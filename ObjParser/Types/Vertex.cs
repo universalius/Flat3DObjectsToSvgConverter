@@ -48,7 +48,7 @@ namespace ObjParser.Types
 
         public override string ToString()
         {
-            return string.Format("v {0} {1} {2}", X, Y, Z);
+            return string.Format("{3} v {0} {1} {2}", X, Y, Z, Index);
         }
     }
 }

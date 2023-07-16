@@ -17,6 +17,8 @@ namespace ObjParser.Types
         public int[] VertexIndexList { get; set; }
         public int[] TextureVertexIndexList { get; set; }
 
+        public int Id { get; set; }
+
         public void LoadFromStringArray(string[] data)
         {
             if (data.Length < MinimumDataLength)
@@ -55,7 +57,7 @@ namespace ObjParser.Types
         public override string ToString()
         {
             StringBuilder b = new StringBuilder();
-            b.Append("f");
+            b.Append($"{Id} f");
 
             for (int i = 0; i < VertexIndexList.Count(); i++)
             {
