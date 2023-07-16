@@ -12,6 +12,8 @@ namespace ObjParser
         public List<Face> FaceList;
         public List<TextureVertex> TextureList;
 
+        public int VertexListShift { get; set; } = 0;
+
         public Extent Size { get; set; }
 
         public string UseMtl { get; set; }
@@ -159,7 +161,7 @@ namespace ObjParser
                         Vertex v = new Vertex();
                         v.LoadFromStringArray(parts);
                         VertexList.Add(v);
-                        v.Index = VertexList.Count();
+                        v.Index = VertexList.Count() + VertexListShift;
                         break;
                     case "f":
                         Face f = new Face();

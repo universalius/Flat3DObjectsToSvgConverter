@@ -11,31 +11,47 @@ var contentWitoutComments = content.Where(l => !l.StartsWith("#"));
 
 var meshesText = string.Join(Environment.NewLine, contentWitoutComments)
     .Split("o ")
-    .Where(t => !(string.IsNullOrEmpty(t) || t == "\r\n"));
+    .Where(t => !(string.IsNullOrEmpty(t) || t == "\r\n")).ToList();
 
-var meshes = meshesText.Select(t =>
+var meshes = new List<Mesh>();
+meshesText.ForEach(t =>
 {
     var meshLines = t.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
     var obj = new Obj();
+    obj.VertexListShift = meshes.Any() ? meshes.Last().Obj.VertexList.Last().Index : 0;
     obj.LoadObj(meshLines.Skip(1));
-    return new Mesh
+    meshes.Add(new Mesh
     {
         Name = meshLines[0],
         Obj = obj
+    });
+});
+
+var meshLoopsPoints = meshes.Select(mesh =>
+{
+    var meshObjectsParser = new MeshObjectsParser();
+    var meshObjects = meshObjectsParser.Parse(mesh.Obj);
+
+    var edgeLoopParser = new EdgeLoopParser();
+    var loopsPoints = meshObjects.Select(mo => edgeLoopParser.GetEdgeLoopPoints(mo));
+    return new MeshLoopPoints
+    {
+        MeshName = mesh.Name,
+        ObjectsLoopsPoints = loopsPoints
     };
 });
 
-var testObj = meshes.First().Obj;
+//var testObj = meshes.First().Obj;
 
-var meshObjectsParser = new MeshObjectsParser();
-var meshObjects = meshObjectsParser.Parse(testObj);
+//var meshObjectsParser = new MeshObjectsParser();
+//var meshObjects = meshObjectsParser.Parse(testObj);
 
-var edgeLoopParser = new EdgeLoopParser();
-var loopsPoints = meshObjects.Select(mo => edgeLoopParser.GetEdgeLoopPoints(mo));
+//var edgeLoopParser = new EdgeLoopParser();
+//var loopsPoints = meshObjects.Select(mo => edgeLoopParser.GetEdgeLoopPoints(mo));
 
 var svgConverter = new SvgConverter();
 
-var svg = svgConverter.Convert(loopsPoints);
+var svg = svgConverter.Convert(meshLoopsPoints);
 
 File.WriteAllText(@"D:\Виталик\Cat_Hack\Svg\test.svg", svg);
 

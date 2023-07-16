@@ -1,11 +1,6 @@
 ﻿using ObjParser.Types;
-using System;
-using System.Collections;
-using System.Collections.Generic;
+using ObjParserExecutor.Helpers;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ObjParserExecutor
 {
@@ -15,6 +10,7 @@ namespace ObjParserExecutor
         {
             var verts = meshObject.PlainVerts;
             var faces = meshObject.Faces;
+            var axis = meshObject.Axis;
 
             var vertIndexes = verts.Select(v => v.Index);
             var vertsDictionary = verts.ToDictionary(v => v.Index);
@@ -26,38 +22,21 @@ namespace ObjParserExecutor
                     Faces = faces.Where(f => f.VertexIndexList.Contains(v.Index))
                 });
 
-            //var initialVertex = verts.First();
-            //var firstVertex = initialVertex;
-            //EdgeFace edgeFace = null;
-            //var mainLoopEdgeFaces = new List<EdgeFace>();
-            //var holesLoopVerts = new List<Vertex>();
-
-            ////var c = faces.Where(f => f.VertexIndexList.Intersect(new[] { 174 }).Any());
-
-            //while ((edgeFace?.SecondVertex?.Index ?? 0) != initialVertex.Index)
-            //{
-            //    edgeFace = GetEdgeFace(firstVertex, vertexFaces, edgeFace?.FirstVertex?.Index);
-            //    mainLoopEdgeFaces.Add(edgeFace);
-            //    firstVertex = edgeFace.SecondVertex;
-            //}
-
             var initialVertex = verts.First();
             var mainLoopEdgeFaces = GetEdgeLoop(initialVertex, vertexFaces);
 
             var allLoopsEdgeFaces = GetHolesEdgeLoops(faces, vertexFaces, new List<IEnumerable<EdgeFace>> { mainLoopEdgeFaces });
 
             var mmGain = 1000;
-
             var loopsPoints = allLoopsEdgeFaces.Select(l =>
             {
-                var points = l.Select(ef => new PointF((float)(ef.SecondVertex.X * mmGain), (float)(ef.SecondVertex.Y * mmGain)));
+                var points = l.Select(ef => AxisSelectHelpers.GetPointByAxis(axis, ef.SecondVertex, mmGain));
                 var firstVertex = l.First().FirstVertex;
-                return points.Prepend(new PointF((float)(firstVertex.X * mmGain), (float)(firstVertex.Y * mmGain)));
+                return points.Prepend(AxisSelectHelpers.GetPointByAxis(axis, firstVertex, mmGain));
             });
 
             return loopsPoints;
         }
-
 
         public List<IEnumerable<EdgeFace>> GetHolesEdgeLoops(IEnumerable<Face> faces, IEnumerable<VertexFaces> vertexFaces,
             List<IEnumerable<EdgeFace>> loopsEdgeFaces)
@@ -80,15 +59,11 @@ namespace ObjParserExecutor
             return GetHolesEdgeLoops(faces, vertexFaces, loopsEdgeFaces);
         }
 
-
-
         public IEnumerable<EdgeFace> GetEdgeLoop(Vertex initialVertex, IEnumerable<VertexFaces> vertexFaces)
         {
             var firstVertex = initialVertex;
             EdgeFace edgeFace = null;
             var loopEdgeFaces = new List<EdgeFace>();
-
-            //var c = faces.Where(f => f.VertexIndexList.Intersect(new[] { 174 }).Any());
 
             while ((edgeFace?.SecondVertex?.Index ?? 0) != initialVertex.Index)
             {
@@ -123,7 +98,6 @@ namespace ObjParserExecutor
             };
         }
     }
-
 
     public class VertexFaces
     {

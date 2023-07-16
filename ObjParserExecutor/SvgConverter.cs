@@ -11,23 +11,25 @@ namespace ObjParserExecutor
 {
     public class SvgConverter
     {
-        public string Convert(IEnumerable<IEnumerable<IEnumerable<PointF>>> objectLoopsPoints)
+        public string Convert(IEnumerable<MeshLoopPoints> meshLoopPoints)
         {
-
-            var svgGroups = objectLoopsPoints.Select(curvePoints =>
+            var svgGroups = meshLoopPoints.Select(meshLoops =>
             {
-                var pathCoords = curvePoints.Select(points =>
-                    string.Join(" ",
-                        points.Select(p => $"{p.X.ToString(new CultureInfo("en-US", false))} {p.Y.ToString(new CultureInfo("en-US", false))}")));
+                return meshLoops.ObjectsLoopsPoints.Select((curvePoints, i) =>
+                {
+                    var pathCoords = curvePoints.Select(points =>
+                        string.Join(" ",
+                            points.Select(p => $"{p.X.ToString(new CultureInfo("en-US", false))} {p.Y.ToString(new CultureInfo("en-US", false))}")));
 
-                var pathes = pathCoords.Select(pc => $@"<path d=""M {pc} z"" style=""fill:none;stroke-width:0.264583;stroke:#000000;"" />");
-                var pathesString = string.Join("\r\n", pathes);
-                return @$"<g>
+                    var pathes = pathCoords.Select(pc => $@"<path d=""M {pc} z"" style=""fill:none;stroke-width:0.264583;stroke:#000000;"" />");
+                    var pathesString = string.Join("\r\n", pathes);
+                    return @$"<g id=""{meshLoops.MeshName}-{i}"">
                             {pathesString}
                           </g>";
+                });
             });
 
-            var svgGroupsString = string.Join("\r\n", svgGroups);
+            var svgGroupsString = string.Join("\r\n", svgGroups.SelectMany(i => i));
 
             var body = @$"
             <?xml version=""1.0"" standalone=""no""?>
@@ -40,5 +42,12 @@ namespace ObjParserExecutor
 
             return body;
         }
+    }
+
+    public class MeshLoopPoints
+    {
+        public string MeshName { get; set; }
+
+        public IEnumerable<IEnumerable<IEnumerable<PointF>>> ObjectsLoopsPoints { get; set; }
     }
 }
