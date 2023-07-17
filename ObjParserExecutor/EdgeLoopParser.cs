@@ -1,12 +1,14 @@
-﻿using ObjParser.Types;
+﻿using ObjParser;
+using ObjParser.Types;
 using ObjParserExecutor.Helpers;
 using System.Drawing;
+using System.Linq;
 
 namespace ObjParserExecutor
 {
     public class EdgeLoopParser
     {
-        public IEnumerable<IEnumerable<PointF>> GetEdgeLoopPoints(MeshObject meshObject)
+        public IEnumerable<ObjectLoopsPoints> GetEdgeLoopPoints(MeshObject meshObject)
         {
             var verts = meshObject.PlainVerts;
             var faces = meshObject.Faces;
@@ -27,18 +29,25 @@ namespace ObjParserExecutor
 
             var allLoopsEdgeFaces = GetHolesEdgeLoops(faces, vertexFaces, new List<IEnumerable<EdgeFace>> { mainLoopEdgeFaces });
 
-            var mmGain = 1000;
-            var loopsPoints = allLoopsEdgeFaces.Select(l =>
+            var groupedLoops = GroupLoopsByBoundaries(axis, allLoopsEdgeFaces);
+
+            var loopsWithChildren = groupedLoops.Where(gl => gl.Children.Any()).Select(g =>
+           {
+               var loopsPoints = new List<IEnumerable<PointF>> { GetLoopPoints(axis, g.Main) };
+               loopsPoints.AddRange(g.Children.Select(child => GetLoopPoints(axis, child)));
+               return new ObjectLoopsPoints { LoopsPoints = loopsPoints };
+           });
+
+            var singleLoops = groupedLoops.Where(gl => !gl.Children.Any()).Select(gl => new ObjectLoopsPoints
             {
-                var points = l.Select(ef => AxisSelectHelpers.GetPointByAxis(axis, ef.SecondVertex, mmGain));
-                var firstVertex = l.First().FirstVertex;
-                return points.Prepend(AxisSelectHelpers.GetPointByAxis(axis, firstVertex, mmGain));
+                LoopsPoints = new[] { GetLoopPoints(axis, gl.Main) }
             });
 
-            return loopsPoints;
+
+            return loopsWithChildren.Concat(singleLoops);
         }
 
-        public List<IEnumerable<EdgeFace>> GetHolesEdgeLoops(IEnumerable<Face> faces, IEnumerable<VertexFaces> vertexFaces,
+        private List<IEnumerable<EdgeFace>> GetHolesEdgeLoops(IEnumerable<Face> faces, IEnumerable<VertexFaces> vertexFaces,
             List<IEnumerable<EdgeFace>> loopsEdgeFaces)
         {
             var vertIndexes = vertexFaces.Select(vf => vf.Vertex.Index);
@@ -59,7 +68,7 @@ namespace ObjParserExecutor
             return GetHolesEdgeLoops(faces, vertexFaces, loopsEdgeFaces);
         }
 
-        public IEnumerable<EdgeFace> GetEdgeLoop(Vertex initialVertex, IEnumerable<VertexFaces> vertexFaces)
+        private IEnumerable<EdgeFace> GetEdgeLoop(Vertex initialVertex, IEnumerable<VertexFaces> vertexFaces)
         {
             var firstVertex = initialVertex;
             EdgeFace edgeFace = null;
@@ -75,7 +84,7 @@ namespace ObjParserExecutor
             return loopEdgeFaces;
         }
 
-        public EdgeFace GetEdgeFace(Vertex firstVertex, IEnumerable<VertexFaces> vertexFaces, int? prevVertIndex)
+        private EdgeFace GetEdgeFace(Vertex firstVertex, IEnumerable<VertexFaces> vertexFaces, int? prevVertIndex)
         {
             var firstVertexFaces = vertexFaces.First(vf => vf.Vertex.Index == firstVertex.Index);
             var nextFace = prevVertIndex == null ?
@@ -97,6 +106,54 @@ namespace ObjParserExecutor
                 Face = nextFace
             };
         }
+
+        private IEnumerable<Loops> GroupLoopsByBoundaries(string axis, List<IEnumerable<EdgeFace>> allLoopsEdgeFaces)
+        {
+            var loopsSizes = allLoopsEdgeFaces.Select(lef => new
+            {
+                Loop = lef,
+                Size = Obj.GetObjSize(lef.SelectMany(ef => ef.Edge))
+            });
+
+            var loops = new List<Loops>();
+
+            var groupedLoops = loopsSizes.Select((secondLoop, i) =>
+            {
+                var children = loopsSizes.Where(firstLoop => IsFistLoopInsideSecondLoop(axis, firstLoop.Size, secondLoop.Size));
+                return new Loops
+                {
+                    Id = i,
+                    Main = secondLoop.Loop,
+                    Children = children.Select(x => x.Loop)
+                };
+            });
+
+            var loopsWithChildren = groupedLoops.Where(gl => gl.Children.Any());
+            var loopsWithChildrenIds = loopsWithChildren.Select(l => l.Id);
+            var allLoopsChildren = loopsWithChildren.SelectMany(l => l.Children);
+            var singleLoops = groupedLoops.Where(l => !loopsWithChildrenIds.Contains(l.Id));
+            var singleLoopsNotChildOfOthers = singleLoops.Where(sl => !allLoopsChildren.Contains(sl.Main));
+
+            return loopsWithChildren.Concat(singleLoopsNotChildOfOthers);
+        }
+
+        private bool IsFistLoopInsideSecondLoop(string axis, Extent firstLoopSize, Extent secondLoopSize)
+        {
+            var firstLoopBoundary = AxisSelectHelpers.GetXYBoundaries(axis, firstLoopSize);
+            var secondLoopBoundary = AxisSelectHelpers.GetXYBoundaries(axis, secondLoopSize);
+
+            return firstLoopBoundary.minPoint.X > secondLoopBoundary.minPoint.X && firstLoopBoundary.minPoint.Y > secondLoopBoundary.minPoint.Y &&
+            firstLoopBoundary.maxPoint.X < secondLoopBoundary.maxPoint.X && firstLoopBoundary.maxPoint.Y < secondLoopBoundary.maxPoint.Y;
+        }
+
+        private IEnumerable<PointF> GetLoopPoints(string axis, IEnumerable<EdgeFace> loopEdgeFaces)
+        {
+            var mmGain = 1000;
+            var points = loopEdgeFaces.Select(ef => AxisSelectHelpers.GetPointByAxis(axis, ef.SecondVertex, mmGain));
+            var firstVertex = loopEdgeFaces.First().FirstVertex;
+            return points.Prepend(AxisSelectHelpers.GetPointByAxis(axis, firstVertex, mmGain));
+        }
+
     }
 
     public class VertexFaces
@@ -110,5 +167,19 @@ namespace ObjParserExecutor
         public Vertex FirstVertex { get; set; }
         public Vertex SecondVertex { get; set; }
         public Face Face { get; set; }
+
+        public Vertex[] Edge => new[] { FirstVertex, SecondVertex };
+    }
+    public class Loops
+    {
+        public int Id { get; set; }
+        public IEnumerable<EdgeFace> Main { get; set; }
+        public IEnumerable<IEnumerable<EdgeFace>> Children { get; set; }
+    }
+
+    public class ObjectLoopsPoints
+    {
+        public IEnumerable<IEnumerable<PointF>> LoopsPoints { get; set; }
     }
 }
+

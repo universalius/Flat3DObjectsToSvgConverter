@@ -112,9 +112,16 @@ namespace ObjParser
         private void updateSize()
         {
             // If there are no vertices then size should be 0.
-            if (VertexList.Count == 0)
+            Size = GetObjSize(VertexList);
+        }
+
+        public static Extent GetObjSize(IEnumerable<Vertex> verts)
+        {
+            Extent size = null;
+            // If there are no vertices then size should be 0.
+            if (verts.Count() == 0)
             {
-                Size = new Extent
+                size = new Extent
                 {
                     XMax = 0,
                     XMin = 0,
@@ -125,18 +132,20 @@ namespace ObjParser
                 };
 
                 // Avoid an exception below if VertexList was empty.
-                return;
+                return size;
             }
 
-            Size = new Extent
+            size = new Extent
             {
-                XMax = VertexList.Max(v => v.X),
-                XMin = VertexList.Min(v => v.X),
-                YMax = VertexList.Max(v => v.Y),
-                YMin = VertexList.Min(v => v.Y),
-                ZMax = VertexList.Max(v => v.Z),
-                ZMin = VertexList.Min(v => v.Z)
+                XMax = verts.Max(v => v.X),
+                XMin = verts.Min(v => v.X),
+                YMax = verts.Max(v => v.Y),
+                YMin = verts.Min(v => v.Y),
+                ZMax = verts.Max(v => v.Z),
+                ZMin = verts.Min(v => v.Z)
             };
+
+            return size;
         }
 
         /// <summary>

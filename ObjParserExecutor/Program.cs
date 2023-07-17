@@ -33,11 +33,11 @@ var meshLoopsPoints = meshes.Select(mesh =>
     var meshObjects = meshObjectsParser.Parse(mesh.Obj);
 
     var edgeLoopParser = new EdgeLoopParser();
-    var loopsPoints = meshObjects.Select(mo => edgeLoopParser.GetEdgeLoopPoints(mo));
+    var meshObjectsLoopsPoints = meshObjects.Select(mo => edgeLoopParser.GetEdgeLoopPoints(mo));
     return new MeshLoopPoints
     {
         MeshName = mesh.Name,
-        ObjectsLoopsPoints = loopsPoints
+        ObjectsLoopsPoints = meshObjectsLoopsPoints.SelectMany(molp=> molp)
     };
 });
 

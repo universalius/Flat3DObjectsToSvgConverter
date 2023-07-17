@@ -17,7 +17,7 @@ namespace ObjParserExecutor
             {
                 return meshLoops.ObjectsLoopsPoints.Select((curvePoints, i) =>
                 {
-                    var pathCoords = curvePoints.Select(points =>
+                    var pathCoords = curvePoints.LoopsPoints.Select(points =>
                         string.Join(" ",
                             points.Select(p => $"{p.X.ToString(new CultureInfo("en-US", false))} {p.Y.ToString(new CultureInfo("en-US", false))}")));
 
@@ -48,6 +48,6 @@ namespace ObjParserExecutor
     {
         public string MeshName { get; set; }
 
-        public IEnumerable<IEnumerable<IEnumerable<PointF>>> ObjectsLoopsPoints { get; set; }
+        public IEnumerable<ObjectLoopsPoints> ObjectsLoopsPoints { get; set; }
     }
 }

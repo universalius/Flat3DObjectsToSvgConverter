@@ -1,4 +1,5 @@
-﻿using ObjParser.Types;
+﻿using ObjParser;
+using ObjParser.Types;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -24,7 +25,7 @@ namespace ObjParserExecutor.Helpers
             throw new NotImplementedException();
         }
 
-        public static PointF GetPointByAxis(string axis, Vertex vertex, int mmGain)
+        public static PointF GetPointByAxis(string axis, Vertex vertex, int mmGain = 1)
         {
             double x = 0;
             double y = 0;
@@ -52,5 +53,43 @@ namespace ObjParserExecutor.Helpers
 
             return new PointF((float)(x * mmGain), (float)(y * mmGain));
         }
+
+        public static (PointF minPoint, PointF maxPoint) GetXYBoundaries(string axis, Extent size)
+        {
+            double minX = 0;
+            double minY = 0;
+            double maxX = 0;
+            double maxY = 0;
+
+            if (axis.ToLower() == "x")
+            {
+                minX = size.YMin;
+                maxX = size.YMax;
+                minY = size.ZMin;
+                maxY = size.ZMax;
+            }
+
+            if (axis.ToLower() == "y")
+            {
+                minX = size.XMin;
+                maxX = size.XMax;
+                minY = size.ZMin;
+                maxY = size.ZMax;
+            }
+
+            if (axis.ToLower() == "z")
+            {
+                minX = size.XMin;
+                maxX = size.XMax;
+                minY = size.YMin;
+                maxY = size.YMax;
+            }
+
+            if (minX == 0 && minY == 0)
+                throw new NotImplementedException();
+
+            return (new PointF((float)minX, (float)minY), new PointF((float)maxX, (float)maxY));
+        }
+
     }
 }
