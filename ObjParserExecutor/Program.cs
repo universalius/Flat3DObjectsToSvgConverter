@@ -6,7 +6,7 @@ using System.Linq;
 
 Console.WriteLine("Start parsing!");
 
-var content = await File.ReadAllLinesAsync(@"D:\Виталик\Cat_Hack\ExportFiles\test.obj");
+var content = await File.ReadAllLinesAsync(@"D:\Виталик\Cat_Hack\ExportFiles\test1.obj");
 var contentWitoutComments = content.Where(l => !l.StartsWith("#"));
 
 var meshesText = string.Join(Environment.NewLine, contentWitoutComments)
@@ -29,11 +29,17 @@ meshesText.ForEach(t =>
 
 var meshLoopsPoints = meshes.Select(mesh =>
 {
+    Console.WriteLine($"Starting process mesh - {mesh.Name}");
+
     var meshObjectsParser = new MeshObjectsParser();
-    var meshObjects = meshObjectsParser.Parse(mesh.Obj);
+    var meshObjects = meshObjectsParser.Parse(mesh);
 
     var edgeLoopParser = new EdgeLoopParser();
-    var meshObjectsLoopsPoints = meshObjects.Select(mo => edgeLoopParser.GetEdgeLoopPoints(mo));
+    var meshObjectsLoopsPoints = meshObjects.Select(mo => edgeLoopParser.GetEdgeLoopPoints(mo)).ToList();
+
+    Console.WriteLine($"Converted to loops mesh - {mesh.Name}, objects - {meshObjectsLoopsPoints.Count()}");
+    Console.WriteLine();
+
     return new MeshLoopPoints
     {
         MeshName = mesh.Name,
@@ -41,19 +47,11 @@ var meshLoopsPoints = meshes.Select(mesh =>
     };
 });
 
-//var testObj = meshes.First().Obj;
-
-//var meshObjectsParser = new MeshObjectsParser();
-//var meshObjects = meshObjectsParser.Parse(testObj);
-
-//var edgeLoopParser = new EdgeLoopParser();
-//var loopsPoints = meshObjects.Select(mo => edgeLoopParser.GetEdgeLoopPoints(mo));
-
 var svgConverter = new SvgConverter();
 
 var svg = svgConverter.Convert(meshLoopsPoints);
 
-File.WriteAllText(@"D:\Виталик\Cat_Hack\Svg\test.svg", svg);
+File.WriteAllText(@"D:\Виталик\Cat_Hack\Svg\test1.svg", svg);
 
 Console.ReadKey();
 

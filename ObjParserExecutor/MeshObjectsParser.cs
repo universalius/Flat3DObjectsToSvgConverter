@@ -1,5 +1,6 @@
 ﻿using ObjParser;
 using ObjParser.Types;
+using ObjParserExecutor.Extensions;
 using ObjParserExecutor.Helpers;
 using System;
 using System.Collections.Generic;
@@ -11,31 +12,36 @@ namespace ObjParserExecutor
 {
     public class MeshObjectsParser
     {
-        public IEnumerable<MeshObject> Parse(Obj obj)
+        public IEnumerable<MeshObject> Parse(Mesh mesh)
         {
-            var xAxisVerts = obj.VertexList.GroupBy(x => x.X);
-            var yAxisVerts = obj.VertexList.GroupBy(x => x.Y);
-            var zAxisVerts = obj.VertexList.GroupBy(x => x.Z);
+            var obj = mesh.Obj;
+            var xLines = obj.VertexList.GroupBy(x => x.X);
+            var yLines = obj.VertexList.GroupBy(x => x.Y);
+            var zLines = obj.VertexList.GroupBy(x => x.Z);
 
-            var vertexGroups = new[] {
-                new { VertexGroup= xAxisVerts, VertexCount = xAxisVerts.Select(g => g.Count()).Max(), Axis = "x" },
-                new { VertexGroup= yAxisVerts, VertexCount = yAxisVerts.Select(g => g.Count()).Max(), Axis = "y" },
-                new { VertexGroup= zAxisVerts, VertexCount = zAxisVerts.Select(g => g.Count()).Max(), Axis = "z" },
+            var axisPlanes = new[] {
+                new { Lines= xLines, VertexCount = xLines.Select(g => g.Count()).Max(), Axis = "x", LinesCount = xLines.Count() },
+                new { Lines= yLines, VertexCount = yLines.Select(g => g.Count()).Max(), Axis = "y", LinesCount = yLines.Count() },
+                new { Lines= zLines, VertexCount = zLines.Select(g => g.Count()).Max(), Axis = "z", LinesCount = zLines.Count() },
             };
 
-            var vertCounts = vertexGroups.Select(g => g.VertexCount);
-            if (vertCounts.Distinct().Count() != vertCounts.Count())
+            var targetAxisVerts = axisPlanes.FirstOrDefault(p => p.LinesCount % 2 == 0); //vertexGroups.First(v => v.VertexCount == vertCounts.Max());
+            if (targetAxisVerts == null)
             {
-                Console.WriteLine("Can not distinguish axis");
-                Console.ReadKey();
-                return null;
+                throw new Exception($"Mesh {mesh.Name} object consists of one plain only, but extect always two parralel");
             }
 
-            var targetAxisVerts = vertexGroups.First(v => v.VertexCount == vertCounts.Max());
             var targetAxis = targetAxisVerts.Axis;
-            var meshObjects = targetAxisVerts.VertexGroup.GroupBy(g => g.Count());
+            //var meshObjects = targetAxisVerts.VertexGroup.GroupBy(g => g.Count());
 
-            return meshObjects.Select(mo =>
+            var orderedMeshObjects = targetAxisVerts.Lines.OrderBy(g => g.Key); // parallel vert planes should be in pairs between plains in pair should be 4 mms
+
+            if (mesh.Name.ToLower() == "74_bearing")
+            {
+                var c = 0;
+            }
+
+            return orderedMeshObjects.Chunks(2).Select((mo, i) =>
             {
                 var verts = mo.Select(g => g);
                 var pararelVerts = verts
@@ -47,13 +53,26 @@ namespace ObjParserExecutor
                     })
                     .GroupBy(v => v.Id);
 
+                //if (Math.Abs(pararelVerts.First().Key - pararelVerts.Last().Key) ! = 4 )
+                //{
+
+                //}
+
                 var edgesVertsIndexes = pararelVerts.Select(g => g.Select(v => v.Vertex.Index));
 
                 var targetFaces = obj.FaceList
                     .Where(f => edgesVertsIndexes.Any(evi => f.VertexIndexList.Intersect(evi).Count() == evi.Count()));
 
+                if (mesh.Name.ToLower() == "74_bearing" && targetFaces.Any(f => f.Id == 264))
+                {
+                    var c = 0;
+                }
+
+
                 //var b = obj.FaceList
-                //    .Where(f => edgesVertsIndexes.Any(evi => f.VertexIndexList.Intersect(new[] {1, 36}).Any()));
+                //    .Where(f => edgesVertsIndexes.Any(evi => f.VertexIndexList.Intersect(new[] { 109 }).Any()));
+
+                Console.WriteLine($"    Finished parse mesh - {mesh.Name}, object - {i}");
 
                 return new MeshObject
                 {

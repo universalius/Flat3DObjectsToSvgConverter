@@ -24,7 +24,10 @@ namespace ObjParserExecutor
                     Faces = faces.Where(f => f.VertexIndexList.Contains(v.Index))
                 });
 
-            var initialVertex = verts.First();
+            var objSize = Obj.GetObjSize(verts);
+            var objBoundaries = AxisSelectHelpers.GetXYBoundaries(axis, objSize);
+            var initialVertex = verts.First(v => AxisSelectHelpers.GetPointByAxis(axis, v).X == objBoundaries.minPoint.X);
+
             var mainLoopEdgeFaces = GetEdgeLoop(initialVertex, vertexFaces);
 
             var allLoopsEdgeFaces = GetHolesEdgeLoops(faces, vertexFaces, new List<IEnumerable<EdgeFace>> { mainLoopEdgeFaces });
@@ -96,6 +99,7 @@ namespace ObjParserExecutor
 
             if (nextVertIndexes.Count() > 1)
             {
+                var nextFaces = firstVertexFaces.Faces.Select(f => new { Face = f, Verts = vertexFaces.Where(vf => f.VertexIndexList.Contains(vf.Vertex.Index)) });
                 throw new Exception("Found more then 1 second edge vertex");
             }
 
