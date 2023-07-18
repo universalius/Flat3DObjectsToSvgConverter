@@ -53,16 +53,23 @@ namespace ObjParserExecutor
         private List<IEnumerable<EdgeFace>> GetHolesEdgeLoops(IEnumerable<Face> faces, IEnumerable<VertexFaces> vertexFaces,
             List<IEnumerable<EdgeFace>> loopsEdgeFaces)
         {
-            var vertIndexes = vertexFaces.Select(vf => vf.Vertex.Index);
-
             var holesFaces = faces.Except(loopsEdgeFaces.SelectMany(l => l.Select(ef => ef.Face)));
-
-            if (!holesFaces.Any())
+            if (!holesFaces.Any() || holesFaces.Count() < 4) // hole should have at least 4 sides
             {
                 return loopsEdgeFaces;
             }
 
-            var holeFirstVertIndex = holesFaces.First().VertexIndexList.Intersect(vertIndexes).First();
+            // perfomance optimisation
+            var vertsInLoopsIds = loopsEdgeFaces.SelectMany(l => l.SelectMany(ef => ef.Edge)).Select(v => v.Index);
+            vertexFaces = vertexFaces.Where(vf => !vertsInLoopsIds.Contains(vf.Vertex.Index));
+            var vertIndexes = vertexFaces.Select(vf => vf.Vertex.Index);
+
+            var holeFirstVertIndex = holesFaces.First().VertexIndexList.Intersect(vertIndexes).FirstOrDefault();
+            if (holeFirstVertIndex == 0)
+            {
+                throw new Exception("Mesh has defects, some edges not paralel to each other");
+            }
+
             var holeVertexFaces = vertexFaces.First(vf => vf.Vertex.Index == holeFirstVertIndex);
             var holeLoopEdgeFaces = GetEdgeLoop(holeVertexFaces.Vertex, vertexFaces);
 

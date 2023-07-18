@@ -6,7 +6,7 @@ using System.Linq;
 
 Console.WriteLine("Start parsing!");
 
-var content = await File.ReadAllLinesAsync(@"D:\Виталик\Cat_Hack\ExportFiles\test1.obj");
+var content = await File.ReadAllLinesAsync(@"D:\Виталик\Cat_Hack\ExportFiles\test3.obj");
 var contentWitoutComments = content.Where(l => !l.StartsWith("#"));
 
 var meshesText = string.Join(Environment.NewLine, contentWitoutComments)
@@ -51,7 +51,7 @@ var svgConverter = new SvgConverter();
 
 var svg = svgConverter.Convert(meshLoopsPoints);
 
-File.WriteAllText(@"D:\Виталик\Cat_Hack\Svg\test1.svg", svg);
+File.WriteAllText(@"D:\Виталик\Cat_Hack\Svg\test.svg", svg);
 
 Console.ReadKey();
 
