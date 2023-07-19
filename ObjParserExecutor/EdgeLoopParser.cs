@@ -1,6 +1,8 @@
 ﻿using ObjParser;
 using ObjParser.Types;
 using ObjParserExecutor.Helpers;
+using ObjParserExecutor.Models;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 
@@ -10,6 +12,8 @@ namespace ObjParserExecutor
     {
         public IEnumerable<ObjectLoopsPoints> GetEdgeLoopPoints(MeshObject meshObject)
         {
+            var watch = Stopwatch.StartNew();
+
             var verts = meshObject.PlainVerts;
             var faces = meshObject.Faces;
             var axis = meshObject.Axis;
@@ -46,8 +50,12 @@ namespace ObjParserExecutor
                 LoopsPoints = new[] { GetLoopPoints(axis, gl.Main) }
             });
 
+            var loops = loopsWithChildren.Concat(singleLoops);
 
-            return loopsWithChildren.Concat(singleLoops);
+            watch.Stop();
+            Console.WriteLine($"    Converted to loops mesh objects - {loops.Count()}, took - {watch.ElapsedMilliseconds/1000} s");
+
+            return loops;
         }
 
         private List<IEnumerable<EdgeFace>> GetHolesEdgeLoops(IEnumerable<Face> faces, IEnumerable<VertexFaces> vertexFaces,
@@ -67,6 +75,7 @@ namespace ObjParserExecutor
             var holeFirstVertIndex = holesFaces.First().VertexIndexList.Intersect(vertIndexes).FirstOrDefault();
             if (holeFirstVertIndex == 0)
             {
+                //var holeFirstVertFaceVerts = holesFaces.First().VertexIndexList
                 throw new Exception("Mesh has defects, some edges not paralel to each other");
             }
 
@@ -80,6 +89,8 @@ namespace ObjParserExecutor
 
         private IEnumerable<EdgeFace> GetEdgeLoop(Vertex initialVertex, IEnumerable<VertexFaces> vertexFaces)
         {
+            var watch = Stopwatch.StartNew();
+
             var firstVertex = initialVertex;
             EdgeFace edgeFace = null;
             var loopEdgeFaces = new List<EdgeFace>();
@@ -90,6 +101,9 @@ namespace ObjParserExecutor
                 loopEdgeFaces.Add(edgeFace);
                 firstVertex = edgeFace.SecondVertex;
             }
+
+            watch.Stop();
+            Console.WriteLine($"        GetEdgeLoop edges - {loopEdgeFaces.Count()}, took - {watch.ElapsedMilliseconds / 1000} s");
 
             return loopEdgeFaces;
         }
