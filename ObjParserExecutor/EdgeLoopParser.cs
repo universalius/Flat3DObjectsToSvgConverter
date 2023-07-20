@@ -25,8 +25,8 @@ namespace ObjParserExecutor
                 new VertexFaces
                 {
                     Vertex = v,
-                    Faces = faces.Where(f => f.VertexIndexList.Contains(v.Index))
-                });
+                    Faces = faces.Where(f => f.VertexIndexList.Contains(v.Index)).ToList()
+                }).ToList();
 
             var objSize = Obj.GetObjSize(verts);
             var objBoundaries = AxisSelectHelpers.GetXYBoundaries(axis, objSize);
@@ -41,19 +41,19 @@ namespace ObjParserExecutor
             var loopsWithChildren = groupedLoops.Where(gl => gl.Children.Any()).Select(g =>
            {
                var loopsPoints = new List<IEnumerable<PointF>> { GetLoopPoints(axis, g.Main) };
-               loopsPoints.AddRange(g.Children.Select(child => GetLoopPoints(axis, child)));
+               loopsPoints.AddRange(g.Children.Select(child => GetLoopPoints(axis, child)).ToList());
                return new ObjectLoopsPoints { LoopsPoints = loopsPoints };
-           });
+           }).ToList();
 
             var singleLoops = groupedLoops.Where(gl => !gl.Children.Any()).Select(gl => new ObjectLoopsPoints
             {
                 LoopsPoints = new[] { GetLoopPoints(axis, gl.Main) }
-            });
+            }).ToList();
 
             var loops = loopsWithChildren.Concat(singleLoops);
 
             watch.Stop();
-            Console.WriteLine($"    Converted to loops mesh objects - {loops.Count()}, took - {watch.ElapsedMilliseconds/1000} s");
+            Console.WriteLine($"    Converted to loops mesh objects - {loops.Count()}, took - {watch.ElapsedMilliseconds / 1000.0} s");
 
             return loops;
         }
@@ -61,16 +61,16 @@ namespace ObjParserExecutor
         private List<IEnumerable<EdgeFace>> GetHolesEdgeLoops(IEnumerable<Face> faces, IEnumerable<VertexFaces> vertexFaces,
             List<IEnumerable<EdgeFace>> loopsEdgeFaces)
         {
-            var holesFaces = faces.Except(loopsEdgeFaces.SelectMany(l => l.Select(ef => ef.Face)));
+            var holesFaces = faces.Except(loopsEdgeFaces.SelectMany(l => l.Select(ef => ef.Face))).ToList();
             if (!holesFaces.Any() || holesFaces.Count() < 4) // hole should have at least 4 sides
             {
                 return loopsEdgeFaces;
             }
 
             // perfomance optimisation
-            var vertsInLoopsIds = loopsEdgeFaces.SelectMany(l => l.SelectMany(ef => ef.Edge)).Select(v => v.Index);
-            vertexFaces = vertexFaces.Where(vf => !vertsInLoopsIds.Contains(vf.Vertex.Index));
-            var vertIndexes = vertexFaces.Select(vf => vf.Vertex.Index);
+            var vertsInLoopsIds = loopsEdgeFaces.SelectMany(l => l.SelectMany(ef => ef.Edge)).Select(v => v.Index).ToList();
+            vertexFaces = vertexFaces.Where(vf => !vertsInLoopsIds.Contains(vf.Vertex.Index)).ToList();
+            var vertIndexes = vertexFaces.Select(vf => vf.Vertex.Index).ToList();
 
             var holeFirstVertIndex = holesFaces.First().VertexIndexList.Intersect(vertIndexes).FirstOrDefault();
             if (holeFirstVertIndex == 0)
@@ -97,26 +97,34 @@ namespace ObjParserExecutor
 
             while ((edgeFace?.SecondVertex?.Index ?? 0) != initialVertex.Index)
             {
-                edgeFace = GetEdgeFace(firstVertex, vertexFaces, edgeFace?.FirstVertex?.Index);
+                edgeFace = GetEdgeFace(firstVertex, vertexFaces, edgeFace?.FirstVertex?.Index, loopEdgeFaces);
                 loopEdgeFaces.Add(edgeFace);
                 firstVertex = edgeFace.SecondVertex;
             }
 
             watch.Stop();
-            Console.WriteLine($"        GetEdgeLoop edges - {loopEdgeFaces.Count()}, took - {watch.ElapsedMilliseconds / 1000} s");
+            Console.WriteLine($"        GetEdgeLoop edges - {loopEdgeFaces.Count()}, took - {watch.ElapsedMilliseconds / 1000.0} s");
 
             return loopEdgeFaces;
         }
 
-        private EdgeFace GetEdgeFace(Vertex firstVertex, IEnumerable<VertexFaces> vertexFaces, int? prevVertIndex)
+        private EdgeFace GetEdgeFace(Vertex firstVertex, IEnumerable<VertexFaces> vertexFaces, int? prevVertIndex, List<EdgeFace> edgeFaces)
         {
             var firstVertexFaces = vertexFaces.First(vf => vf.Vertex.Index == firstVertex.Index);
             var nextFace = prevVertIndex == null ?
                 firstVertexFaces.Faces.First() :
-                firstVertexFaces.Faces.First(f => !f.VertexIndexList.Contains(prevVertIndex.Value));
+                firstVertexFaces.Faces.FirstOrDefault(f => !f.VertexIndexList.Contains(prevVertIndex.Value));
 
-            var nextFaceVertIndexes = nextFace.VertexIndexList.Except(new[] { firstVertex.Index });
-            var nextVertIndexes = vertexFaces.Where(vf => nextFaceVertIndexes.Contains(vf.Vertex.Index));
+            if (nextFace == null)
+            {
+                //var d = vertexFaces.Where(vf => vf.Faces.Count() < 2).ToList();
+                var face = firstVertexFaces.Faces.First();
+                var faceVerts = vertexFaces.Where(v => face.VertexIndexList.Contains(v.Vertex.Index));
+                throw new Exception("Can not find next face");
+            }
+
+            var nextFaceVertIndexes = nextFace.VertexIndexList.Except(new[] { firstVertex.Index }).ToList();
+            var nextVertIndexes = vertexFaces.Where(vf => nextFaceVertIndexes.Contains(vf.Vertex.Index)).ToList();
 
             if (nextVertIndexes.Count() > 1)
             {
@@ -137,27 +145,27 @@ namespace ObjParserExecutor
             var loopsSizes = allLoopsEdgeFaces.Select(lef => new
             {
                 Loop = lef,
-                Size = Obj.GetObjSize(lef.SelectMany(ef => ef.Edge))
+                Size = Obj.GetObjSize(lef.SelectMany(ef => ef.Edge).ToList())
             });
 
             var loops = new List<Loops>();
 
             var groupedLoops = loopsSizes.Select((secondLoop, i) =>
             {
-                var children = loopsSizes.Where(firstLoop => IsFistLoopInsideSecondLoop(axis, firstLoop.Size, secondLoop.Size));
+                var children = loopsSizes.Where(firstLoop => IsFistLoopInsideSecondLoop(axis, firstLoop.Size, secondLoop.Size)).ToList();
                 return new Loops
                 {
                     Id = i,
                     Main = secondLoop.Loop,
-                    Children = children.Select(x => x.Loop)
+                    Children = children.Select(x => x.Loop).ToList()
                 };
-            });
+            }).ToList();
 
-            var loopsWithChildren = groupedLoops.Where(gl => gl.Children.Any());
-            var loopsWithChildrenIds = loopsWithChildren.Select(l => l.Id);
-            var allLoopsChildren = loopsWithChildren.SelectMany(l => l.Children);
-            var singleLoops = groupedLoops.Where(l => !loopsWithChildrenIds.Contains(l.Id));
-            var singleLoopsNotChildOfOthers = singleLoops.Where(sl => !allLoopsChildren.Contains(sl.Main));
+            var loopsWithChildren = groupedLoops.Where(gl => gl.Children.Any()).ToList();
+            var loopsWithChildrenIds = loopsWithChildren.Select(l => l.Id).ToList();
+            var allLoopsChildren = loopsWithChildren.SelectMany(l => l.Children).ToList();
+            var singleLoops = groupedLoops.Where(l => !loopsWithChildrenIds.Contains(l.Id)).ToList();
+            var singleLoopsNotChildOfOthers = singleLoops.Where(sl => !allLoopsChildren.Contains(sl.Main)).ToList();
 
             return loopsWithChildren.Concat(singleLoopsNotChildOfOthers);
         }
@@ -174,11 +182,10 @@ namespace ObjParserExecutor
         private IEnumerable<PointF> GetLoopPoints(string axis, IEnumerable<EdgeFace> loopEdgeFaces)
         {
             var mmGain = 1000;
-            var points = loopEdgeFaces.Select(ef => AxisSelectHelpers.GetPointByAxis(axis, ef.SecondVertex, mmGain));
+            var points = loopEdgeFaces.Select(ef => AxisSelectHelpers.GetPointByAxis(axis, ef.SecondVertex, mmGain)).ToList();
             var firstVertex = loopEdgeFaces.First().FirstVertex;
             return points.Prepend(AxisSelectHelpers.GetPointByAxis(axis, firstVertex, mmGain));
         }
-
     }
 
     public class VertexFaces

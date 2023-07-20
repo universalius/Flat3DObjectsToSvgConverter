@@ -25,6 +25,20 @@ namespace ObjParserExecutor.Helpers
             throw new NotImplementedException();
         }
 
+        public static double GetVertCoordinateByAxis(string axis, Vertex vertex)
+        {
+            if (axis.ToLower() == "x")
+                return vertex.X;
+
+            if (axis.ToLower() == "y")
+                return vertex.Y;
+
+            if (axis.ToLower() == "z")
+                return vertex.Z;
+
+            throw new NotImplementedException();
+        }
+
         public static PointF GetPointByAxis(string axis, Vertex vertex, int mmGain = 1)
         {
             double x = 0;
