@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.6.33829.357
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ObjParser", "ObjParser\ObjParser.csproj", "{04AA9B94-B460-4E73-BAF0-0154494BFE82}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ObjParser", "ObjParser\ObjParser.csproj", "{04AA9B94-B460-4E73-BAF0-0154494BFE82}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ObjParser_Tests", "ObjParser_Tests\ObjParser_Tests.csproj", "{067456C0-086C-46A8-B37F-1405717B7BFC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ObjParser_Tests", "ObjParser_Tests\ObjParser_Tests.csproj", "{067456C0-086C-46A8-B37F-1405717B7BFC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ObjParserExecutor", "ObjParserExecutor\ObjParserExecutor.csproj", "{72563175-EC42-42F3-91B8-CD4184203B14}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Plain3DObjectsToSvgConverter", "ObjParserExecutor\Plain3DObjectsToSvgConverter.csproj", "{72563175-EC42-42F3-91B8-CD4184203B14}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
