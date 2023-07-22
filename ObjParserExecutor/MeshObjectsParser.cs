@@ -61,18 +61,6 @@ namespace ObjParserExecutor
                     .Where(g => g.Count() > 1)
                     .ToList();
 
-                //if (Math.Abs(pararelVerts.First().Key - pararelVerts.Last().Key) ! = 4 )
-                //{
-
-                //}
-
-                //var targetFaces = paralelVerts.Select((pv, i) =>
-                //{
-                //    var vertIndexes = pv.Select(v => v.Vertex.Index);
-                //    var faces = obj.FaceList.Where(f => f.VertexIndexList.Intersect(vertIndexes).Count() == 2);
-                //    return faces;
-                //}).SelectMany(gf => gf).ToList().DistinctBy(f => f.Id);
-
                 // can contain edges that match totally by vertexes, so in pair group can be more then 2 verts
                 var edgesVerts = paralelVerts.Select(g => g.Select(v => v.Vertex)).ToList();
                 var edgesVertsIndexes = edgesVerts.Select(ev => ev.Select(v => v.Index)).ToList();
@@ -82,15 +70,10 @@ namespace ObjParserExecutor
                     .Where(f => edgesVertsIndexes.Any(evi => f.VertexIndexList.Intersect(evi).Count() == 2))
                     .DistinctBy(f => f.Id).ToList();
 
-                //var allEdgesVertsIndexes = edgesVertsIndexes.SelectMany(evi => evi);
-                //var targetFacesVerts = targetFaces.Where(f => f.VertexIndexList.Intersect(allEdgesVertsIndexes).Count() == 4)
-                //    .DistinctBy(f => f.Id);
-
                 //if (mesh.Name.ToLower() == "74_bearing" && targetFaces.Any(f => f.Id == 264))
                 //{
                 //    var c = 0;
                 //}
-
 
                 //var b = obj.FaceList
                 //    .Where(f => edgesVertsIndexes.Any(evi => f.VertexIndexList.Intersect(new[] { 109 }).Any()));

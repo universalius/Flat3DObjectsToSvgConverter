@@ -120,6 +120,9 @@ DocProject/Help/html
 # Click-Once directory
 publish/
 
+# VS
+.vs/
+
 # Publish Web Output
 *.[Pp]ublish.xml
 *.azurePubxml

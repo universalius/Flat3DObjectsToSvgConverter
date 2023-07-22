@@ -32,7 +32,7 @@ meshesText.ForEach(t =>
     });
 });
 
-var meshLoopsPoints = meshes.Select((mesh, i) =>
+var meshesObjects = meshes.Select((mesh, i) =>
 {
     Console.WriteLine($"Starting process mesh - {mesh.Name}");
 
@@ -40,31 +40,32 @@ var meshLoopsPoints = meshes.Select((mesh, i) =>
     var meshObjects = meshObjectsParser.Parse(mesh);
 
     var edgeLoopParser = new EdgeLoopParser();
-    var meshObjectsLoopsPoints = meshObjects.Select(mo => edgeLoopParser.GetEdgeLoopPoints(mo)).ToList();
+    var meshObjectsLoops = meshObjects.Select(mo => edgeLoopParser.GetMeshObjectsLoops(mo))
+        .SelectMany(mol => mol.Objects).ToList();
 
-    Console.WriteLine($"Converted to loops mesh - {mesh.Name}, loops - {meshObjectsLoopsPoints.Count()}");
+    Console.WriteLine($"Converted to loops mesh - {mesh.Name}, loops - {meshObjectsLoops.Count()}");
     Console.WriteLine();
-    Console.WriteLine($"Processed meshes {i+1}/{meshes.Count}");
+    Console.WriteLine($"Processed meshes {i + 1}/{meshes.Count}");
     Console.WriteLine();
 
-    return new MeshLoopPoints
+    return new MeshObjects
     {
         MeshName = mesh.Name,
-        ObjectsLoopsPoints = meshObjectsLoopsPoints.SelectMany(molp=> molp)
+        Objects = meshObjectsLoops
     };
 }).ToList();
 
 var svgConverter = new SvgConverter();
 
-var svg = svgConverter.Convert(meshLoopsPoints);
+var svg = svgConverter.Convert(meshesObjects);
 
 File.WriteAllText(@"D:\Виталик\Cat_Hack\Svg\test.svg", svg);
 
 watch.Stop();
 
-var resultCurvesCount = meshLoopsPoints.Select(mlp => mlp.ObjectsLoopsPoints.Count()).Sum();
+var resultCurvesCount = meshesObjects.SelectMany(mo => mo.Objects.Select(o => o.Loops.Count())).Sum();
 Console.WriteLine();
-Console.WriteLine($"Finished parsing, processed {meshLoopsPoints.Count()} meshes, generated {resultCurvesCount} curves, " +
+Console.WriteLine($"Finished parsing, processed {meshesObjects.Count()} meshes, generated {resultCurvesCount} curves, " +
     $"took - {watch.ElapsedMilliseconds / 1000.0} sec");
 
 Console.ReadKey();
