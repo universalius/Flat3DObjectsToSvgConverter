@@ -1,0 +1,8 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+		<Description>Lightweight SVG library for .NET Framework, .NET Standard and .NET Core.</Description>
+	</PropertyGroup>
+
+</Project>

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace ObjParserExecutor
 {
-    public class SvgConverter
+    public class ObjectsToSvgConverter
     {
         public string Convert(IEnumerable<MeshObjects> meshes)
         {
@@ -43,6 +43,7 @@ namespace ObjParserExecutor
                 return new
                 {
                     Object = o,
+                    //o.Size,
                     Transform = GetTransformToXYZero(new PointF((float)o.Size.XMin, (float)o.Size.YMax), shiftByX)
                 };
             }).ToList();
@@ -51,6 +52,7 @@ namespace ObjParserExecutor
             {
                 var loops = ot.Object.Loops;
                 var meshName = ot.Object.MeshName;
+                //var size = ot.Size;
 
                 var pathes = loops.Select((l, j) =>
                 {
@@ -58,7 +60,8 @@ namespace ObjParserExecutor
                         l.Points.Select(p => $"{p.X.ToString(new CultureInfo("en-US", false))} {p.Y.ToString(new CultureInfo("en-US", false))}")
                         .ToList());
 
-                    return $@"<path id=""{meshName}-{i}-{j}"" d=""M {pathCoords} z"" style=""fill:none;stroke-width:0.264583;stroke:#000000;"" />";
+                    var @class = j == 0 ? "main" : string.Empty;
+                    return $@"<path id=""{meshName}-{i}-{j}"" d=""M {pathCoords} z"" style=""fill:none;stroke-width:0.264583;stroke:#000000;"" class=""{@class}"" />";
                 }).ToList();
 
                 var pathesString = string.Join("\r\n", pathes);
@@ -78,17 +81,6 @@ namespace ObjParserExecutor
 
             return body;
         }
-
-        private string textTemplate(string x, string y, string value) => @$"
-        <text
-            xml:space=""preserve""
-            transform=""scale(0.26458333)""
-            style=""font-size:13.3333px;white-space:pre;fill:none;stroke:#000000;fill:#000000"">
-            <tspan x=""{x}"" y=""{y}"">
-                <tspan style=""-inkscape-font-specification:sans-serif"">{value}</tspan>
-            </tspan>
-        </text>
-        ";
 
         private string GetTransformToXYZero(PointF point, double shiftByX)
         {

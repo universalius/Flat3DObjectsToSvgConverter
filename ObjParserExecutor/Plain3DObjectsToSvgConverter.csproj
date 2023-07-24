@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ObjParser\ObjParser.csproj" />
+    <ProjectReference Include="..\SvgLib\SvgLib.csproj" />
   </ItemGroup>
 
 </Project>

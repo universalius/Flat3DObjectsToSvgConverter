@@ -2,9 +2,18 @@
 using ObjParser;
 using ObjParserExecutor;
 using ObjParserExecutor.Models;
+using Plain3DObjectsToSvgConverter;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+
+
+var objectsLabelsToSvgConverter = new ObjectsLabelsToSvgConverter();
+var labelsSvg = await objectsLabelsToSvgConverter.Convert();
+File.WriteAllText(@"D:\Виталик\Cat_Hack\Svg\test_labels.svg", labelsSvg);
+
+Console.ReadKey();
+return;
 
 var watch = Stopwatch.StartNew();
 
@@ -55,7 +64,7 @@ var meshesObjects = meshes.Select((mesh, i) =>
     };
 }).ToList();
 
-var svgConverter = new SvgConverter();
+var svgConverter = new ObjectsToSvgConverter();
 
 var svg = svgConverter.Convert(meshesObjects);
 
