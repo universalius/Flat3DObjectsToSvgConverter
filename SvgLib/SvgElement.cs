@@ -70,16 +70,13 @@ namespace SvgLib
             set => Element.SetAttribute("transform", value);
         }
 
-        public string TransformRotate
+        public string GetTransformRotate()
         {
-            get
-            {
-                var marker = "rotate(";
-                var index = Transform.IndexOf(marker);
-                var first = index + marker.Count();
-                var last = Transform.IndexOf(")", first);
-                return Transform.Substring(first, last - first);
-            }
+            var marker = "rotate(";
+            var index = Transform.IndexOf(marker);
+            var first = index + marker.Count();
+            var last = Transform.IndexOf(")", first);
+            return Transform.Substring(first, last - first);
         }
 
 

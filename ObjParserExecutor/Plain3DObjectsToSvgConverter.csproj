@@ -12,4 +12,10 @@
     <ProjectReference Include="..\SvgLib\SvgLib.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Asserts\Letters.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
