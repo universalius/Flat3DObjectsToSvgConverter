@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ObjParserExecutor
+namespace Plain3DObjectsToSvgConverter.Services
 {
     public class MeshObjectsParser
     {
@@ -78,7 +78,7 @@ namespace ObjParserExecutor
                 //var b = obj.FaceList
                 //    .Where(f => edgesVertsIndexes.Any(evi => f.VertexIndexList.Intersect(new[] { 109 }).Any()));
 
-                Console.WriteLine($"        Finished parse object - {i+1}");
+                Console.WriteLine($"        Finished parse object - {i + 1}");
 
                 var firstVertOfAllEdges = edgesVerts.SelectMany(ev => ev.Select(v => v))
                     .GroupBy(v => AxisSelectHelpers.GetVertCoordinateByAxis(targetAxis, v))

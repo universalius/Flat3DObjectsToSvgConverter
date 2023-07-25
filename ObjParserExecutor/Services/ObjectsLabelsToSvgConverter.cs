@@ -1,4 +1,5 @@
-﻿using ObjParser;
+﻿using Microsoft.Extensions.Logging;
+using ObjParser;
 using Plain3DObjectsToSvgConverter.Models;
 using SvgLib;
 using System.Globalization;
@@ -6,7 +7,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Xml;
 
-namespace Plain3DObjectsToSvgConverter
+namespace Plain3DObjectsToSvgConverter.Services
 {
     public class ObjectsLabelsToSvgConverter
     {
@@ -14,8 +15,9 @@ namespace Plain3DObjectsToSvgConverter
         private readonly IEnumerable<SvgPath> _svgLetters;
         private readonly double _letterWidth;
         private readonly double _letterHeight;
+        private readonly ILogger<ObjectsLabelsToSvgConverter> _logger;
 
-        public ObjectsLabelsToSvgConverter()
+        public ObjectsLabelsToSvgConverter(ILogger<ObjectsLabelsToSvgConverter> logger)
         {
             var mainFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -24,10 +26,14 @@ namespace Plain3DObjectsToSvgConverter
             _svgLetters = pathElements.Select(e => new SvgPath(e));
             _letterHeight = GetOrHeight();
             _letterWidth = GetUnderscoreWidth();
+
+            _logger = logger;
         }
 
         public async Task<string> Convert()
         {
+            //_logger.LogInformation("Test qwer asdf cvbbb");
+
             SvgDocument svgDocument = ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\test_compacted.svg");
             var groupElements = svgDocument.Element.GetElementsByTagName("g").Cast<XmlElement>().ToArray();
 
@@ -62,7 +68,7 @@ namespace Plain3DObjectsToSvgConverter
             if (idSections.Count() > 1)
             {
                 secondPart = int.TryParse(idSections[1], out secondNumber) ?
-                    (secondNumber > 10 ? secondNumber.ToString() : string.Empty) : string.Empty;
+                    secondNumber > 10 ? secondNumber.ToString() : string.Empty : string.Empty;
             }
 
 
@@ -134,7 +140,7 @@ namespace Plain3DObjectsToSvgConverter
 
             if (rotate == 270)
             {
-                leftTopPoint.XMin += (leftTopPoint.XSize + shift);
+                leftTopPoint.XMin += leftTopPoint.XSize + shift;
             }
 
             return $"translate({leftTopPoint.XMin.ToString(culture)} {leftTopPoint.YMin.ToString(culture)}) rotate({-rotate})";

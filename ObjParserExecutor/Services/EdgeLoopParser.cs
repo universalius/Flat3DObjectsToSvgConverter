@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 
-namespace ObjParserExecutor
+namespace Plain3DObjectsToSvgConverter.Services
 {
     public class EdgeLoopParser
     {
@@ -163,7 +163,7 @@ namespace ObjParserExecutor
 
             var loopsWithChildren = groupedLoops.Where(gl => gl.Children.Any()).ToList();
             var singleLoops = groupedLoops.Except(loopsWithChildren);
-            var allChildrensEdges = loopsWithChildren.SelectMany(l => l.Children.SelectMany(le=>le.Edges).ToList()).ToList();
+            var allChildrensEdges = loopsWithChildren.SelectMany(l => l.Children.SelectMany(le => le.Edges).ToList()).ToList();
             var singleLoopsNotChildOfOthers = singleLoops.Where(l => allChildrensEdges.Intersect(l.Main.Edges).Count() != l.Main.Edges.Count()).ToList();
 
             return loopsWithChildren.Concat(singleLoopsNotChildOfOthers);
