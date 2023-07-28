@@ -1,14 +1,12 @@
 // matrix utility from SvgPath
 // https://github.com/fontello/svgpath
 
-'use strict';
-
 function Matrix() {
   if (!(this instanceof Matrix)) { return new Matrix(); }
   this.queue = [];   // list of matrixes to apply
   this.cache = null; // combined matrix cache
 }
-(typeof window !== 'undefined' ? window : self).Matrix = Matrix;
+//(typeof window !== 'undefined' ? window : self).Matrix = Matrix;
 
 // combine 2 matrixes
 // m1, m2 - [a, b, c, d, e, g]
@@ -154,3 +152,5 @@ Matrix.prototype.calc = function (x, y, isRelative) {
     x * m[1] + y * m[3] + (isRelative ? 0 : m[5])
   ];
 };
+
+module.exports.Matrix = Matrix;

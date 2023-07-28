@@ -11,6 +11,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Plain3DObjectsToSvgConverte
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SvgLib", "SvgLib\SvgLib.csproj", "{605113AB-C2C9-45D8-9703-8C37FA3A7E42}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SvgNest", "SvgNest\SvgNest.csproj", "{4C4A1C05-47B6-4374-92CF-59B126D751A0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{F7780EBC-A6F7-46AE-97C0-833A88B8420C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +37,14 @@ Global
 		{605113AB-C2C9-45D8-9703-8C37FA3A7E42}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{605113AB-C2C9-45D8-9703-8C37FA3A7E42}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{605113AB-C2C9-45D8-9703-8C37FA3A7E42}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C4A1C05-47B6-4374-92CF-59B126D751A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C4A1C05-47B6-4374-92CF-59B126D751A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C4A1C05-47B6-4374-92CF-59B126D751A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C4A1C05-47B6-4374-92CF-59B126D751A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7780EBC-A6F7-46AE-97C0-833A88B8420C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7780EBC-A6F7-46AE-97C0-833A88B8420C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7780EBC-A6F7-46AE-97C0-833A88B8420C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7780EBC-A6F7-46AE-97C0-833A88B8420C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

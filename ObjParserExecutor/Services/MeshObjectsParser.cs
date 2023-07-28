@@ -1,6 +1,6 @@
 ﻿using ObjParser;
 using ObjParser.Types;
-using ObjParserExecutor.Extensions;
+using ObjParserExecutor.Common.Extensions;
 using ObjParserExecutor.Helpers;
 using ObjParserExecutor.Models;
 using System;

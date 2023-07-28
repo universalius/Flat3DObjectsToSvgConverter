@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ObjParserExecutor.Extensions
+namespace ObjParserExecutor.Common.Extensions
 {
     public static class IEnumerableExtensions
     {
@@ -23,5 +23,19 @@ namespace ObjParserExecutor.Extensions
             return chunks;
         }
 
+        public static T PopAt<T>(this List<T> list, int index)
+        {
+            T r = list[index];
+            list.RemoveAt(index);
+            return r;
+        }
+
+        public static T Pop<T>(this List<T> list)
+        {
+            var index = list.Count() - 1;
+            T r = list[index];
+            list.RemoveAt(index);
+            return r;
+        }
     }
 }

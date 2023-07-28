@@ -10,17 +10,23 @@ namespace Plain3DObjectsToSvgConverter;
 public class Plain3DObjectsToSvgHostedService : IHostedService
 {
     private readonly ObjectsLabelsToSvgConverter _objectsLabelsToSvgConverter;
+    private readonly IJavaScriptService _nodeJsService;
 
-    public Plain3DObjectsToSvgHostedService(ObjectsLabelsToSvgConverter objectsLabelsToSvgConverter)
+    public Plain3DObjectsToSvgHostedService(ObjectsLabelsToSvgConverter objectsLabelsToSvgConverter, IJavaScriptService nodeJsService)
     {
         _objectsLabelsToSvgConverter = objectsLabelsToSvgConverter;
+        _nodeJsService = nodeJsService;
     }
 
     public async Task StartAsync(CancellationToken stoppingToken)
     {
-        //var objectsLabelsToSvgConverter = new ObjectsLabelsToSvgConverter();
-        var labelsSvg = await _objectsLabelsToSvgConverter.Convert();
-        File.WriteAllText(@"D:\Виталик\Cat_Hack\Svg\test_labels.svg", labelsSvg);
+        var testSvg = File.ReadAllText(@"D:\Виталик\Cat_Hack\Svg\test.svg");
+
+        var a = await _nodeJsService.GetCompactedSvg(testSvg);
+
+        ////var objectsLabelsToSvgConverter = new ObjectsLabelsToSvgConverter();
+        //var labelsSvg = await _objectsLabelsToSvgConverter.Convert();
+        //File.WriteAllText(@"D:\Виталик\Cat_Hack\Svg\test_labels.svg", labelsSvg);
 
         Console.ReadKey();
         return;

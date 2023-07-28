@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using ClipperLib;
+using Microsoft.Extensions.Logging;
 using ObjParser;
 using Plain3DObjectsToSvgConverter.Models;
 using SvgLib;
@@ -104,7 +105,7 @@ namespace Plain3DObjectsToSvgConverter.Services
             var points = pointsString.Select((s, i) =>
             {
                 var points = s.Trim().Split(" ");
-                return new PointD(double.Parse(points[0], culture), double.Parse(points[1], culture));
+                return new DoublePoint(double.Parse(points[0], culture), double.Parse(points[1], culture));
             }).ToList();
 
             return new Extent

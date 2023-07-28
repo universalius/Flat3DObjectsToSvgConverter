@@ -8,7 +8,15 @@ public static class ServiceRegistration
     public static IServiceCollection AddServices(this IServiceCollection services)
     {
         services.AddHostedService<Plain3DObjectsToSvgHostedService>()
-            .AddSingleton<ObjectsLabelsToSvgConverter>();
+            .AddSingleton<ObjectsLabelsToSvgConverter>()
+            .AddTransient<IJavaScriptService, JavaScriptService>();
+
+        services.AddNodeServices(options =>
+        {
+            options.LaunchWithDebugging = true;
+            //options.UseSocketHosting();
+        });
+
         return services;
     }
 }

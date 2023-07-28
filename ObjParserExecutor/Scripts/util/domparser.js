@@ -1,9 +1,9 @@
  /* inspired by https://gist.github.com/1129031 */
 /*global document, DOMParser*/
+const jsdom = require("jsdom");
+const { JSDOM } = jsdom;
 
-(function(DOMParser) {
-	"use strict";
-
+function DOMParser() {
 	var
 	  proto = DOMParser.prototype
 	, nativeParse = proto.parseFromString
@@ -34,4 +34,6 @@
 			return nativeParse.apply(this, arguments);
 		}
 	};
-}(DOMParser));
+}
+
+module.exports.DOMParser = DOMParser;

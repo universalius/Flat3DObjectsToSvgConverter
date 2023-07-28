@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.NodeServices;
+using SvgNest;
 
 namespace Plain3DObjectsToSvgConverter.Services
 {
@@ -27,9 +28,13 @@ namespace Plain3DObjectsToSvgConverter.Services
 
         public async Task<string> GetCompactedSvg(string inputSvg)
         {
-            string path = Path.Combine(_scriptFolder, "./scripts/addNumbers");
-            var result = await _nodeServices.InvokeAsync<int>(path, x, y);
-            return result;
+            //string path = Path.Combine(_scriptFolder, "./Scripts/getCompactedSvg");
+            //var result = await _nodeServices.InvokeAsync<string>(path, inputSvg);
+
+            var a = new SvgNest.SvgNest();
+            a.parsesvg(inputSvg);
+
+            return null;
         }
     }
 }
