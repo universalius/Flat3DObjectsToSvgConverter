@@ -2,9 +2,10 @@
 using System.Xml;
 using System.Text.RegularExpressions;
 using System.Globalization;
-using Plain3DObjectsToSvgConverter.Common;
 using SvgNest.Utils;
 using ClipperLib;
+using Plain3DObjectsToSvgConverter.Common.Extensions;
+
 
 namespace SvgNest
 {
@@ -150,7 +151,7 @@ namespace SvgNest
             // split any compound paths into individual path elements
             splitCompoundPaths(svgRoot.Element);
 
-            return svg;
+            return svgRoot;
         }
 
         //// return style node, if any
@@ -1618,18 +1619,10 @@ namespace SvgNest
             while (poly.Count() > 0 && GeometryUtil.almostEqual(poly[0].X, poly[poly.Count() - 1].X, this.conf.toleranceSvg) && 
                 GeometryUtil.almostEqual(poly[0].Y, poly[poly.Count() - 1].Y, this.conf.toleranceSvg))
             {
-                Pop(poly);
+                poly.Pop();
             }
 
             return poly.ToArray();
-        }
-
-        private T Pop<T>(List<T> list)
-        {
-            var index = list.Count() - 1;
-            T r = list[index];
-            list.RemoveAt(index);
-            return r;
         }
     }
 }

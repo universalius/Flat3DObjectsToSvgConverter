@@ -31,8 +31,8 @@ namespace Plain3DObjectsToSvgConverter.Services
             //string path = Path.Combine(_scriptFolder, "./Scripts/getCompactedSvg");
             //var result = await _nodeServices.InvokeAsync<string>(path, inputSvg);
 
-            var a = new SvgNest.SvgNest();
-            a.parsesvg(inputSvg);
+            var svgNest = new SvgNest.SvgNest();
+            svgNest.parsesvg(inputSvg);
 
             return null;
         }

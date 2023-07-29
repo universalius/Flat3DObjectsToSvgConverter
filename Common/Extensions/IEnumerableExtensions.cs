@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ObjParserExecutor.Common.Extensions
+namespace Plain3DObjectsToSvgConverter.Common.Extensions
 {
     public static class IEnumerableExtensions
     {

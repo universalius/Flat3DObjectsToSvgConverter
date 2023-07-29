@@ -68,7 +68,7 @@ namespace ClipperLib
     using Path = List<IntPoint>;
     using Paths = List<List<IntPoint>>;
 
-    public struct DoublePoint
+    public class DoublePoint
     {
         public double X;
         public double Y;
