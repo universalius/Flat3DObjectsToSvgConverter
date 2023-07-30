@@ -1,5 +1,6 @@
 ﻿using ClipperLib;
 using System.ComponentModel;
+using static SvgNest.Utils.GeometryUtil;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using Path = System.Collections.Generic.List<ClipperLib.DoublePoint>;
 
@@ -522,7 +523,7 @@ namespace SvgNest.Utils
 
         // searches for an arrangement of A and B such that they do not overlap
         // if an NFP is given, only search for startpoints that have not already been traversed in the given NFP
-        private static DoublePoint searchStartPoint(PointsWithOffset A, PointsWithOffset B, bool inside, bool? NFP = null)
+        private static DoublePoint searchStartPoint(PointsWithOffset A, PointsWithOffset B, bool inside, List<Path> NFP = null)
         {
             // clone arrays
             A = A.Clone();
@@ -650,23 +651,23 @@ namespace SvgNest.Utils
             return null;
         }
 
-        private static bool inNfp(DoublePoint p, bool? nfp)
+        private static bool inNfp(DoublePoint p, List<Path> nfp)
         {
-            //if (!nfp || nfp.Length == 0)
-            //{
-            //    return false;
-            //}
+            if (nfp == null || !nfp.Any())
+            {
+                return false;
+            }
 
-            //for (var i = 0; i < nfp.Length; i++)
-            //{
-            //    for (var j = 0; j < nfp[i].Length; j++)
-            //    {
-            //        if (almostEqual(p.X, nfp[i][j].X) && almostEqual(p.Y, nfp[i][j].Y))
-            //        {
-            //            return true;
-            //        }
-            //    }
-            //}
+            for (var i = 0; i < nfp.Count; i++)
+            {
+                for (var j = 0; j < nfp[i].Count; j++)
+                {
+                    if (almostEqual(p.X, nfp[i][j].X) && almostEqual(p.Y, nfp[i][j].Y))
+                    {
+                        return true;
+                    }
+                }
+            }
 
             return false;
         }
@@ -689,9 +690,257 @@ namespace SvgNest.Utils
             }
         }
 
-        class PointWithMark : DoublePoint
+        public static double? segmentDistance(DoublePoint A, DoublePoint B, DoublePoint E, DoublePoint F, DoublePoint direction)
         {
-            public bool marked { get; set; }
+            var normal = new DoublePoint(direction.Y, -direction.X);
+
+            var reverse = new DoublePoint(-direction.X, -direction.Y);
+
+            var dotA = A.X * normal.X + A.Y * normal.Y;
+            var dotB = B.X * normal.X + B.Y * normal.Y;
+            var dotE = E.X * normal.X + E.Y * normal.Y;
+            var dotF = F.X * normal.X + F.Y * normal.Y;
+
+            var crossA = A.X * direction.X + A.Y * direction.Y;
+            var crossB = B.X * direction.X + B.Y * direction.Y;
+            var crossE = E.X * direction.X + E.Y * direction.Y;
+            var crossF = F.X * direction.X + F.Y * direction.Y;
+
+            var crossABmin = Math.Min(crossA, crossB);
+            var crossABmax = Math.Max(crossA, crossB);
+
+            var crossEFmax = Math.Max(crossE, crossF);
+            var crossEFmin = Math.Min(crossE, crossF);
+
+            var ABmin = Math.Min(dotA, dotB);
+            var ABmax = Math.Max(dotA, dotB);
+
+            var EFmax = Math.Max(dotE, dotF);
+            var EFmin = Math.Min(dotE, dotF);
+
+            // segments that will merely touch at one point
+            if (almostEqual(ABmax, EFmin, TOL) || almostEqual(ABmin, EFmax, TOL))
+            {
+                return null;
+            }
+            // segments miss eachother completely
+            if (ABmax < EFmin || ABmin > EFmax)
+            {
+                return null;
+            }
+
+            double overlap;
+
+            if ((ABmax > EFmax && ABmin < EFmin) || (EFmax > ABmax && EFmin < ABmin))
+            {
+                overlap = 1;
+            }
+
+            else
+            {
+                var minMax = Math.Min(ABmax, EFmax);
+                var maxMin = Math.Max(ABmin, EFmin);
+
+                var maxMax = Math.Max(ABmax, EFmax);
+                var minMin = Math.Min(ABmin, EFmin);
+
+                overlap = (minMax - maxMin) / (maxMax - minMin);
+            }
+
+            var crossABE = (E.Y - A.Y) * (B.X - A.X) - (E.X - A.X) * (B.Y - A.Y);
+            var crossABF = (F.Y - A.Y) * (B.X - A.X) - (F.X - A.X) * (B.Y - A.Y);
+
+            // lines are colinear
+            if (almostEqual(crossABE, 0) && almostEqual(crossABF, 0))
+            {
+
+                var ABnorm = new DoublePoint(B.Y - A.Y, A.X - B.X);
+                var EFnorm = new DoublePoint(F.Y - E.Y, E.X - F.X);
+
+                var ABnormlength = Math.Sqrt(ABnorm.X * ABnorm.X + ABnorm.Y * ABnorm.Y);
+                ABnorm.X /= ABnormlength;
+                ABnorm.Y /= ABnormlength;
+
+                var EFnormlength = Math.Sqrt(EFnorm.X * EFnorm.X + EFnorm.Y * EFnorm.Y);
+                EFnorm.X /= EFnormlength;
+                EFnorm.Y /= EFnormlength;
+
+                // segment normals must point in opposite directions
+                if (Math.Abs(ABnorm.Y * EFnorm.X - ABnorm.X * EFnorm.Y) < TOL && ABnorm.Y * EFnorm.Y + ABnorm.X * EFnorm.X < 0)
+                {
+                    // normal of AB segment must point in same direction as given direction vector
+                    var normdot = ABnorm.Y * direction.Y + ABnorm.X * direction.X;
+                    // the segments merely slide along eachother
+                    if (almostEqual(normdot, 0, TOL))
+                    {
+                        return null;
+                    }
+                    if (normdot < 0)
+                    {
+                        return 0;
+                    }
+                }
+                return null;
+            }
+
+            var distances = new List<double>();
+
+            // coincident points
+            if (almostEqual(dotA, dotE))
+            {
+                distances.Add(crossA - crossE);
+            }
+            else if (almostEqual(dotA, dotF))
+            {
+                distances.Add(crossA - crossF);
+            }
+            else if (dotA > EFmin && dotA < EFmax)
+            {
+                var d = pointDistance(A, E, F, reverse);
+                if (d != null && almostEqual(d.Value, 0))
+                { //  A currently touches EF, but AB is moving away from EF
+                    var dB = pointDistance(B, E, F, reverse, true);
+                    if (dB == null || dB < 0 || almostEqual(dB.Value * overlap, 0))
+                    {
+                        d = null;
+                    }
+                }
+                if (d != null)
+                {
+                    distances.Add(d.Value);
+                }
+            }
+
+            if (almostEqual(dotB, dotE))
+            {
+                distances.Add(crossB - crossE);
+            }
+            else if (almostEqual(dotB, dotF))
+            {
+                distances.Add(crossB - crossF);
+            }
+            else if (dotB > EFmin && dotB < EFmax)
+            {
+                var d = pointDistance(B, E, F, reverse);
+
+                if (d != null && almostEqual(d.Value, 0))
+                { // crossA>crossB A currently touches EF, but AB is moving away from EF
+                    var dA = pointDistance(A, E, F, reverse, true);
+                    if (dA == null || dA < 0 || almostEqual(dA.Value * overlap, 0))
+                    {
+                        d = null;
+                    }
+                }
+                if (d != null)
+                {
+                    distances.Add(d.Value);
+                }
+            }
+
+            if (dotE > ABmin && dotE < ABmax)
+            {
+                var d = pointDistance(E, A, B, direction);
+                if (d != null && almostEqual(d.Value, 0))
+                { // crossF<crossE A currently touches EF, but AB is moving away from EF
+                    var dF = pointDistance(F, A, B, direction, true);
+                    if (dF == null || dF < 0 || almostEqual(dF.Value * overlap, 0))
+                    {
+                        d = null;
+                    }
+                }
+                if (d != null)
+                {
+                    distances.Add(d.Value);
+                }
+            }
+
+            if (dotF > ABmin && dotF < ABmax)
+            {
+                var d = pointDistance(F, A, B, direction);
+                if (d != null && almostEqual(d.Value, 0))
+                { // && crossE<crossF A currently touches EF, but AB is moving away from EF
+                    var dE = pointDistance(E, A, B, direction, true);
+                    if (dE == null || dE < 0 || almostEqual(dE.Value * overlap, 0))
+                    {
+                        d = null;
+                    }
+                }
+                if (d != null)
+                {
+                    distances.Add(d.Value);
+                }
+            }
+
+            if (!distances.Any())
+            {
+                return null;
+            }
+
+            return distances.Min();
+        }
+
+
+        public static double? polygonSlideDistance(PointsWithOffset A, PointsWithOffset B, DoublePoint direction, bool ignoreNegative)
+        {
+            A = A.Clone();
+            B = B.Clone();
+
+            var a = A.Points.ToList();
+            var b = B.Points.ToList();
+
+            var Aoffsetx = A.offsetx;
+            var Aoffsety = A.offsety;
+            var Boffsetx = B.offsetx;
+            var Boffsety = B.offsety;
+
+            // close the loop for polygons
+            if (a[0] != a[a.Count - 1])
+            {
+                a.Add(a[0]);
+            }
+
+            if (b[0] != b[b.Count - 1])
+            {
+                b.Add(b[0]);
+            }
+
+            var edgeA = a;
+            var edgeB = b;
+
+            double? distance = null;
+
+            var dir = normalizeVector(direction);
+
+            var normal = new DoublePoint(dir.Y, -dir.X);
+
+            var reverse = new DoublePoint(-dir.X, -dir.Y);
+
+            for (var i = 0; i < edgeB.Count - 1; i++)
+            {
+                for (var j = 0; j < edgeA.Count - 1; j++)
+                {
+                    var A1 = new DoublePoint(edgeA[j].X + Aoffsetx, edgeA[j].Y + Aoffsety);
+                    var A2 = new DoublePoint(edgeA[j + 1].X + Aoffsetx, y: edgeA[j + 1].Y + Aoffsety);
+                    var B1 = new DoublePoint(edgeB[i].X + Boffsetx, edgeB[i].Y + Boffsety);
+                    var B2 = new DoublePoint(edgeB[i + 1].X + Boffsetx, edgeB[i + 1].Y + Boffsety);
+
+                    if ((almostEqual(A1.X, A2.X) && almostEqual(A1.Y, A2.Y)) || (almostEqual(B1.X, B2.X) && almostEqual(B1.Y, B2.Y)))
+                    {
+                        continue; // ignore extremely small lines
+                    }
+
+                    var d = segmentDistance(A1, A2, B1, B2, dir);
+
+                    if (d != null && (distance == null || d < distance))
+                    {
+                        if (!ignoreNegative || d > 0 || almostEqual(d.Value, 0))
+                        {
+                            distance = d;
+                        }
+                    }
+                }
+            }
+            return distance;
         }
 
         // given a static polygon A and a movable polygon B, compute a no fit polygon by orbiting B about A
@@ -747,7 +996,7 @@ namespace SvgNest.Utils
                 startpoint = searchStartPoint(A, B, true);
             }
 
-            var NFPlist = [];
+            var NFPlist = new List<Path>();
 
             while (startpoint != null)
             {
@@ -758,7 +1007,7 @@ namespace SvgNest.Utils
                 // maintain a list of touching points/edges
                 var touching = new List<Touching>();
 
-                var prevvector = null; // keep track of previous vector
+                Vector prevvector = null; // keep track of previous vector
                 var NFP = new Path { new DoublePoint(b[0].X + B.offsetx, b[0].Y + B.offsety) };
 
                 var referencex = b[0].X + B.offsetx;
@@ -907,8 +1156,8 @@ namespace SvgNest.Utils
 
                     // todo: there should be a faster way to reject vectors that will cause immediate intersection. For now just check them all
 
-                    var translate = null;
-                    var maxd = 0;
+                    Vector translate = null;
+                    double maxd = 0;
 
                     for (var i = 0; i < vectors.Count; i++)
                     {
@@ -919,7 +1168,7 @@ namespace SvgNest.Utils
 
                         // if this vector points us back to where we came from, ignore it.
                         // ie cross product = 0, dot product < 0
-                        if (prevvector && vectors[i].Y * prevvector.Y + vectors[i].X * prevvector.X < 0)
+                        if (prevvector != null && vectors[i].Y * prevvector.Y + vectors[i].X * prevvector.X < 0)
                         {
 
                             // compare magnitude with unit vectors
@@ -947,11 +1196,10 @@ namespace SvgNest.Utils
 
                         if (d != null && d > maxd)
                         {
-                            maxd = d;
+                            maxd = d.Value;
                             translate = vectors[i];
                         }
                     }
-
 
                     if (translate == null || almostEqual(maxd, 0))
                     {
@@ -985,9 +1233,9 @@ namespace SvgNest.Utils
 
                     // if A and B start on a touching horizontal line, the end point may not be the start point
                     var looped = false;
-                    if (NFP.Length > 0)
+                    if (NFP.Count > 0)
                     {
-                        for (i = 0; i < NFP.Length - 1; i++)
+                        for (var i = 0; i < NFP.Count - 1; i++)
                         {
                             if (almostEqual(referencex, NFP[i].X) && almostEqual(referencey, NFP[i].Y))
                             {
@@ -1002,12 +1250,7 @@ namespace SvgNest.Utils
                         break;
                     }
 
-                    NFP.push({
-                    x: referencex,
-						y: referencey
-        
-
-                    });
+                    NFP.Add(new DoublePoint(referencex, referencey));
 
                     B.offsetx += translate.X;
                     B.offsety += translate.Y;
@@ -1015,9 +1258,9 @@ namespace SvgNest.Utils
                     counter++;
                 }
 
-                if (NFP && NFP.Length > 0)
+                if (NFP != null && NFP.Any())
                 {
-                    NFPlist.push(NFP);
+                    NFPlist.Add(NFP);
                 }
 
                 if (!searchEdges)
@@ -1031,7 +1274,7 @@ namespace SvgNest.Utils
             }
 
             return NFPlist;
-        },
+        }
 
 
         // returns true if p lies on the line segment defined by AB, but not at any endpoints
@@ -1132,8 +1375,13 @@ namespace SvgNest.Utils
 
     class Vector : DoublePoint
     {
-        public DoublePoint start { get; set; }
-        public DoublePoint end { get; set; }
+        public PointWithMark start { get; set; }
+        public PointWithMark end { get; set; }
+    }
+
+    class PointWithMark : DoublePoint
+    {
+        public bool marked { get; set; }
     }
 
 }

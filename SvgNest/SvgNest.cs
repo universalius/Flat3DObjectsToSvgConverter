@@ -3,8 +3,16 @@ using System.Xml;
 using SvgNest.Utils;
 using ClipperLib;
 using Path = System.Collections.Generic.List<ClipperLib.IntPoint>;
+using DPath = System.Collections.Generic.List<ClipperLib.DoublePoint>;
 using Plain3DObjectsToSvgConverter.Common.Extensions;
 using Newtonsoft.Json;
+using static SvgNest.PlacementWorker;
+using SvgNest.Models.SvgNest;
+using System.Collections.Generic;
+using SvgNest.Helpers;
+using SvgNest.Constants;
+using System.Linq;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SvgNest
 {
@@ -15,14 +23,14 @@ namespace SvgNest
         // keep a reference to any style nodes, to maintain color/fill info
         private string style = null;
 
-        private string parts = null;
+        private List<XmlElement> parts = null;
 
         private List<Node> tree = null;
 
         private XmlElement bin = null;
         //private DoublePoint[] binPolygon = null;
         private PolygonBounds binBounds = null;
-        private Dictionary<string, NfpPair> nfpCache = null;
+        private Dictionary<string, List<DPath>> nfpCache = null;
 
         private SvgNestConfig config;
 
@@ -32,7 +40,7 @@ namespace SvgNest
         {
             svgParser = new SvgParser();
             config = new SvgNestConfig();
-            nfpCache = new Dictionary<string, NfpPair>();
+            nfpCache = new Dictionary<string, List<DPath>>();
         }
 
         //        /*!
@@ -41,7 +49,7 @@ namespace SvgNest
         // */
 
         //        (function(root){
-        //	'use strict';
+        //	"use strict";
 
         //	root.SvgNest = new SvgNest();
 
@@ -163,7 +171,7 @@ namespace SvgNest
         //                config.curveTolerance = parseFloat(c.curveTolerance);
         //            }
 
-        //            if ('spacing' in c){
+        //            if ("spacing" in c){
         //                config.spacing = parseFloat(c.spacing);
         //            }
 
@@ -182,11 +190,11 @@ namespace SvgNest
         //                config.mutationRate = parseInt(c.mutationRate);
         //            }
 
-        //            if ('useHoles' in c){
+        //            if ("useHoles" in c){
         //                config.useHoles = !!c.useHoles;
         //            }
 
-        //            if ('exploreConcave' in c){
+        //            if ("exploreConcave" in c){
         //                config.exploreConcave = !!c.exploreConcave;
         //            }
 
@@ -202,24 +210,24 @@ namespace SvgNest
 
         // progressCallback is called when progress is made
         // displayCallback is called when a new placement has been made
-        public bool start(/*progressCallback, displayCallback*/)
+        public void start(/*progressCallback, displayCallback*/)
         {
             if (svg == null || bin == null)
             {
-                return false;
+                throw new Exception("Svg or bin is null");
             }
 
             var children = svg.Element.ChildNodes.Cast<XmlElement>().ToArray();
 
             XmlElement[] childrenCopy = null;
             Array.Copy(children, childrenCopy, children.Length);
-            var parts = childrenCopy.ToList();
+            parts = childrenCopy.ToList();
 
             var binindex = bin == null ? parts.IndexOf(bin) : 0;
 
             if (binindex >= 0)
             {
-                // don't process bin as a part of the tree
+                // don"t process bin as a part of the tree
                 parts.RemoveRange(binindex, 1);
             }
 
@@ -233,7 +241,7 @@ namespace SvgNest
 
             if (binPolygon == null || binPolygon.Points.Length < 3)
             {
-                return false;
+                throw new Exception("binPolygon is null or has less then 3 points");
             }
 
             binBounds = GeometryUtil.getPolygonBounds(binPolygon.Points);
@@ -313,6 +321,8 @@ namespace SvgNest
                 }
             });
 
+            launchWorkers(tree, binPolygon);
+
             //var self = this;
             //this.working = false;
 
@@ -367,8 +377,10 @@ namespace SvgNest
         //    return array;
         //}
 
-        private void launchWorkers(List<Node> tree, PolygonWithBounds binPolygon, SvgNestConfig config/*, progressCallback, displayCallback*/)
+        private async void launchWorkers(List<Node> tree, PolygonWithBounds binPolygon/*, progressCallback, displayCallback*/)
         {
+            PlacementsFitness best = null;
+
             // initiate new GA
             var adam = new List<Node>(tree);
 
@@ -409,10 +421,10 @@ namespace SvgNest
                 placelist[i].rotation = rotations[i];
             }
 
-            var nfpPairs = new List<NfpPair>();
+            var nfpPairs = new List<NodesPair>();
             SvgNestPair key;
             string keyJson;
-            var newCache = new Dictionary<string, NfpPair>();
+            var newCache = new Dictionary<string, List<DPath>>();
 
             for (var i = 0; i < placelist.Count; i++)
             {
@@ -422,7 +434,7 @@ namespace SvgNest
 
                 if (!nfpCache.ContainsKey(keyJson))
                 {
-                    nfpPairs.Add(new NfpPair
+                    nfpPairs.Add(new NodesPair
                     {
                         A = new Node { id = binPolygon.id, points = binPolygon.Points.ToList() },
                         B = part,
@@ -449,7 +461,7 @@ namespace SvgNest
                     keyJson = JsonConvert.SerializeObject(key);
                     if (!nfpCache.ContainsKey(keyJson))
                     {
-                        nfpPairs.Add(new NfpPair { A = placed, B = part, key = key });
+                        nfpPairs.Add(new NodesPair { A = placed, B = part, key = key });
                     }
                     else
                     {
@@ -464,6 +476,68 @@ namespace SvgNest
 
             var worker = new PlacementWorker(binPolygon, new List<Node>(placelist), ids, rotations, config, nfpCache);
 
+            var generatedNfp = await Task.WhenAll(nfpPairs.Select(GetNodesPairsPathes));
+
+            if (generatedNfp != null && generatedNfp.Any())
+            {
+                for (var i = 0; i < generatedNfp.Length; i++)
+                {
+                    var Nfp = generatedNfp[i];
+
+                    if (Nfp != null)
+                    {
+                        // a null nfp means the nfp could not be generated, either because the parts simply don"t fit or an error in the nfp algo
+                        var cacheKey = JsonConvert.SerializeObject(Nfp.Value.Key);
+                        nfpCache[cacheKey] = Nfp.Value.Value;
+                    }
+                }
+            }
+            worker.nfpCache = nfpCache;
+
+            var placements = await Task.WhenAll(new List<List<Node>> { new List<Node>(placelist) }.Select(worker.placePaths));
+
+            if (placements == null || !placements.Any())
+            {
+                return;
+            }
+
+            individual.fitness = placements[0].fitness;
+            var bestresult = placements[0];
+
+            for (var i = 1; i < placements.Length; i++)
+            {
+                if (placements[i].fitness < bestresult.fitness)
+                {
+                    bestresult = placements[i];
+                }
+            }
+
+            if (best == null || bestresult.fitness < best.fitness)
+            {
+                best = bestresult;
+
+                double placedArea = 0;
+                double totalArea = 0;
+                var numParts = placelist.Count;
+                var numPlacedParts = 0;
+
+                for (var i = 0; i < best.placements.Count; i++)
+                {
+                    totalArea += Math.Abs(GeometryUtil.polygonArea(binPolygon.Points));
+                    for (var j = 0; j < best.placements[i].Count; j++)
+                    {
+                        placedArea += Math.Abs(GeometryUtil.polygonArea(tree[best.placements[i][j].id].points.ToArray()));
+                        numPlacedParts++;
+                    }
+                }
+
+                displayCallback(self.applyPlacement(best.placements), placedArea / totalArea, numPlacedParts, numParts);
+            }
+            else
+            {
+                //displayCallback();
+            }
+
             //var p = new Parallel(nfpPairs, {
 
 
@@ -474,13 +548,13 @@ namespace SvgNest
             //        searchEdges: config.exploreConcave,
             //        useHoles: config.useHoles
             //        				},
-            //        				evalPath: 'util/eval.js'
+            //        				evalPath: "util/eval.js"
             //        			});
 
-            //p.require('matrix.js');
-            //p.require('geometryutil.js');
-            //p.require('placementworker.js');
-            //p.require('clipper.js');
+            //p.require("matrix.js");
+            //p.require("geometryutil.js");
+            //p.require("placementworker.js");
+            //p.require("clipper.js");
 
             //var self = this;
             //var spawncount = 0;
@@ -489,185 +563,185 @@ namespace SvgNest
             //    progress = spawncount++ / nfpPairs.Length;
             //    return Parallel.prototype._spawnMapWorker.call(p, i, cb, done, env, wrk);
             //}
-//
-//.then(function(generatedNfp){
-        //    if (generatedNfp)
-        //    {
-        //        for (var i = 0; i < generatedNfp.Length; i++)
-        //        {
-        //            var Nfp = generatedNfp[i];
+            //
+            //.then(function(generatedNfp){
+            //    if (generatedNfp)
+            //    {
+            //        for (var i = 0; i < generatedNfp.Length; i++)
+            //        {
+            //            var Nfp = generatedNfp[i];
 
-        //            if (Nfp)
-        //            {
-        //                // a null nfp means the nfp could not be generated, either because the parts simply don't fit or an error in the nfp algo
-        //                var key = JSON.stringify(Nfp.key);
-        //                nfpCache[key] = Nfp.value;
-        //            }
-        //        }
-        //    }
-        //    worker.nfpCache = nfpCache;
+            //            if (Nfp)
+            //            {
+            //                // a null nfp means the nfp could not be generated, either because the parts simply don"t fit or an error in the nfp algo
+            //                var key = JSON.stringify(Nfp.key);
+            //                nfpCache[key] = Nfp.value;
+            //            }
+            //        }
+            //    }
+            //    worker.nfpCache = nfpCache;
 
-        //    // can't use .spawn because our data is an array
-        //    var p2 = new Parallel([placelist.slice(0)], {
-        //    env:
-        //        {
-        //        self: worker
+            //    // can"t use .spawn because our data is an array
+            //    var p2 = new Parallel([placelist.slice(0)], {
+            //    env:
+            //        {
+            //        self: worker
 
-        //                    },
-        //					evalPath: 'util/eval.js'
+            //                    },
+            //					evalPath: "util/eval.js"
 
-        //                });
+            //                });
 
-        //    p2.require('json.js');
-        //    p2.require('clipper.js');
-        //    p2.require('matrix.js');
-        //    p2.require('geometryutil.js');
-        //    p2.require('placementworker.js');
+            //    p2.require("json.js");
+            //    p2.require("clipper.js");
+            //    p2.require("matrix.js");
+            //    p2.require("geometryutil.js");
+            //    p2.require("placementworker.js");
 
-        //    p2.map(worker.placePaths).then(function(placements){
-        //        if (!placements || placements.Length == 0)
-        //        {
-        //            return;
-        //        }
+            //    p2.map(worker.placePaths).then(function(placements){
+            //        if (!placements || placements.Length == 0)
+            //        {
+            //            return;
+            //        }
 
-        //        individual.fitness = placements[0].fitness;
-        //        var bestresult = placements[0];
+            //        individual.fitness = placements[0].fitness;
+            //        var bestresult = placements[0];
 
-        //        for (var i = 1; i < placements.Length; i++)
-        //        {
-        //            if (placements[i].fitness < bestresult.fitness)
-        //            {
-        //                bestresult = placements[i];
-        //            }
-        //        }
+            //        for (var i = 1; i < placements.Length; i++)
+            //        {
+            //            if (placements[i].fitness < bestresult.fitness)
+            //            {
+            //                bestresult = placements[i];
+            //            }
+            //        }
 
-        //        if (!best || bestresult.fitness < best.fitness)
-        //        {
-        //            best = bestresult;
+            //        if (!best || bestresult.fitness < best.fitness)
+            //        {
+            //            best = bestresult;
 
-        //            var placedArea = 0;
-        //            var totalArea = 0;
-        //            var numParts = placelist.Length;
-        //            var numPlacedParts = 0;
+            //            var placedArea = 0;
+            //            var totalArea = 0;
+            //            var numParts = placelist.Length;
+            //            var numPlacedParts = 0;
 
-        //            for (i = 0; i < best.placements.Length; i++)
-        //            {
-        //                totalArea += Math.abs(GeometryUtil.polygonArea(binPolygon));
-        //                for (var j = 0; j < best.placements[i].Length; j++)
-        //                {
-        //                    placedArea += Math.abs(GeometryUtil.polygonArea(tree[best.placements[i][j].id]));
-        //                    numPlacedParts++;
-        //                }
-        //            }
-        //            displayCallback(self.applyPlacement(best.placements), placedArea / totalArea, numPlacedParts, numParts);
-        //        }
-        //        else
-        //        {
-        //            displayCallback();
-        //        }
-        //        self.working = false;
-        //    }, function(err) {
-        //        console.log(err);
-        //    });
-        //}, function(err) {
-        //    console.log(err);
-        //});
-        //		}
+            //            for (i = 0; i < best.placements.Length; i++)
+            //            {
+            //                totalArea += Math.abs(GeometryUtil.polygonArea(binPolygon));
+            //                for (var j = 0; j < best.placements[i].Length; j++)
+            //                {
+            //                    placedArea += Math.abs(GeometryUtil.polygonArea(tree[best.placements[i][j].id]));
+            //                    numPlacedParts++;
+            //                }
+            //            }
+            //            displayCallback(self.applyPlacement(best.placements), placedArea / totalArea, numPlacedParts, numParts);
+            //        }
+            //        else
+            //        {
+            //            displayCallback();
+            //        }
+            //        self.working = false;
+            //    }, function(err) {
+            //        console.log(err);
+            //    });
+            //}, function(err) {
+            //    console.log(err);
+            //});
+            //		}
 
-        //		// assuming no intersections, return a tree where odd leaves are parts and even ones are holes
-        //		// might be easier to use the DOM, but paths can't have paths as children. So we'll just make our own tree.
-        //		this.getParts(paths){
+            //		// assuming no intersections, return a tree where odd leaves are parts and even ones are holes
+            //		// might be easier to use the DOM, but paths can"t have paths as children. So we"ll just make our own tree.
+            //		this.getParts(paths){
 
-        //    var i, j;
-        //    var polygons = [];
+            //    var i, j;
+            //    var polygons = [];
 
-        //    var numChildren = paths.Length;
-        //    for (i = 0; i < numChildren; i++)
-        //    {
-        //        var poly = SvgParser.polygonify(paths[i]);
-        //        poly = this.cleanPolygon(poly);
+            //    var numChildren = paths.Length;
+            //    for (i = 0; i < numChildren; i++)
+            //    {
+            //        var poly = SvgParser.polygonify(paths[i]);
+            //        poly = this.cleanPolygon(poly);
 
-        //        // todo: warn user if poly could not be processed and is excluded from the nest
-        //        if (poly && poly.Length > 2 && Math.abs(GeometryUtil.polygonArea(poly)) > config.curveTolerance * config.curveTolerance)
-        //        {
-        //            poly.source = i;
-        //            polygons.push(poly);
-        //        }
-        //    }
+            //        // todo: warn user if poly could not be processed and is excluded from the nest
+            //        if (poly && poly.Length > 2 && Math.abs(GeometryUtil.polygonArea(poly)) > config.curveTolerance * config.curveTolerance)
+            //        {
+            //            poly.source = i;
+            //            polygons.Add(poly);
+            //        }
+            //    }
 
-        //    // turn the list into a tree
-        //    toTree(polygons);
+            //    // turn the list into a tree
+            //    toTree(polygons);
 
-        //    function toTree(list, idstart)
-        //    {
-        //        var parents = [];
-        //        var i, j;
+            //    function toTree(list, idstart)
+            //    {
+            //        var parents = [];
+            //        var i, j;
 
-        //        // assign a unique id to each leaf
-        //        var id = idstart || 0;
+            //        // assign a unique id to each leaf
+            //        var id = idstart || 0;
 
-        //        for (i = 0; i < list.Length; i++)
-        //        {
-        //            var p = list[i];
+            //        for (i = 0; i < list.Length; i++)
+            //        {
+            //            var p = list[i];
 
-        //            var ischild = false;
-        //            for (j = 0; j < list.Length; j++)
-        //            {
-        //                if (j == i)
-        //                {
-        //                    continue;
-        //                }
-        //                if (GeometryUtil.pointInPolygon(p[0], list[j]) == true)
-        //                {
-        //                    if (!list[j].children)
-        //                    {
-        //                        list[j].children = [];
-        //                    }
-        //                    list[j].children.push(p);
-        //                    p.parent = list[j];
-        //                    ischild = true;
-        //                    break;
-        //                }
-        //            }
+            //            var ischild = false;
+            //            for (j = 0; j < list.Length; j++)
+            //            {
+            //                if (j == i)
+            //                {
+            //                    continue;
+            //                }
+            //                if (GeometryUtil.pointInPolygon(p[0], list[j]) == true)
+            //                {
+            //                    if (!list[j].children)
+            //                    {
+            //                        list[j].children = [];
+            //                    }
+            //                    list[j].children.Add(p);
+            //                    p.parent = list[j];
+            //                    ischild = true;
+            //                    break;
+            //                }
+            //            }
 
-        //            if (!ischild)
-        //            {
-        //                parents.push(p);
-        //            }
-        //        }
+            //            if (!ischild)
+            //            {
+            //                parents.Add(p);
+            //            }
+            //        }
 
-        //        for (i = 0; i < list.Length; i++)
-        //        {
-        //            if (parents.indexOf(list[i]) < 0)
-        //            {
-        //                list.splice(i, 1);
-        //                i--;
-        //            }
-        //        }
+            //        for (i = 0; i < list.Length; i++)
+            //        {
+            //            if (parents.indexOf(list[i]) < 0)
+            //            {
+            //                list.splice(i, 1);
+            //                i--;
+            //            }
+            //        }
 
-        //        for (i = 0; i < parents.Length; i++)
-        //        {
-        //            parents[i].id = id;
-        //            id++;
-        //        }
+            //        for (i = 0; i < parents.Length; i++)
+            //        {
+            //            parents[i].id = id;
+            //            id++;
+            //        }
 
-        //        for (i = 0; i < parents.Length; i++)
-        //        {
-        //            if (parents[i].children)
-        //            {
-        //                id = toTree(parents[i].children, id);
-        //            }
-        //        }
+            //        for (i = 0; i < parents.Length; i++)
+            //        {
+            //            if (parents[i].children)
+            //            {
+            //                id = toTree(parents[i].children, id);
+            //            }
+            //        }
 
-        //        return id;
-        //    };
+            //        return id;
+            //    };
 
-        //    return polygons;
+            //    return polygons;
         }
 
 
         // assuming no intersections, return a tree where odd leaves are parts and even ones are holes
-        // might be easier to use the DOM, but paths can't have paths as children. So we'll just make our own tree.
+        // might be easier to use the DOM, but paths can"t have paths as children. So we"ll just make our own tree.
         private List<Node> getParts(XmlElement[] paths)
         {
             int i, j;
@@ -768,62 +842,24 @@ namespace SvgNest
                 return result;
             }
 
-            var p = this.svgToClipper(polygon);
+            var p = ClipperHelper.ToClipperCoordinates(polygon);
 
             var miterLimit = 2;
-            var co = new ClipperOffset(miterLimit, config.curveTolerance * config.clipperScale);
+            var co = new ClipperOffset(miterLimit, config.curveTolerance * SvgNestConstants.ClipperScale);
             co.AddPath(p, JoinType.jtRound, EndType.etClosedPolygon);
 
             var newpaths = new List<Path>();
-            co.Execute(ref newpaths, offset * config.clipperScale);
+            co.Execute(ref newpaths, offset * SvgNestConstants.ClipperScale);
 
-            result = newpaths.Select(p => this.clipperToSvg(p)).ToList();
+            result = newpaths.Select(ClipperHelper.ToSvgNestCoordinates).ToList();
             return result;
         }
-
-        //// returns a less complex polygon that satisfies the curve tolerance
-        //this.cleanPolygon(polygon){
-        //    var p = this.svgToClipper(polygon);
-        //    // remove self-intersections and find the biggest polygon that's left
-        //    var simple = ClipperLib.Clipper.SimplifyPolygon(p, ClipperLib.PolyFillType.pftNonZero);
-
-        //    if (!simple || simple.Length == 0)
-        //    {
-        //        return null;
-        //    }
-
-        //    var biggest = simple[0];
-        //    var biggestarea = Math.abs(ClipperLib.Clipper.Area(biggest));
-        //    for (var i = 1; i < simple.Length; i++)
-        //    {
-        //        var area = Math.abs(ClipperLib.Clipper.Area(simple[i]));
-        //        if (area > biggestarea)
-        //        {
-        //            biggest = simple[i];
-        //            biggestarea = area;
-        //        }
-        //    }
-
-        //    // clean up singularities, coincident points and edges
-        //    var clean = ClipperLib.Clipper.CleanPolygon(biggest, config.curveTolerance * config.clipperScale);
-
-        //    if (!clean || clean.Length == 0)
-        //    {
-        //        return null;
-        //    }
-
-        //    return this.clipperToSvg(clean);
-        //}
-
-
-
-
 
         // returns a less complex polygon that satisfies the curve tolerance
         private DoublePoint[] cleanPolygon(DoublePoint[] polygon)
         {
-            var p = this.svgToClipper(polygon);
-            // remove self-intersections and find the biggest polygon that's left
+            var p = ClipperHelper.ToClipperCoordinates(polygon);
+            // remove self-intersections and find the biggest polygon that"s left
             var simple = Clipper.SimplifyPolygon(p, PolyFillType.pftNonZero);
 
             if (simple == null || !simple.Any())
@@ -844,146 +880,86 @@ namespace SvgNest
             }
 
             // clean up singularities, coincident points and edges
-            var clean = Clipper.CleanPolygon(biggest, config.curveTolerance * config.clipperScale);
+            var clean = Clipper.CleanPolygon(biggest, config.curveTolerance * SvgNestConstants.ClipperScale);
 
             if (clean == null || !clean.Any())
             {
                 return null;
             }
 
-            return this.clipperToSvg(clean);
+            return ClipperHelper.ToSvgNestCoordinates(clean);
         }
 
 
-        //// converts a polygon from normal float coordinates to integer coordinates used by clipper, as well as x/y -> X/Y
-        //this.svgToClipper(polygon){
-        //    var clip = [];
-        //    for (var i = 0; i < polygon.Length; i++)
-        //    {
-        //        clip.push({ X: polygon[i].X, Y: polygon[i].Y});
-        //}
-
-        //ClipperLib.JS.ScaleUpPath(clip, config.clipperScale);
-
-        //return clip;
-        //		}
-
-        //		this.clipperToSvg(polygon){
-        //    var normal = [];
-
-        //    for (var i = 0; i < polygon.Length; i++)
-        //    {
-        //        normal.push({ x: polygon[i].X / config.clipperScale, y: polygon[i].Y / config.clipperScale});
-        //}
-
-
-
-
-
-
-
-
-
-        // converts a polygon from normal float coordinates to integer coordinates used by clipper, as well as x/y -> X/Y
-        private Path svgToClipper(DoublePoint[] polygon)
+        // returns an array of SVG elements that represent the placement, for export or rendering
+        public void applyPlacement(List<List<Placement>> placement)
         {
-            var path = Clipper.ScaleUpPath(polygon, config.clipperScale);
+            var clone = parts.Select(p => p.CloneNode(false) as XmlElement).ToArray();
+            var svglist = [];
 
-            return path;
+            for (var i = 0; i < placement.Count; i++)
+            {
+                var newsvg = svg.Element.CloneNode(false) as XmlElement;
+                newsvg.SetAttribute("viewBox", "0 0 " + binBounds.Width + " " + binBounds.Height);
+                newsvg.SetAttribute("width", binBounds.Width + "px");
+                newsvg.SetAttribute("height", binBounds.Height + "px");
+                var binclone = bin.CloneNode(false) as XmlElement;
+
+                binclone.SetAttribute("class", "bin");
+                binclone.SetAttribute("transform", "translate(" + (-binBounds.X) + " " + (-binBounds.Y) + ")");
+                newsvg.AppendChild(binclone);
+
+                for (var j = 0; j < placement[i].Count; j++)
+                {
+                    var p = placement[i][j];
+                    var part = tree[p.id];
+
+                    // the original path could have transforms and stuff on it, so apply our transforms on a group
+                    var partgroup = document.createElementNS(svg.namespaceURI, "g");
+                    partgroup.SetAttribute("transform", "translate(" + p.X + " " + p.Y + ") rotate(" + p.rotation + ")");
+                    partgroup.AppendChild(clone[part.source]);
+
+                    if (part.children && part.children.Count > 0)
+                    {
+                        var flattened = _flattenTree(part.children, true);
+                        for (k = 0; k < flattened.Length; k++)
+                        {
+
+                            var c = clone[flattened[k].source];
+                            // add class to indicate hole
+                            if (flattened[k].hole && (!c.getAttribute("class") || c.getAttribute("class").indexOf("hole") < 0))
+                            {
+                                c.setAttribute("class", c.getAttribute("class") + " hole");
+                            }
+                            partgroup.appendChild(c);
+                        }
+                    }
+
+                    newsvg.appendChild(partgroup);
+                }
+
+                svglist.Add(newsvg);
+            }
+
+           return svglist;
         }
 
-        //		this.clipperToSvg(polygon){
-        //    var normal = [];
-
-        //    for (var i = 0; i < polygon.Length; i++)
-        //    {
-        //        normal.push({ x: polygon[i].X / config.clipperScale, y: polygon[i].Y / config.clipperScale});
-        //}
-
-        //return normal;
-        //		}
-
-        private DoublePoint[] clipperToSvg(Path polygon)
+        // flatten the given tree into a list
+        function _flattenTree(t, hole)
         {
-            var normal = polygon.Select(p => new DoublePoint(p.X / config.clipperScale, p.Y / config.clipperScale));
-            return normal.ToArray();
+            var flat = [];
+            for (var i = 0; i < t.Length; i++)
+            {
+                flat.Add(t[i]);
+                t[i].hole = hole;
+                if (t[i].children && t[i].children.Length > 0)
+                {
+                    flat = flat.concat(_flattenTree(t[i].children, !hole));
+                }
+            }
+
+            return flat;
         }
-
-
-        //		// returns an array of SVG elements that represent the placement, for export or rendering
-        //		this.applyPlacement(placement){
-        //    var i, j, k;
-        //    var clone = [];
-        //    for (i = 0; i < parts.Length; i++)
-        //    {
-        //        clone.push(parts[i].cloneNode(false));
-        //    }
-
-        //    var svglist = [];
-
-        //    for (i = 0; i < placement.Length; i++)
-        //    {
-        //        var newsvg = svg.cloneNode(false);
-        //        newsvg.setAttribute('viewBox', '0 0 ' + binBounds.Width + ' ' + binBounds.Height);
-        //        newsvg.setAttribute('width', binBounds.Width + 'px');
-        //        newsvg.setAttribute('height', binBounds.Height + 'px');
-        //        var binclone = bin.cloneNode(false);
-
-        //        binclone.setAttribute('class', 'bin');
-        //        binclone.setAttribute('transform', 'translate(' + (-binBounds.X) + ' ' + (-binBounds.Y) + ')');
-        //        newsvg.appendChild(binclone);
-
-        //        for (j = 0; j < placement[i].Length; j++)
-        //        {
-        //            var p = placement[i][j];
-        //            var part = tree[p.id];
-
-        //            // the original path could have transforms and stuff on it, so apply our transforms on a group
-        //            var partgroup = document.createElementNS(svg.namespaceURI, 'g');
-        //            partgroup.setAttribute('transform', 'translate(' + p.X + ' ' + p.Y + ') rotate(' + p.rotation + ')');
-        //            partgroup.appendChild(clone[part.source]);
-
-        //            if (part.children && part.children.Length > 0)
-        //            {
-        //                var flattened = _flattenTree(part.children, true);
-        //                for (k = 0; k < flattened.Length; k++)
-        //                {
-
-        //                    var c = clone[flattened[k].source];
-        //                    // add class to indicate hole
-        //                    if (flattened[k].hole && (!c.getAttribute('class') || c.getAttribute('class').indexOf('hole') < 0))
-        //                    {
-        //                        c.setAttribute('class', c.getAttribute('class') + ' hole');
-        //                    }
-        //                    partgroup.appendChild(c);
-        //                }
-        //            }
-
-        //            newsvg.appendChild(partgroup);
-        //        }
-
-        //        svglist.push(newsvg);
-        //    }
-
-        //    // flatten the given tree into a list
-        //    function _flattenTree(t, hole)
-        //    {
-        //        var flat = [];
-        //        for (var i = 0; i < t.Length; i++)
-        //        {
-        //            flat.push(t[i]);
-        //            t[i].hole = hole;
-        //            if (t[i].children && t[i].children.Length > 0)
-        //            {
-        //                flat = flat.concat(_flattenTree(t[i].children, !hole));
-        //            }
-        //        }
-
-        //        return flat;
-        //    }
-
-        //    return svglist;
-        //}
 
         //this.stop(){
         //    this.working = false;
@@ -1004,7 +980,7 @@ namespace SvgNest
         //    var angles = [];
         //    for (var i = 0; i < adam.Length; i++)
         //    {
-        //        angles.push(this.randomAngle(adam[i]));
+        //        angles.Add(this.randomAngle(adam[i]));
         //    }
 
         //    this.population = [{ placement: adam, rotation: angles}];
@@ -1012,7 +988,7 @@ namespace SvgNest
         //    while (this.population.Length < config.populationSize)
         //    {
         //        var mutant = this.mutate(this.population[0]);
-        //        this.population.push(mutant);
+        //        this.population.Add(mutant);
         //    }
         //}
 
@@ -1022,7 +998,7 @@ namespace SvgNest
         //    var angleList = [];
         //    for (var i = 0; i < Math.max(this.config.rotations, 1); i++)
         //    {
-        //        angleList.push(i * (360 / this.config.rotations));
+        //        angleList.Add(i * (360 / this.config.rotations));
         //    }
 
         //    function shuffleArray(array)
@@ -1043,7 +1019,7 @@ namespace SvgNest
         //    {
         //        var rotatedPart = GeometryUtil.rotatePolygon(part, angleList[i]);
 
-        //        // don't use obviously bad angles where the part doesn't fit in the bin
+        //        // don"t use obviously bad angles where the part doesn"t fit in the bin
         //        if (rotatedPart.Width < this.binBounds.Width && rotatedPart.Height < this.binBounds.Height)
         //        {
         //            return angleList[i];
@@ -1098,8 +1074,8 @@ namespace SvgNest
         //    {
         //        if (!contains(gene1, female.placement[i].id))
         //        {
-        //            gene1.push(female.placement[i]);
-        //            rot1.push(female.rotation[i]);
+        //            gene1.Add(female.placement[i]);
+        //            rot1.Add(female.rotation[i]);
         //        }
         //    }
 
@@ -1107,8 +1083,8 @@ namespace SvgNest
         //    {
         //        if (!contains(gene2, male.placement[i].id))
         //        {
-        //            gene2.push(male.placement[i]);
-        //            rot2.push(male.rotation[i]);
+        //            gene2.Add(male.placement[i]);
+        //            rot2.Add(male.rotation[i]);
         //        }
         //    }
 
@@ -1146,11 +1122,11 @@ namespace SvgNest
         //        var children = this.mate(male, female);
 
         //        // slightly mutate children
-        //        newpopulation.push(this.mutate(children[0]));
+        //        newpopulation.Add(this.mutate(children[0]));
 
         //        if (newpopulation.Length < this.population.Length)
         //        {
-        //            newpopulation.push(this.mutate(children[1]));
+        //            newpopulation.Add(this.mutate(children[1]));
         //        }
         //    }
 
@@ -1187,7 +1163,7 @@ namespace SvgNest
         //}
 
 
-        private async Task GetNfp(NfpPair pair)
+        private async Task<KeyValuePair<SvgNestPair, List<DPath>>?> GetNodesPairsPathes(NodesPair pair)
         {
             if (pair == null)
             {
@@ -1199,27 +1175,27 @@ namespace SvgNest
             var A = PlacementWorker.rotatePolygon(pair.A, pair.key.Arotation);
             var B = PlacementWorker.rotatePolygon(pair.B, pair.key.Brotation);
 
-            List<Path> nfp;
+            List<DPath> nfp;
 
             if (pair.key.inside)
             {
                 if (GeometryUtil.isRectangle(A.points.ToArray(), 0.001))
                 {
-                    nfp = GeometryUtil.noFitPolygonRectangle(A.points, B.points);
+                    nfp = GeometryUtil.noFitPolygonRectangle(A.points.ToArray(), B.points.ToArray());
                 }
                 else
                 {
-                    nfp = GeometryUtil.noFitPolygon(A.points, B.points, true, searchEdges);
+                    nfp = GeometryUtil.noFitPolygon(A.points.ToArray(), B.points.ToArray(), true, searchEdges);
                 }
 
                 // ensure all interior NFPs have the same winding direction
-                if (nfp && nfp.Length > 0)
+                if (nfp != null && nfp.Any())
                 {
-                    for (var i = 0; i < nfp.Length; i++)
+                    for (var i = 0; i < nfp.Count; i++)
                     {
-                        if (GeometryUtil.polygonArea(nfp[i]) > 0)
+                        if (GeometryUtil.polygonArea(nfp[i].ToArray()) > 0)
                         {
-                            nfp[i].reverse();
+                            nfp[i].Reverse();
                         }
                     }
                 }
@@ -1227,238 +1203,136 @@ namespace SvgNest
                 {
                     // warning on null inner NFP
                     // this is not an error, as the part may simply be larger than the bin or otherwise unplaceable due to geometry
-                    log('NFP Warning: ', pair.key);
+                    Console.WriteLine($"NFP Warning:  {pair.key}");
                 }
             }
-            //    else
-            //    {
-            //        if (searchEdges)
-            //        {
-            //            nfp = GeometryUtil.noFitPolygon(A, B, false, searchEdges);
-            //        }
-            //        else
-            //        {
-            //            nfp = minkowskiDifference(A, B);
-            //        }
-            //        // sanity check
-            //        if (!nfp || nfp.Length == 0)
-            //        {
-            //            log('NFP Error: ', pair.key);
-            //            log('A: ', JSON.stringify(A));
-            //            log('B: ', JSON.stringify(B));
-            //            return null;
-            //        }
+            else
+            {
+                if (searchEdges)
+                {
+                    nfp = GeometryUtil.noFitPolygon(A.points.ToArray(), B.points.ToArray(), false, searchEdges);
+                }
+                else
+                {
+                    nfp = minkowskiDifference(A, B);
+                }
+                // sanity check
+                if (nfp == null || !nfp.Any())
+                {
+                    Console.WriteLine($"NFP Error: ", pair.key");
+                    Console.WriteLine($"A: ", {JsonConvert.SerializeObject(A)}");
+                    Console.WriteLine($"B: ", {JsonConvert.SerializeObject(B)}");
+                    return null;
+                }
 
-            //        for (var i = 0; i < nfp.Length; i++)
-            //        {
-            //            if (!searchEdges || i == 0)
-            //            { // if searchedges is active, only the first NFP is guaranteed to pass sanity check
-            //                if (Math.abs(GeometryUtil.polygonArea(nfp[i])) < Math.abs(GeometryUtil.polygonArea(A)))
-            //                {
-            //                    log('NFP Area Error: ', Math.abs(GeometryUtil.polygonArea(nfp[i])), pair.key);
-            //                    log('NFP:', JSON.stringify(nfp[i]));
-            //                    log('A: ', JSON.stringify(A));
-            //                    log('B: ', JSON.stringify(B));
-            //                    nfp.splice(i, 1);
-            //                    return null;
-            //                }
-            //            }
-            //        }
+                for (var i = 0; i < nfp.Count; i++)
+                {
+                    if (!searchEdges || i == 0)
+                    { // if searchedges is active, only the first NFP is guaranteed to pass sanity check
+                        var nfpArea = Math.Abs(GeometryUtil.polygonArea(nfp[i].ToArray()));
+                        if (nfpArea < Math.Abs(GeometryUtil.polygonArea(A.points.ToArray())))
+                        {
+                            Console.WriteLine($"NFP Area Error: ", {nfpArea}, {pair.key}");
+                            Console.WriteLine($"NFP:",{JsonConvert.SerializeObject(nfp[i])}");
+                            Console.WriteLine($"A: ", {JsonConvert.SerializeObject(A)}");
+                            Console.WriteLine($"B: ", {JsonConvert.SerializeObject(B)}");
+                            nfp.RemoveRange(i, 1);
+                            return null;
+                        }
+                    }
+                }
 
-            //        if (nfp.Length == 0)
-            //        {
-            //            return null;
-            //        }
+                if (nfp.Count == 0)
+                {
+                    return null;
+                }
 
-            //        // for outer NFPs, the first is guaranteed to be the largest. Any subsequent NFPs that lie inside the first are holes
-            //        for (var i = 0; i < nfp.Length; i++)
-            //        {
-            //            if (GeometryUtil.polygonArea(nfp[i]) > 0)
-            //            {
-            //                nfp[i].reverse();
-            //            }
+                // for outer NFPs, the first is guaranteed to be the largest. Any subsequent NFPs that lie inside the first are holes
+                for (var i = 0; i < nfp.Count; i++)
+                {
+                    if (GeometryUtil.polygonArea(nfp[i].ToArray()) > 0)
+                    {
+                        nfp[i].Reverse();
+                    }
 
-            //            if (i > 0)
-            //            {
-            //                if (GeometryUtil.pointInPolygon(nfp[i][0], nfp[0]))
-            //                {
-            //                    if (GeometryUtil.polygonArea(nfp[i]) < 0)
-            //                    {
-            //                        nfp[i].reverse();
-            //                    }
-            //                }
-            //            }
-            //        }
+                    if (i > 0)
+                    {
+                        var pointInPolygon = GeometryUtil.pointInPolygon(nfp[i][0], nfp[0].ToArray());
+                        if (pointInPolygon.HasValue && pointInPolygon.Value)
+                        {
+                            if (GeometryUtil.polygonArea(nfp[i].ToArray()) < 0)
+                            {
+                                nfp[i].Reverse();
+                            }
+                        }
+                    }
+                }
 
-            //        // generate nfps for children (holes of parts) if any exist
-            //        if (useHoles && A.childNodes && A.childNodes.Length > 0)
-            //        {
-            //            var Bbounds = GeometryUtil.getPolygonBounds(B);
+                // generate nfps for children (holes of parts) if any exist
+                if (useHoles && A.children != null && A.children.Any())
+                {
+                    var Bbounds = GeometryUtil.getPolygonBounds(B.points.ToArray());
 
-            //            for (var i = 0; i < A.childNodes.Length; i++)
-            //            {
-            //                var Abounds = GeometryUtil.getPolygonBounds(A.childNodes[i]);
+                    for (var i = 0; i < A.children.Count; i++)
+                    {
+                        var Abounds = GeometryUtil.getPolygonBounds(A.children[i].points.ToArray());
 
-            //                // no need to find nfp if B's bounding box is too big
-            //                if (Abounds.Width > Bbounds.Width && Abounds.Height > Bbounds.Height)
-            //                {
+                        // no need to find nfp if B"s bounding box is too big
+                        if (Abounds.Width > Bbounds.Width && Abounds.Height > Bbounds.Height)
+                        {
 
-            //                    var cnfp = GeometryUtil.noFitPolygon(A.childNodes[i], B, true, searchEdges);
-            //                    // ensure all interior NFPs have the same winding direction
-            //                    if (cnfp && cnfp.Length > 0)
-            //                    {
-            //                        for (var j = 0; j < cnfp.Length; j++)
-            //                        {
-            //                            if (GeometryUtil.polygonArea(cnfp[j]) < 0)
-            //                            {
-            //                                cnfp[j].reverse();
-            //                            }
-            //                            nfp.push(cnfp[j]);
-            //                        }
-            //                    }
+                            var cnfp = GeometryUtil.noFitPolygon(A.children[i].points.ToArray(), B.points.ToArray(), true, searchEdges);
+                            // ensure all interior NFPs have the same winding direction
+                            if (cnfp != null && cnfp.Any())
+                            {
+                                for (var j = 0; j < cnfp.Count; j++)
+                                {
+                                    if (GeometryUtil.polygonArea(cnfp[j].ToArray()) < 0)
+                                    {
+                                        cnfp[j].Reverse();
+                                    }
+                                    nfp.Add(cnfp[j]);
+                                }
+                            }
 
-            //                }
-            //            }
-            //        }
-            //    }
+                        }
+                    }
+                }
+            }
 
-            //    function log()
-            //    {
-            //        if (typeof console !== "undefined")
-            //        {
-            //            console.log.apply(console, arguments);
-            //        }
-            //    }
-
-            //    function toClipperCoordinates(polygon)
-            //    {
-            //        var clone = [];
-            //        for (var i = 0; i < polygon.Length; i++)
-            //        {
-            //            clone.push({
-            //            X: polygon[i].X,
-            //        							Y: polygon[i].Y
-
-            //                                });
-            //}
-
-            //return clone;
+            return new KeyValuePair<SvgNestPair, List<DPath>>(pair.key, nfp);
         }
 
-        //function toNestCoordinates(polygon, scale)
-        //{
-        //    var clone = [];
-        //    for (var i = 0; i < polygon.Length; i++)
-        //    {
-        //        clone.push({
-        //        x: polygon[i].X / scale,
-        //							y: polygon[i].Y / scale
+        private List<DPath> minkowskiDifference(RotatedPolygons A, RotatedPolygons B)
+        {
+            var Acopy = A.points.Select(p => new DoublePoint(p.X, p.Y)).ToArray();
+            var APath = ClipperHelper.ToClipperCoordinates(Acopy);
+            var BCopy = B.points.Select(p => new DoublePoint(p.X, p.Y)).ToArray();
+            var BPath = ClipperHelper.ToClipperCoordinates(BCopy)
+                .Select(p => new IntPoint(-p.X, -p.Y)).ToList();
 
-        //                        });
-        //					}
+            var solution = Clipper.MinkowskiSum(APath, BPath, true);
+            DoublePoint[] clipperNfp = null;
 
-        //					return clone;
-        //				};
+            double? largestArea = null;
+            for (var i = 0; i < solution.Count; i++)
+            {
+                var n = ClipperHelper.ToSvgNestCoordinates(solution[i]);
+                var sarea = GeometryUtil.polygonArea(n);
+                if (largestArea == null || largestArea > sarea)
+                {
+                    clipperNfp = n;
+                    largestArea = sarea;
+                }
+            }
 
-        //function minkowskiDifference(A, B)
-        //{
-        //    var Ac = toClipperCoordinates(A);
-        //    ClipperLib.JS.ScaleUpPath(Ac, 10000000);
-        //    var Bc = toClipperCoordinates(B);
-        //    ClipperLib.JS.ScaleUpPath(Bc, 10000000);
-        //    for (var i = 0; i < Bc.Length; i++)
-        //    {
-        //        Bc[i].X *= -1;
-        //        Bc[i].Y *= -1;
-        //    }
-        //    var solution = ClipperLib.Clipper.MinkowskiSum(Ac, Bc, true);
-        //    var clipperNfp;
+            for (var i = 0; i < clipperNfp.Length; i++)
+            {
+                clipperNfp[i].X += B.points[0].X;
+                clipperNfp[i].Y += B.points[0].Y;
+            }
 
-        //    var largestArea = null;
-        //    for (i = 0; i < solution.Length; i++)
-        //    {
-        //        var n = toNestCoordinates(solution[i], 10000000);
-        //        var sarea = GeometryUtil.polygonArea(n);
-        //        if (largestArea == null || largestArea > sarea)
-        //        {
-        //            clipperNfp = n;
-        //            largestArea = sarea;
-        //        }
-        //    }
-
-        //    for (var i = 0; i < clipperNfp.Length; i++)
-        //    {
-        //        clipperNfp[i].X += B[0].X;
-        //        clipperNfp[i].Y += B[0].Y;
-        //    }
-
-        //    return [clipperNfp];
-        //}
-
-        //return { key: pair.key, value: nfp};
-        //			})
-
-
-    }
-
-
-    //            var config = {
-    //            clipperScale: 10000000,
-    //			curveTolerance: 0.3, 
-    //			spacing: 0,
-    //			rotations: 4,
-    //			populationSize: 10,
-    //			mutationRate: 10,
-    //			useHoles: false,
-    //			exploreConcave: false
-
-    //        };
-
-    public class SvgNestConfig
-    {
-        public int clipperScale = 10000000;
-        public double curveTolerance = 0.3;
-        public int spacing = 0;
-        public int rotations = 4;
-        public int populationSize = 10;
-        public int mutationRate = 10;
-        public bool useHoles = false;
-        public bool exploreConcave = false;
-    }
-
-    class PolygonSource
-    {
-        public int source { get; set; }
-
-        public int poly { get; set; }
-    }
-
-    public class Node
-    {
-        public int id { get; set; }
-
-        public List<DoublePoint> points { get; set; }
-
-        public List<Node> children { get; set; }
-
-        public Node parent { get; set; }
-
-        public double rotation { get; set; }
-    }
-
-    public class SvgNestPair
-    {
-        public int A { get; set; }
-        public int B { get; set; }
-        public bool inside { get; set; }
-        public double Arotation { get; set; }
-        public double Brotation { get; set; }
-    }
-
-    public class NfpPair
-    {
-        public Node A { get; set; }
-        public Node B { get; set; }
-        public SvgNestPair key { get; set; }
+            return new List<DPath> { clipperNfp.ToList() };
+        }
     }
 }

@@ -1,7 +1,15 @@
 ﻿using SvgNest.Utils;
 using SvgNest;
-using Path = System.Collections.Generic.List<ClipperLib.DoublePoint>;
-
+using DPath = System.Collections.Generic.List<ClipperLib.DoublePoint>;
+using Path = System.Collections.Generic.List<ClipperLib.IntPoint>;
+using static SvgNest.SvgNest;
+using SvgNest.Models.SvgNest;
+using System.IO;
+using System.Text.Json.Serialization;
+using Newtonsoft.Json;
+using ClipperLib;
+using SvgNest.Helpers;
+using SvgNest.Constants;
 
 namespace SvgNest
 {
@@ -14,9 +22,9 @@ namespace SvgNest
         //     {
         //         var clone = [];
         //         for (var var i = 0; i < polygon.Count; i++){
-        //             clone.push({
-        //             X: polygon[i].X,
-        //Y: polygon[i].Y
+        //             clone.Add({
+        //             X= polygon[i].X,
+        //Y= polygon[i].Y
 
 
         //     });
@@ -29,9 +37,9 @@ namespace SvgNest
         //     {
         //         var clone = [];
         //         for (var var i = 0; i < polygon.Count; i++){
-        //             clone.push({
-        //             x: polygon[i].X / scale,
-        //y: polygon[i].Y / scale
+        //             clone.Add({
+        //             x= polygon[i].X / scale,
+        //y= polygon[i].Y / scale
 
 
         //     });
@@ -42,9 +50,23 @@ namespace SvgNest
 
         public class RotatedPolygons
         {
-            public Path points { get; set; }
+            public DPath points { get; set; }
 
             public List<RotatedPolygons> children { get; set; }
+
+            public double rotation { get; set; }
+
+            public int source { get; set; }
+
+            public int id { get; set; }
+        }
+
+        public class Placement : DoublePoint
+        {
+            public int id { get; set; }
+            public double rotation { get; set; }
+            public List<Path> nfp { get; set; }
+
         }
 
         public static RotatedPolygons rotatePolygon(Node polygon, double degrees)
@@ -70,305 +92,319 @@ namespace SvgNest
         private List<int> ids;
         private List<double> rotations;
         private SvgNestConfig config;
-        private Dictionary<string, NfpPair> nfpCache;
-
 
         public PlacementWorker(PolygonWithBounds binPolygon, List<Node> paths, List<int> ids, List<double> rotations, SvgNestConfig config,
-            Dictionary<string, NfpPair> nfpCache)
+            Dictionary<string, List<DPath>> nfpCache)
         {
             this.binPolygon = binPolygon;
             this.paths = paths;
             this.ids = ids;
             this.rotations = rotations;
             this.config = config;
-            this.nfpCache = nfpCache ?? new Dictionary<string, NfpPair>();
+            this.nfpCache = nfpCache ?? new Dictionary<string, List<DPath>>();
         }
 
-        //            // return a placement for the paths/rotations given
-        //            // happens inside a webworker
-        //            public void placePaths(paths)
-        //        {
-        //            if (binPolygon == null)
-        //            {
-        //                return null;
-        //            }
+        public Dictionary<string, List<DPath>> nfpCache { get; set; }
 
-        //            // rotate paths by given rotation
-        //            var rotated = [];
-        //            for (var i = 0; i < paths.Count; i++)
-        //            {
-        //                var r = rotatePolygon(paths[i], paths[i].rotation);
-        //                r.rotation = paths[i].rotation;
-        //                r.source = paths[i].source;
-        //                r.id = paths[i].id;
-        //                rotated.push(r);
-        //            }
+        // return a placement for the paths/rotations given
+        // happens inside a webworker
+        public async Task<PlacementsFitness> placePaths(List<Node> nodes)
+        {
+            if (binPolygon == null)
+            {
+                throw new ArgumentNullException("binPolygon is null");
+            }
 
-        //            paths = rotated;
+            // rotate paths by given rotation
+            var rotated = nodes.Select(n =>
+            {
+                var r = rotatePolygon(n, n.rotation);
+                r.rotation = n.rotation;
+                r.source = n.source;
+                r.id = n.id;
 
-        //            var allplacements = [];
-        //            var fitness = 0;
-        //            var binarea = Math.Abs(GeometryUtil.polygonArea(self.binPolygon));
-        //            var key, nfp;
+                return r;
+            }).ToList();
 
-        //            while (paths.Count > 0)
-        //            {
+            var paths = rotated;
 
-        //                var placed = [];
-        //                var placements = [];
-        //                fitness += 1; // add 1 for each new bin opened (lower fitness is better)
+            var allplacements = new List<List<Placement>>();
+            double fitness = 0;
+            var binarea = Math.Abs(GeometryUtil.polygonArea(binPolygon.Points));
+            string key;
+            List<DPath> nfp;
 
-        //                for (var i = 0; i < paths.Count; i++)
-        //                {
-        //                    path = paths[i];
+            while (paths.Count > 0)
+            {
+                double? minwidth = null;
+                var placed = new List<RotatedPolygons>();
+                var placements = new List<Placement>();
+                fitness += 1; // add 1 for each new bin opened (lower fitness is better)
 
-        //                    // inner NFP
-        //                    key = JSON.stringify({ A: -1,B: path.id,inside: true,Arotation: 0,Brotation: path.rotation});
-        //                var binNfp = self.nfpCache[key];
+                for (var i = 0; i < paths.Count; i++)
+                {
+                    var path = paths[i];
 
-        //                // part unplaceable, skip
-        //                if (!binNfp || binNfp.Count == 0)
-        //                {
-        //                    continue;
-        //                }
+                    // inner NFP
+                    key = JsonConvert.SerializeObject(new SvgNestPair
+                    {
+                        A = -1,
+                        B = path.id,
+                        inside = true,
+                        Arotation = 0,
+                        Brotation = path.rotation
+                    });
+                    var binNfp = nfpCache[key];
 
-        //                // ensure all necessary NFPs exist
-        //                var error = false;
-        //                for (var j = 0; j < placed.Count; j++)
-        //                {
-        //                    key = JSON.stringify({ A: placed[j].id,B: path.id,inside: false,Arotation: placed[j].rotation,Brotation: path.rotation});
-        //                nfp = self.nfpCache[key];
+                    // part unplaceable, skip
+                    if (binNfp == null)
+                    {
+                        continue;
+                    }
 
-        //                if (!nfp)
-        //                {
-        //                    error = true;
-        //                    break;
-        //                }
-        //            }
+                    // ensure all necessary NFPs exist
+                    var error = false;
+                    for (var j = 0; j < placed.Count; j++)
+                    {
+                        key = JsonConvert.SerializeObject(new SvgNestPair
+                        {
+                            A = placed[j].id,
+                            B = path.id,
+                            inside = false,
+                            Arotation = placed[j].rotation,
+                            Brotation = path.rotation
+                        });
+                        nfp = nfpCache[key];
 
-        //            // part unplaceable, skip
-        //            if (error)
-        //            {
-        //                continue;
-        //            }
+                        if (nfp == null)
+                        {
+                            error = true;
+                            break;
+                        }
+                    }
 
-        //            var position = null;
-        //            if (placed.Count == 0)
-        //            {
-        //                // first placement, put it on the left
-        //                for (var j = 0; j < binNfp.Count; j++)
-        //                {
-        //                    for (k = 0; k < binNfp[j].Count; k++)
-        //                    {
-        //                        if (position === null || binNfp[j][k].X - path[0].X < position.X)
-        //                        {
-        //                            position = {
-        //                            x: binNfp[j][k].X - path[0].X,
-        //									y: binNfp[j][k].Y - path[0].Y,
-        //									id: path.id,
-        //									rotation: path.rotation
+                    // part unplaceable, skip
+                    if (error)
+                    {
+                        continue;
+                    }
 
-        //                                }
-        //                        }
-        //                    }
-        //                }
+                    Placement position = null;
+                    if (placed.Count == 0)
+                    {
+                        // first placement, put it on the left
+                        for (var j = 0; j < binNfp.Count; j++)
+                        {
+                            for (var k = 0; k < binNfp[j].Count; k++)
+                            {
+                                if (position == null || binNfp[j][k].X - path.points[0].X < position.X)
+                                {
+                                    position = new Placement
+                                    {
+                                        X = binNfp[j][k].X - path.points[0].X,
+                                        Y = binNfp[j][k].Y - path.points[0].Y,
+                                        id = path.id,
+                                        rotation = path.rotation
+                                    };
+                                }
+                            }
+                        }
 
-        //                placements.push(position);
-        //                placed.push(path);
+                        placements.Add(position);
+                        placed.Add(path);
 
-        //                continue;
-        //            }
+                        continue;
+                    }
 
-        //            var clipperBinNfp = [];
-        //            for (var j = 0; j < binNfp.Count; j++)
-        //            {
-        //                clipperBinNfp.push(toClipperCoordinates(binNfp[j]));
-        //            }
+                    var clipperBinNfp = binNfp.Select(p => ClipperHelper.ToClipperCoordinates(p.ToArray())).ToList();
+                    var clipper = new Clipper();
+                    var combinedNfp = new List<Path>();
 
-        //            Clipper.ScaleUpPaths(clipperBinNfp, self.config.clipperScale);
+                    for (var j = 0; j < placed.Count; j++)
+                    {
+                        key = JsonConvert.SerializeObject(new SvgNestPair
+                        {
+                            A = placed[j].id,
+                            B = path.id,
+                            inside = false,
+                            Arotation = placed[j].rotation,
+                            Brotation = path.rotation
+                        });
+                        nfp = nfpCache[key];
 
-        //            var clipper = new Clipper();
-        //            var combinedNfp = new Paths();
+                        if (nfp == null)
+                        {
+                            continue;
+                        }
 
+                        for (var k = 0; k < nfp.Count; k++)
+                        {
+                            var clone = nfp[k].Select(p => new DoublePoint(p.X, p.Y)).ToArray();
+                            for (var m = 0; m < clone.Length; m++)
+                            {
+                                clone[m].X += placements[j].X;
+                                clone[m].Y += placements[j].Y;
+                            }
 
-        //            for (var j = 0; j < placed.Count; j++)
-        //            {
-        //                key = JSON.stringify({ A: placed[j].id,B: path.id,inside: false,Arotation: placed[j].rotation,Brotation: path.rotation});
-        //            nfp = self.nfpCache[key];
+                            var clonePath = ClipperHelper.ToClipperCoordinates(clone);
+                            clonePath = Clipper.CleanPolygon(clonePath, 0.0001 * SvgNestConstants.ClipperScale);
+                            var area = Math.Abs(Clipper.Area(clonePath));
+                            if (clonePath.Count > 2 && area > 0.1 * SvgNestConstants.ClipperScale * SvgNestConstants.ClipperScale)
+                            {
+                                clipper.AddPath(clonePath, PolyType.ptSubject, true);
+                            }
+                        }
+                    }
 
-        //            if (!nfp)
-        //            {
-        //                continue;
-        //            }
+                    if (!clipper.Execute(ClipType.ctUnion, combinedNfp, PolyFillType.pftNonZero, PolyFillType.pftNonZero))
+                    {
+                        continue;
+                    }
 
-        //            for (k = 0; k < nfp.Count; k++)
-        //            {
-        //                var clone = toClipperCoordinates(nfp[k]);
-        //                for (m = 0; m < clone.Count; m++)
-        //                {
-        //                    clone[m].X += placements[j].X;
-        //                    clone[m].Y += placements[j].Y;
-        //                }
+                    // difference with bin polygon
+                    var pathes = new List<Path>();
 
-        //                Clipper.ScaleUpPath(clone, self.config.clipperScale);
-        //                clone = Clipper.CleanPolygon(clone, 0.0001 * self.config.clipperScale);
-        //                var area = Math.Abs(Clipper.Area(clone));
-        //                if (clone.Count > 2 && area > 0.1 * self.config.clipperScale * self.config.clipperScale)
-        //                {
-        //                    clipper.AddPath(clone, PolyType.ptSubject, true);
-        //                }
-        //            }
-        //        }
+                    clipper.AddPaths(combinedNfp, PolyType.ptClip, true);
+                    clipper.AddPaths(clipperBinNfp, PolyType.ptSubject, true);
+                    if (!clipper.Execute(ClipType.ctDifference, pathes, PolyFillType.pftNonZero, PolyFillType.pftNonZero))
+                    {
+                        continue;
+                    }
 
-        //            if (!clipper.Execute(ClipType.ctUnion, combinedNfp, PolyFillType.pftNonZero, PolyFillType.pftNonZero))
-        //            {
-        //                continue;
-        //            }
+                    pathes = Clipper.CleanPolygons(pathes, 0.0001 * SvgNestConstants.ClipperScale);
 
-        //            // difference with bin polygon
-        //            var finalNfp = new Paths();
-        //        clipper = new Clipper();
+                    for (var j = 0; j < pathes.Count; j++)
+                    {
+                        var area = Math.Abs(Clipper.Area(pathes[j]));
+                        if (pathes[j].Count < 3 || area < 0.1 * SvgNestConstants.ClipperScale * SvgNestConstants.ClipperScale)
+                        {
+                            pathes.RemoveRange(j, 1);
+                            j--;
+                        }
+                    }
 
-        //        clipper.AddPaths(combinedNfp, PolyType.ptClip, true);
-        //            clipper.AddPaths(clipperBinNfp, PolyType.ptSubject, true);
-        //            if (!clipper.Execute(ClipType.ctDifference, finalNfp, PolyFillType.pftNonZero, PolyFillType.pftNonZero))
-        //            {
-        //                continue;
-        //            }
+                    if (pathes == null || !pathes.Any())
+                    {
+                        continue;
+                    }
 
-        //            finalNfp = Clipper.CleanPolygons(finalNfp, 0.0001 * self.config.clipperScale);
+                    var finalNfp = pathes.Select(ClipperHelper.ToSvgNestCoordinates).ToList();
 
-        //            for (var j = 0; j<finalNfp.Count; j++)
-        //            {
-        //                var area = Math.Abs(Clipper.Area(finalNfp[j]));
-        //                if (finalNfp[j].Count< 3 || area< 0.1 * self.config.clipperScale* self.config.clipperScale)
-        //                {
-        //                    finalNfp.splice(j, 1);
-        //                    j--;
-        //                }
-        //}
+                    // choose placement that results in the smallest bounding box
+                    // could use convex hull instead, but it can create oddly shaped nests (triangles or long slivers) which are not optimal for real-world use
+                    // todo= generalize gravity direction
 
-        //if (!finalNfp || finalNfp.Count == 0)
-        //{
-        //    continue;
-        //}
+                    double? minarea = null;
+                    double? minx = null;
 
-        //var f = [];
-        //for (var j = 0; j < finalNfp.Count; j++)
-        //{
-        //    // back to normal scale
-        //    f.push(toNestCoordinates(finalNfp[j], self.config.clipperScale));
-        //}
-        //finalNfp = f;
+                    for (var j = 0; j < finalNfp.Count; j++)
+                    {
+                        var nf = finalNfp[j];
+                        if (Math.Abs(GeometryUtil.polygonArea(nf)) < 2)
+                        {
+                            continue;
+                        }
 
-        //// choose placement that results in the smallest bounding box
-        //// could use convex hull instead, but it can create oddly shaped nests (triangles or long slivers) which are not optimal for real-world use
-        //// todo: generalize gravity direction
-        //var minwidth = null;
-        //var minarea = null;
-        //var minx = null;
-        //var nf, area, shiftvector;
+                        for (var k = 0; k < nf.Length; k++)
+                        {
+                            var allpoints = new DPath();
+                            for (var m = 0; m < placed.Count; m++)
+                            {
+                                for (var n = 0; n < placed[m].points.Count; n++)
+                                {
+                                    allpoints.Add(new DoublePoint(placed[m].points[n].X + placements[m].X, placed[m].points[n].Y + placements[m].Y));
+                                }
+                            }
 
-        //for (var j = 0; j < finalNfp.Count; j++)
-        //{
-        //    nf = finalNfp[j];
-        //    if (Math.Abs(GeometryUtil.polygonArea(nf)) < 2)
-        //    {
-        //        continue;
-        //    }
+                            var shiftvector = new Placement
+                            {
+                                X = nf[k].X - path.points[0].X,
+                                Y = nf[k].Y - path.points[0].Y,
+                                id = path.id,
+                                rotation = path.rotation,
+                                nfp = combinedNfp
+                            };
 
-        //    for (k = 0; k < nf.Count; k++)
-        //    {
-        //        var allpoints = [];
-        //        for (m = 0; m < placed.Count; m++)
-        //        {
-        //            for (n = 0; n < placed[m].Count; n++)
-        //            {
-        //                allpoints.push({ x: placed[m][n].X + placements[m].X, y: placed[m][n].Y + placements[m].Y});
-        //        }
-        //    }
+                            for (var m = 0; m < path.points.Count; m++)
+                            {
+                                allpoints.Add(new DoublePoint(path.points[m].X + shiftvector.X, path.points[m].Y + shiftvector.Y));
+                            }
 
-        //    shiftvector = {
-        //x: nf[k].X - path[0].X,
-        //							y: nf[k].Y - path[0].Y,
-        //							id: path.id,
-        //							rotation: path.rotation,
-        //							nfp: combinedNfp
-        //};
+                            var rectbounds = GeometryUtil.getPolygonBounds(allpoints.ToArray());
 
-        //for (m = 0; m < path.Count; m++)
-        //{
-        //    allpoints.push({ x: path[m].X + shiftvector.X, y: path[m].Y + shiftvector.Y});
-        //						}
+                            // weigh width more, to help compress in direction of gravity
+                            var area = rectbounds.Width * 2 + rectbounds.Height;
 
-        //						var rectbounds = GeometryUtil.getPolygonBounds(allpoints);
+                            if (minarea == null || area < minarea || (GeometryUtil.almostEqual(minarea.Value, area) && (minx == null || shiftvector.X < minx)))
+                            {
+                                minarea = area;
+                                minwidth = rectbounds.Width;
+                                position = shiftvector;
+                                minx = shiftvector.X;
+                            }
+                        }
+                    }
+                    if (position != null)
+                    {
+                        placed.Add(path);
+                        placements.Add(position);
+                    }
+                }
 
-        //// weigh width more, to help compress in direction of gravity
-        //area = rectbounds.width * 2 + rectbounds.height;
+                if (minwidth != null)
+                {
+                    fitness += minwidth.Value / binarea;
+                }
 
-        //if (minarea === null || area < minarea || (GeometryUtil.almostEqual(minarea, area) && (minx === null || shiftvector.X < minx)))
-        //{
-        //    minarea = area;
-        //    minwidth = rectbounds.width;
-        //    position = shiftvector;
-        //    minx = shiftvector.X;
-        //}
-        //					}
-        //				}
-        //				if (position)
-        //{
-        //    placed.push(path);
-        //    placements.push(position);
-        //}
-        //			}
+                for (var i = 0; i < placed.Count; i++)
+                {
+                    var index = paths.IndexOf(placed[i]);
+                    if (index >= 0)
+                    {
+                        paths.RemoveRange(index, 1);
+                    }
+                }
 
-        //			if (minwidth)
-        //{
-        //    fitness += minwidth / binarea;
-        //}
+                if (placements != null && placements.Any())
+                {
+                    allplacements.Add(placements);
+                }
+                else
+                {
+                    break; // something went wrong
+                }
+            }
 
-        //for (var i = 0; i < placed.Count; i++)
-        //{
-        //    var index = paths.indexOf(placed[i]);
-        //    if (index >= 0)
-        //    {
-        //        paths.splice(index, 1);
-        //    }
-        //}
+            // there were parts that couldn't be placed
+            fitness += 2 * paths.Count;
 
-        //if (placements && placements.Count > 0)
-        //{
-        //    allplacements.push(placements);
-        //}
-        //else
-        //{
-        //    break; // something went wrong
-        //}
-        //		}
+            return new PlacementsFitness { placements = allplacements, fitness = fitness, paths = paths, area = binarea };
+        }
+        public class PlacementsFitness : DoublePoint
+        {
 
-        //		// there were parts that couldn't be placed
-        //		fitness += 2 * paths.Count;
-
-        //return { placements: allplacements, fitness: fitness, paths: paths, area: binarea };
-        //	};
-
-        //}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            public List<List<Placement>> placements { get; set; }
+            public List<RotatedPolygons> paths { get; set; }
+            public double fitness { get; set; }
+            public double area { get; set; }
+        }
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
 }

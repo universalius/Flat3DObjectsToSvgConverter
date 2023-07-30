@@ -1,4 +1,5 @@
 ﻿using ClipperLib;
+using SvgNest.Models.SvgNest;
 using SvgNest.Utils;
 
 namespace SvgNest
@@ -242,6 +243,6 @@ namespace SvgNest
     {
         public List<Node> placement { get; set; }
         public List<double> rotation { get; set; }
-        public int fitness { get; set; }
+        public double fitness { get; set; }
     }
 }

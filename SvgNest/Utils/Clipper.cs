@@ -4444,13 +4444,6 @@ namespace ClipperLib
             return result;
         }
         //------------------------------------------------------------------------------
-
-        public static Path ScaleUpPath(DoublePoint[] points, double scale)
-        {
-            return new Path(points.Select(p => 
-                new IntPoint(Math.Round(p.X * scale), Math.Round(p.Y * scale))).ToList());
-        }
-
     } //end Clipper
 
     public class ClipperOffset
