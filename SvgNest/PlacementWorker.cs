@@ -15,38 +15,13 @@ namespace SvgNest
 {
     public class PlacementWorker
     {
-
-
-        // jsClipper uses X/Y instead of x/y...
-        //     private void toClipperCoordinates(polygon)
-        //     {
-        //         var clone = [];
-        //         for (var var i = 0; i < polygon.Count; i++){
-        //             clone.Add({
-        //             X= polygon[i].X,
-        //Y= polygon[i].Y
-
-
-        //     });
-        //         }
-
-        //         return clone;
-        //     };
-
-        //     private void toNestCoordinates(polygon, scale)
-        //     {
-        //         var clone = [];
-        //         for (var var i = 0; i < polygon.Count; i++){
-        //             clone.Add({
-        //             x= polygon[i].X / scale,
-        //y= polygon[i].Y / scale
-
-
-        //     });
-        //         }
-
-        //         return clone;
-        //     };
+        public class PlacementsFitness : DoublePoint
+        {
+            public List<List<Placement>> placements { get; set; }
+            public List<RotatedPolygons> paths { get; set; }
+            public double fitness { get; set; }
+            public double area { get; set; }
+        }
 
         public class RotatedPolygons
         {
@@ -66,7 +41,6 @@ namespace SvgNest
             public int id { get; set; }
             public double rotation { get; set; }
             public List<Path> nfp { get; set; }
-
         }
 
         public static RotatedPolygons rotatePolygon(Node polygon, double degrees)
@@ -380,31 +354,5 @@ namespace SvgNest
 
             return new PlacementsFitness { placements = allplacements, fitness = fitness, paths = paths, area = binarea };
         }
-        public class PlacementsFitness : DoublePoint
-        {
-
-            public List<List<Placement>> placements { get; set; }
-            public List<RotatedPolygons> paths { get; set; }
-            public double fitness { get; set; }
-            public double area { get; set; }
-        }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-}
 }

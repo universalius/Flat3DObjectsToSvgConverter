@@ -178,12 +178,8 @@ namespace SvgNest
 
         public void generation()
         {
-
             // Individuals with higher fitness are more likely to be selected for mating
-            this.population.Sort((a, b) =>
-            {
-                return a.fitness - b.fitness;
-            });
+            population = population.OrderByDescending(i=>i.fitness).ToList();
 
             // fittest individual is preserved in the new generation (elitism)
             var newpopulation = new List<Individual> { this.population[0] };

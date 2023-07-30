@@ -1,14 +1,8 @@
-﻿using ObjParser;
-using ObjParser.Types;
-using ObjParserExecutor.Common.Extensions;
+﻿using ObjParser.Types;
 using ObjParserExecutor.Helpers;
 using ObjParserExecutor.Models;
-using System;
-using System.Collections.Generic;
+using Plain3DObjectsToSvgConverter.Common.Extensions;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Plain3DObjectsToSvgConverter.Services
 {

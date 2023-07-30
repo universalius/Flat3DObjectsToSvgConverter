@@ -33,7 +33,7 @@ namespace Plain3DObjectsToSvgConverter.Services
 
             var svgNest = new SvgNest.SvgNest();
             svgNest.parsesvg(inputSvg);
-
+            await svgNest.start();
             return null;
         }
     }

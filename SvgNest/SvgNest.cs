@@ -8,11 +8,9 @@ using Plain3DObjectsToSvgConverter.Common.Extensions;
 using Newtonsoft.Json;
 using static SvgNest.PlacementWorker;
 using SvgNest.Models.SvgNest;
-using System.Collections.Generic;
 using SvgNest.Helpers;
 using SvgNest.Constants;
-using System.Linq;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Reflection.Metadata;
 
 namespace SvgNest
 {
@@ -210,29 +208,37 @@ namespace SvgNest
 
         // progressCallback is called when progress is made
         // displayCallback is called when a new placement has been made
-        public void start(/*progressCallback, displayCallback*/)
+        public async Task start(/*progressCallback, displayCallback*/)
         {
-            if (svg == null || bin == null)
+            // Copy relevant scaling info
+            bin = svg._document.CreateElement("rect");
+            bin.SetAttribute("x", "0");
+            bin.SetAttribute("y", "0");
+            bin.SetAttribute("width", ((int)svg.Width).ToString());
+            bin.SetAttribute("height", ((int)svg.Height).ToString());
+            bin.SetAttribute("class", "fullRect");
+
+            if (svg == null)
             {
                 throw new Exception("Svg or bin is null");
             }
 
             var children = svg.Element.ChildNodes.Cast<XmlElement>().ToArray();
 
-            XmlElement[] childrenCopy = null;
+            var childrenCopy = new XmlElement[children.Length];
             Array.Copy(children, childrenCopy, children.Length);
             parts = childrenCopy.ToList();
 
-            var binindex = bin == null ? parts.IndexOf(bin) : 0;
+            //var binindex = bin == null ? parts.IndexOf(bin) : 0;
 
-            if (binindex >= 0)
-            {
-                // don"t process bin as a part of the tree
-                parts.RemoveRange(binindex, 1);
-            }
+            //if (binindex >= 0)
+            //{
+            //    // don"t process bin as a part of the tree
+            //    parts.RemoveRange(binindex, 1);
+            //}
 
             // build tree without bin
-            tree = this.getParts(parts.ToArray());
+            //tree = this.getParts(parts.ToArray());
 
             offsetTree(tree, 0.5 * config.spacing);
 
@@ -260,30 +266,38 @@ namespace SvgNest
 
             // put bin on origin
             var binPoints = binPolygon.Points;
-            var xbinmax = binPoints[0].X;
-            var xbinmin = binPoints[0].X;
-            var ybinmax = binPoints[0].Y;
-            var ybinmin = binPoints[0].Y;
 
-            for (var i = 1; i < binPoints.Length; i++)
-            {
-                if (binPoints[i].X > xbinmax)
-                {
-                    xbinmax = binPoints[i].X;
-                }
-                else if (binPoints[i].X < xbinmin)
-                {
-                    xbinmin = binPoints[i].X;
-                }
-                if (binPoints[i].Y > ybinmax)
-                {
-                    ybinmax = binPoints[i].Y;
-                }
-                else if (binPoints[i].Y < ybinmin)
-                {
-                    ybinmin = binPoints[i].Y;
-                }
-            }
+            var binX = binPoints.Select(p => p.X).ToArray();
+            var binY = binPoints.Select(p => p.Y).ToArray();
+            var xbinmax = binX.Max();
+            var xbinmin = binX.Min();
+            var ybinmax = binY.Max();
+            var ybinmin = binY.Min();
+
+            //var xbinmax = binPoints[0].X;
+            //var xbinmin = binPoints[0].X;
+            //var ybinmax = binPoints[0].Y;
+            //var ybinmin = binPoints[0].Y;
+
+            //for (var i = 1; i < binPoints.Length; i++)
+            //{
+            //    if (binPoints[i].X > xbinmax)
+            //    {
+            //        xbinmax = binPoints[i].X;
+            //    }
+            //    else if (binPoints[i].X < xbinmin)
+            //    {
+            //        xbinmin = binPoints[i].X;
+            //    }
+            //    if (binPoints[i].Y > ybinmax)
+            //    {
+            //        ybinmax = binPoints[i].Y;
+            //    }
+            //    else if (binPoints[i].Y < ybinmin)
+            //    {
+            //        ybinmin = binPoints[i].Y;
+            //    }
+            //}
 
             for (var i = 0; i < binPoints.Length; i++)
             {
@@ -321,7 +335,7 @@ namespace SvgNest
                 }
             });
 
-            launchWorkers(tree, binPolygon);
+            await launchWorkers(tree, binPolygon);
 
             //var self = this;
             //this.working = false;
@@ -377,7 +391,7 @@ namespace SvgNest
         //    return array;
         //}
 
-        private async void launchWorkers(List<Node> tree, PolygonWithBounds binPolygon/*, progressCallback, displayCallback*/)
+        private async Task<List<XmlElement>> launchWorkers(List<Node> tree, PolygonWithBounds binPolygon/*, progressCallback, displayCallback*/)
         {
             PlacementsFitness best = null;
 
@@ -385,10 +399,7 @@ namespace SvgNest
             var adam = new List<Node>(tree);
 
             // seed with decreasing area
-            adam.Sort((a, b) =>
-            {
-                return (int)Math.Abs(GeometryUtil.polygonArea(b.points.ToArray())) - (int)Math.Abs(GeometryUtil.polygonArea(a.points.ToArray()));
-            });
+            adam = adam.OrderByDescending((n) => (int)Math.Abs(GeometryUtil.polygonArea(n.points.ToArray()))).ToList();
 
             var GA = new GeneticAlgorithm(adam, binPolygon.Points, config);
 
@@ -397,7 +408,7 @@ namespace SvgNest
             // evaluate all members of the population
             for (var i = 0; i < GA.population.Count; i++)
             {
-                if (GA.population[i].fitness == null)
+                if (GA.population[i].fitness == 0)
                 {
                     individual = GA.population[i];
                     break;
@@ -498,7 +509,7 @@ namespace SvgNest
 
             if (placements == null || !placements.Any())
             {
-                return;
+                return null;
             }
 
             individual.fitness = placements[0].fitness;
@@ -531,212 +542,19 @@ namespace SvgNest
                     }
                 }
 
-                displayCallback(self.applyPlacement(best.placements), placedArea / totalArea, numPlacedParts, numParts);
+                var result = applyPlacement(best.placements);
+
+                var compactedSvg = SvgDocument.Create();
+
+                //result.Where(e=>e.Name != "rect").ForEach()
+
+                return result;
+                //displayCallback(self.applyPlacement(best.placements), placedArea / totalArea, numPlacedParts, numParts);
             }
             else
             {
-                //displayCallback();
+                return null;
             }
-
-            //var p = new Parallel(nfpPairs, {
-
-
-            //    env: {
-
-
-            //        binPolygon: binPolygon,
-            //        searchEdges: config.exploreConcave,
-            //        useHoles: config.useHoles
-            //        				},
-            //        				evalPath: "util/eval.js"
-            //        			});
-
-            //p.require("matrix.js");
-            //p.require("geometryutil.js");
-            //p.require("placementworker.js");
-            //p.require("clipper.js");
-
-            //var self = this;
-            //var spawncount = 0;
-            //p._spawnMapWorker(i, cb, done, env, wrk){
-            //    // hijack the worker call to check progress
-            //    progress = spawncount++ / nfpPairs.Length;
-            //    return Parallel.prototype._spawnMapWorker.call(p, i, cb, done, env, wrk);
-            //}
-            //
-            //.then(function(generatedNfp){
-            //    if (generatedNfp)
-            //    {
-            //        for (var i = 0; i < generatedNfp.Length; i++)
-            //        {
-            //            var Nfp = generatedNfp[i];
-
-            //            if (Nfp)
-            //            {
-            //                // a null nfp means the nfp could not be generated, either because the parts simply don"t fit or an error in the nfp algo
-            //                var key = JSON.stringify(Nfp.key);
-            //                nfpCache[key] = Nfp.value;
-            //            }
-            //        }
-            //    }
-            //    worker.nfpCache = nfpCache;
-
-            //    // can"t use .spawn because our data is an array
-            //    var p2 = new Parallel([placelist.slice(0)], {
-            //    env:
-            //        {
-            //        self: worker
-
-            //                    },
-            //					evalPath: "util/eval.js"
-
-            //                });
-
-            //    p2.require("json.js");
-            //    p2.require("clipper.js");
-            //    p2.require("matrix.js");
-            //    p2.require("geometryutil.js");
-            //    p2.require("placementworker.js");
-
-            //    p2.map(worker.placePaths).then(function(placements){
-            //        if (!placements || placements.Length == 0)
-            //        {
-            //            return;
-            //        }
-
-            //        individual.fitness = placements[0].fitness;
-            //        var bestresult = placements[0];
-
-            //        for (var i = 1; i < placements.Length; i++)
-            //        {
-            //            if (placements[i].fitness < bestresult.fitness)
-            //            {
-            //                bestresult = placements[i];
-            //            }
-            //        }
-
-            //        if (!best || bestresult.fitness < best.fitness)
-            //        {
-            //            best = bestresult;
-
-            //            var placedArea = 0;
-            //            var totalArea = 0;
-            //            var numParts = placelist.Length;
-            //            var numPlacedParts = 0;
-
-            //            for (i = 0; i < best.placements.Length; i++)
-            //            {
-            //                totalArea += Math.abs(GeometryUtil.polygonArea(binPolygon));
-            //                for (var j = 0; j < best.placements[i].Length; j++)
-            //                {
-            //                    placedArea += Math.abs(GeometryUtil.polygonArea(tree[best.placements[i][j].id]));
-            //                    numPlacedParts++;
-            //                }
-            //            }
-            //            displayCallback(self.applyPlacement(best.placements), placedArea / totalArea, numPlacedParts, numParts);
-            //        }
-            //        else
-            //        {
-            //            displayCallback();
-            //        }
-            //        self.working = false;
-            //    }, function(err) {
-            //        console.log(err);
-            //    });
-            //}, function(err) {
-            //    console.log(err);
-            //});
-            //		}
-
-            //		// assuming no intersections, return a tree where odd leaves are parts and even ones are holes
-            //		// might be easier to use the DOM, but paths can"t have paths as children. So we"ll just make our own tree.
-            //		this.getParts(paths){
-
-            //    var i, j;
-            //    var polygons = [];
-
-            //    var numChildren = paths.Length;
-            //    for (i = 0; i < numChildren; i++)
-            //    {
-            //        var poly = SvgParser.polygonify(paths[i]);
-            //        poly = this.cleanPolygon(poly);
-
-            //        // todo: warn user if poly could not be processed and is excluded from the nest
-            //        if (poly && poly.Length > 2 && Math.abs(GeometryUtil.polygonArea(poly)) > config.curveTolerance * config.curveTolerance)
-            //        {
-            //            poly.source = i;
-            //            polygons.Add(poly);
-            //        }
-            //    }
-
-            //    // turn the list into a tree
-            //    toTree(polygons);
-
-            //    function toTree(list, idstart)
-            //    {
-            //        var parents = [];
-            //        var i, j;
-
-            //        // assign a unique id to each leaf
-            //        var id = idstart || 0;
-
-            //        for (i = 0; i < list.Length; i++)
-            //        {
-            //            var p = list[i];
-
-            //            var ischild = false;
-            //            for (j = 0; j < list.Length; j++)
-            //            {
-            //                if (j == i)
-            //                {
-            //                    continue;
-            //                }
-            //                if (GeometryUtil.pointInPolygon(p[0], list[j]) == true)
-            //                {
-            //                    if (!list[j].children)
-            //                    {
-            //                        list[j].children = [];
-            //                    }
-            //                    list[j].children.Add(p);
-            //                    p.parent = list[j];
-            //                    ischild = true;
-            //                    break;
-            //                }
-            //            }
-
-            //            if (!ischild)
-            //            {
-            //                parents.Add(p);
-            //            }
-            //        }
-
-            //        for (i = 0; i < list.Length; i++)
-            //        {
-            //            if (parents.indexOf(list[i]) < 0)
-            //            {
-            //                list.splice(i, 1);
-            //                i--;
-            //            }
-            //        }
-
-            //        for (i = 0; i < parents.Length; i++)
-            //        {
-            //            parents[i].id = id;
-            //            id++;
-            //        }
-
-            //        for (i = 0; i < parents.Length; i++)
-            //        {
-            //            if (parents[i].children)
-            //            {
-            //                id = toTree(parents[i].children, id);
-            //            }
-            //        }
-
-            //        return id;
-            //    };
-
-            //    return polygons;
         }
 
 
@@ -892,10 +710,10 @@ namespace SvgNest
 
 
         // returns an array of SVG elements that represent the placement, for export or rendering
-        public void applyPlacement(List<List<Placement>> placement)
+        public List<XmlElement> applyPlacement(List<List<Placement>> placement)
         {
             var clone = parts.Select(p => p.CloneNode(false) as XmlElement).ToArray();
-            var svglist = [];
+            var svglist = new List<XmlElement>();
 
             for (var i = 0; i < placement.Count; i++)
             {
@@ -915,46 +733,60 @@ namespace SvgNest
                     var part = tree[p.id];
 
                     // the original path could have transforms and stuff on it, so apply our transforms on a group
-                    var partgroup = document.createElementNS(svg.namespaceURI, "g");
+                    var partgroup = svg._document.CreateElement("g");
                     partgroup.SetAttribute("transform", "translate(" + p.X + " " + p.Y + ") rotate(" + p.rotation + ")");
                     partgroup.AppendChild(clone[part.source]);
 
-                    if (part.children && part.children.Count > 0)
+                    if (part.children != null && part.children.Any())
                     {
-                        var flattened = _flattenTree(part.children, true);
-                        for (k = 0; k < flattened.Length; k++)
+                        var flattened = _flattenTree(part.children.Select(c => new NodeHole
+                        {
+                            Node = c
+                        }).ToList(), true);
+                        for (var k = 0; k < flattened.Count; k++)
                         {
 
-                            var c = clone[flattened[k].source];
+                            var c = clone[flattened[k].Node.source];
                             // add class to indicate hole
-                            if (flattened[k].hole && (!c.getAttribute("class") || c.getAttribute("class").indexOf("hole") < 0))
+                            if (flattened[k].Hole && (c.GetAttribute("class") == null || c.GetAttribute("class").IndexOf("hole") < 0))
                             {
-                                c.setAttribute("class", c.getAttribute("class") + " hole");
+                                c.SetAttribute("class", c.GetAttribute("class") + " hole");
                             }
-                            partgroup.appendChild(c);
+                            partgroup.AppendChild(c);
                         }
                     }
 
-                    newsvg.appendChild(partgroup);
+                    newsvg.AppendChild(partgroup);
                 }
 
                 svglist.Add(newsvg);
             }
 
-           return svglist;
+            return svglist;
+        }
+
+        class NodeHole
+        {
+            public Node Node { get; set; }
+
+            public bool Hole { get; set; }
         }
 
         // flatten the given tree into a list
-        function _flattenTree(t, hole)
+        private List<NodeHole> _flattenTree(List<NodeHole> t, bool hole)
         {
-            var flat = [];
-            for (var i = 0; i < t.Length; i++)
+            var flat = new List<NodeHole>();
+            for (var i = 0; i < t.Count; i++)
             {
                 flat.Add(t[i]);
-                t[i].hole = hole;
-                if (t[i].children && t[i].children.Length > 0)
+                t[i].Hole = hole;
+                if (t[i].Node.children != null && t[i].Node.children.Any())
                 {
-                    flat = flat.concat(_flattenTree(t[i].children, !hole));
+                    flat.AddRange(_flattenTree(
+                        t[i].Node.children.Select(c => new NodeHole
+                        {
+                            Node = c
+                        }).ToList(), !hole));
                 }
             }
 
@@ -1219,9 +1051,9 @@ namespace SvgNest
                 // sanity check
                 if (nfp == null || !nfp.Any())
                 {
-                    Console.WriteLine($"NFP Error: ", pair.key");
-                    Console.WriteLine($"A: ", {JsonConvert.SerializeObject(A)}");
-                    Console.WriteLine($"B: ", {JsonConvert.SerializeObject(B)}");
+                    Console.WriteLine($"NFP Error: {JsonConvert.SerializeObject(pair.key)}");
+                    Console.WriteLine($"A: {JsonConvert.SerializeObject(A)}");
+                    Console.WriteLine($"B: {JsonConvert.SerializeObject(B)}");
                     return null;
                 }
 
@@ -1232,10 +1064,10 @@ namespace SvgNest
                         var nfpArea = Math.Abs(GeometryUtil.polygonArea(nfp[i].ToArray()));
                         if (nfpArea < Math.Abs(GeometryUtil.polygonArea(A.points.ToArray())))
                         {
-                            Console.WriteLine($"NFP Area Error: ", {nfpArea}, {pair.key}");
-                            Console.WriteLine($"NFP:",{JsonConvert.SerializeObject(nfp[i])}");
-                            Console.WriteLine($"A: ", {JsonConvert.SerializeObject(A)}");
-                            Console.WriteLine($"B: ", {JsonConvert.SerializeObject(B)}");
+                            Console.WriteLine($"NFP Area Error: {nfpArea}, {JsonConvert.SerializeObject(pair.key)}");
+                            Console.WriteLine($"NFP: {JsonConvert.SerializeObject(nfp[i])}");
+                            Console.WriteLine($"A: {JsonConvert.SerializeObject(A)}");
+                            Console.WriteLine($"B: {JsonConvert.SerializeObject(B)}");
                             nfp.RemoveRange(i, 1);
                             return null;
                         }

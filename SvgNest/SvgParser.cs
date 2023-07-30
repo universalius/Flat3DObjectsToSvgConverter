@@ -955,7 +955,7 @@ namespace SvgNest
         //    // make copy of seglist (appending to new path removes it from the original pathseglist)
         //    for (var i = 0; i < path.pathSegList.numberOfItems; i++)
         //    {
-        //        seglist.push(path.pathSegList.getItem(i));
+        //        seglist.Add(path.pathSegList.getItem(i));
         //    }
 
         //    var x = 0, y = 0, x0 = 0, y0 = 0;
@@ -987,7 +987,7 @@ namespace SvgNest
         //        {
         //            p = path.cloneNode();
         //            p.setAttribute("d", "");
-        //            paths.push(p);
+        //            paths.Add(p);
         //        }
 
         //        if (/[MLHVCSQTA] /.test(command))
@@ -1029,7 +1029,7 @@ namespace SvgNest
         //    if (paths[i].pathSegList.numberOfItems > 1)
         //    {
         //        path.parentElement.insertBefore(paths[i], path);
-        //        addedPaths.push(paths[i]);
+        //        addedPaths.Add(paths[i]);
         //    }
         //}
 
@@ -1079,7 +1079,7 @@ namespace SvgNest
             //                {
             //                    p = path.cloneNode();
             //                    p.setAttribute("d", "");
-            //                    paths.push(p);
+            //                    paths.Add(p);
             //                }
 
             //                if (/[MLHVCSQTA] /.test(command))
@@ -1121,7 +1121,7 @@ namespace SvgNest
             //    if (paths[i].pathSegList.numberOfItems > 1)
             //    {
             //        path.parentElement.insertBefore(paths[i], path);
-            //        addedPaths.push(paths[i]);
+            //        addedPaths.Add(paths[i]);
             //    }
             //}
 
@@ -1164,7 +1164,7 @@ namespace SvgNest
         //            for (i = 0; i < element.points.numberOfItems; i++)
         //            {
         //                var point = element.points.getItem(i);
-        //                poly.push({ x: point.x, y: point.y });
+        //                poly.Add({ x: point.x, y: point.y });
         //    }
         //    break;
         //        case "rect":
@@ -1185,10 +1185,10 @@ namespace SvgNest
         //        p4.x = p1.x;
         //        p4.y = p3.y;
 
-        //        poly.push(p1);
-        //        poly.push(p2);
-        //        poly.push(p3);
-        //        poly.push(p4);
+        //        poly.Add(p1);
+        //        poly.Add(p2);
+        //        poly.Add(p3);
+        //        poly.Add(p4);
         //        break;
         //    case "circle":
         //        var radius = parseFloat(element.getAttribute("r"));
@@ -1210,7 +1210,7 @@ namespace SvgNest
         //            point.x = radius * Math.cos(theta) + cx;
         //            point.y = radius * Math.sin(theta) + cy;
 
-        //            poly.push(point);
+        //            poly.Add(point);
         //        }
         //        break;
         //    case "ellipse":
@@ -1236,7 +1236,7 @@ namespace SvgNest
         //            point.x = rx * Math.cos(theta) + cx;
         //            point.y = ry * Math.sin(theta) + cy;
 
-        //            poly.push(point);
+        //            poly.Add(point);
         //        }
         //        break;
         //    case "path":
@@ -1294,7 +1294,7 @@ namespace SvgNest
         //            var point = { };
         //            point.x = x;
         //            point.y = y;
-        //            poly.push(point);
+        //            poly.Add(point);
         //            break;
         //        // Quadratic Beziers
         //        case "t":
@@ -1319,7 +1319,7 @@ namespace SvgNest
         //                var point = { };
         //                point.x = pointlist[j].x;
         //                point.y = pointlist[j].y;
-        //                poly.push(point);
+        //                poly.Add(point);
         //            }
         //            break;
         //        case "s":
@@ -1343,7 +1343,7 @@ namespace SvgNest
         //                var point = { };
         //                point.x = pointlist[j].x;
         //                point.y = pointlist[j].y;
-        //                poly.push(point);
+        //                poly.Add(point);
         //            }
         //            break;
         //        case "a":
@@ -1356,7 +1356,7 @@ namespace SvgNest
         //                var point = { };
         //                point.x = pointlist[j].x;
         //                point.y = pointlist[j].y;
-        //                poly.push(point);
+        //                poly.Add(point);
         //            }
         //            break;
         //        case "z": case "Z": x = x0; y = y0; break;
@@ -1404,32 +1404,28 @@ namespace SvgNest
                 //        for (i = 0; i < element.points.numberOfItems; i++)
                 //        {
                 //            var point = element.points.getItem(i);
-                //            poly.push({ x: point.x, y: point.y });
+                //            poly.Add({ x: point.x, y: point.y });
                 //}
                 //break;
-                //    case "rect":
-                //    var p1 = { };
-                //    var p2 = { };
-                //    var p3 = { };
-                //    var p4 = { };
+                case "rect":
+                    var p1 = new DoublePoint(double.Parse(element.GetAttribute("x"), culture),
+                        double.Parse(element.GetAttribute("y"), culture));
 
-                //    p1.x = parseFloat(element.getAttribute("x")) || 0;
-                //    p1.y = parseFloat(element.getAttribute("y")) || 0;
+                    var p2 = new DoublePoint(
+                        p1.X + double.Parse(element.GetAttribute("width"), culture),
+                        p1.Y); 
 
-                //    p2.x = p1.x + parseFloat(element.getAttribute("width"));
-                //    p2.y = p1.y;
+                    var p3 = new DoublePoint(
+                        p2.X,
+                        p1.Y + double.Parse(element.GetAttribute("height"), culture));
 
-                //    p3.x = p2.x;
-                //    p3.y = p1.y + parseFloat(element.getAttribute("height"));
+                    var p4 = new DoublePoint(p1.X, p3.Y);
 
-                //    p4.x = p1.x;
-                //    p4.y = p3.y;
-
-                //    poly.push(p1);
-                //    poly.push(p2);
-                //    poly.push(p3);
-                //    poly.push(p4);
-                //    break;
+                    poly.Add(p1);
+                    poly.Add(p2);
+                    poly.Add(p3);
+                    poly.Add(p4);
+                    break;
                 //case "circle":
                 //    var radius = parseFloat(element.getAttribute("r"));
                 //    var cx = parseFloat(element.getAttribute("cx"));
@@ -1450,7 +1446,7 @@ namespace SvgNest
                 //        point.x = radius * Math.cos(theta) + cx;
                 //        point.y = radius * Math.sin(theta) + cy;
 
-                //        poly.push(point);
+                //        poly.Add(point);
                 //    }
                 //    break;
                 //case "ellipse":
@@ -1476,7 +1472,7 @@ namespace SvgNest
                 //        point.x = rx * Math.cos(theta) + cx;
                 //        point.y = ry * Math.sin(theta) + cy;
 
-                //        poly.push(point);
+                //        poly.Add(point);
                 //    }
                 //    break;
                 case "path":
@@ -1558,7 +1554,7 @@ namespace SvgNest
                             //        var point = { };
                             //        point.x = pointlist[j].x;
                             //        point.y = pointlist[j].y;
-                            //        poly.push(point);
+                            //        poly.Add(point);
                             //    }
                             //    break;
                             //case "s":
@@ -1582,7 +1578,7 @@ namespace SvgNest
                             //        var point = { };
                             //        point.x = pointlist[j].x;
                             //        point.y = pointlist[j].y;
-                            //        poly.push(point);
+                            //        poly.Add(point);
                             //    }
                             //    break;
                             //case "a":
@@ -1595,7 +1591,7 @@ namespace SvgNest
                             //        var point = { };
                             //        point.x = pointlist[j].x;
                             //        point.y = pointlist[j].y;
-                            //        poly.push(point);
+                            //        poly.Add(point);
                             //    }
                             //    break;
                             case "z":
@@ -1616,7 +1612,7 @@ namespace SvgNest
             }
 
             // do not include last point if coincident with starting point
-            while (poly.Count() > 0 && GeometryUtil.almostEqual(poly[0].X, poly[poly.Count() - 1].X, this.conf.toleranceSvg) && 
+            while (poly.Count() > 0 && GeometryUtil.almostEqual(poly[0].X, poly[poly.Count() - 1].X, this.conf.toleranceSvg) &&
                 GeometryUtil.almostEqual(poly[0].Y, poly[poly.Count() - 1].Y, this.conf.toleranceSvg))
             {
                 poly.Pop();

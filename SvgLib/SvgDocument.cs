@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Xml;
 
 namespace SvgLib
@@ -38,13 +39,13 @@ namespace SvgLib
 
         public double Width
         {
-            get => Element.GetAttribute("width", SvgDefaults.Attributes.Size.Width);
+            get => double.Parse(ReplaceUnits("width"));
             set => Element.SetAttribute("width", value);
         }
 
         public double Height
         {
-            get => Element.GetAttribute("height", SvgDefaults.Attributes.Size.Height);
+            get => double.Parse(ReplaceUnits("height"));
             set => Element.SetAttribute("height", value);
         }
 
@@ -52,6 +53,20 @@ namespace SvgLib
         {
             get => Element.GetAttribute("viewBox", new SvgViewBox());
             set => Element.SetAttribute("viewBox", value.ToString());
+        }
+
+        private string ReplaceUnits(string attribute)
+        {
+            string value = Element.GetAttribute(attribute).ToLowerInvariant();
+
+            var units = new List<string> { "px", "mm", "m", "pt", "cm" };
+            units.ForEach(unit =>
+            {
+                value = value.Replace(unit, string.Empty);
+            });
+
+
+            return value.Trim();
         }
     }
 }
