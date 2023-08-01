@@ -35,10 +35,10 @@ namespace SvgNest
 
         private SvgParser _svgParser;
 
-        public SvgNest()
+        public SvgNest(SvgNestConfig config = null)
         {
             _svgParser = new SvgParser();
-            _config = new SvgNestConfig();
+            _config = config ?? new SvgNestConfig();
             _nfpCache = new Dictionary<string, List<DPath>>();
         }
 
@@ -351,7 +351,7 @@ namespace SvgNest
                 }
             }
             worker.NfpCache = _nfpCache;
-            
+
             var placements = await Task.WhenAll(new List<List<Node>> { new List<Node>(placelist) }.Select(worker.PlacePaths));
 
             if (placements == null || !placements.Any())
@@ -420,7 +420,7 @@ namespace SvgNest
                 // todo: warn user if poly could not be processed and is excluded from the nest
                 if (poly != null && poly.Length > 2 && Math.Abs(GeometryUtil.PolygonArea(poly)) > _config.CurveTolerance * _config.CurveTolerance)
                 {
-                    nodes.Add(new Node { Points = poly.ToList(), Source = i});
+                    nodes.Add(new Node { Points = poly.ToList(), Source = i });
                 }
             }
 

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using ObjParser;
 using Plain3DObjectsToSvgConverter.Models;
 using SvgLib;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -31,11 +32,16 @@ namespace Plain3DObjectsToSvgConverter.Services
             _logger = logger;
         }
 
-        public async Task<string> Convert()
+        public async Task<string> Convert(string svg)
         {
+            var watch = Stopwatch.StartNew();
+            Console.WriteLine("Start placing labels for svg curves!");
+            Console.WriteLine();
+
             //_logger.LogInformation("Test qwer asdf cvbbb");
 
-            SvgDocument svgDocument = ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\test_compacted.svg");
+            //SvgDocument svgDocument = ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\test_compacted.svg");
+            SvgDocument svgDocument = ParseSvgString(svg);
             var groupElements = svgDocument.Element.GetElementsByTagName("g").Cast<XmlElement>().ToArray();
 
             foreach (var element in groupElements)
@@ -55,6 +61,10 @@ namespace Plain3DObjectsToSvgConverter.Services
                     await AddLabelToGroup(label, labelGroup);
                 }
             }
+
+            watch.Stop();
+            Console.WriteLine($"Finished placing labels for svg curves! Took - {watch.ElapsedMilliseconds / 1000.0} sec");
+            Console.WriteLine();
 
             return svgDocument._document.OuterXml;
         }
@@ -150,8 +160,13 @@ namespace Plain3DObjectsToSvgConverter.Services
         private SvgDocument ParseSvgFile(string filePath)
         {
             var content = File.ReadAllText(filePath);
+            return ParseSvgString(content);
+        }
+
+        private SvgDocument ParseSvgString(string svg)
+        {
             XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.LoadXml(content);
+            xmlDocument.LoadXml(svg);
 
             return new SvgDocument(xmlDocument, xmlDocument.DocumentElement);
         }

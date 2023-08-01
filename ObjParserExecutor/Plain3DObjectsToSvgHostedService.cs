@@ -1,5 +1,4 @@
-﻿// See https://aka.ms/new-console-template for more information
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using ObjParser;
 using ObjParserExecutor.Models;
 using Plain3DObjectsToSvgConverter.Services;
@@ -10,27 +9,16 @@ namespace Plain3DObjectsToSvgConverter;
 public class Plain3DObjectsToSvgHostedService : IHostedService
 {
     private readonly ObjectsLabelsToSvgConverter _objectsLabelsToSvgConverter;
-    private readonly ISvgCompactingService _nodeJsService;
+    private readonly ISvgCompactingService _svgCompactingService;
 
-    public Plain3DObjectsToSvgHostedService(ObjectsLabelsToSvgConverter objectsLabelsToSvgConverter, ISvgCompactingService nodeJsService)
+    public Plain3DObjectsToSvgHostedService(ObjectsLabelsToSvgConverter objectsLabelsToSvgConverter, ISvgCompactingService svgCompactingService)
     {
         _objectsLabelsToSvgConverter = objectsLabelsToSvgConverter;
-        _nodeJsService = nodeJsService;
+        _svgCompactingService = svgCompactingService;
     }
 
     public async Task StartAsync(CancellationToken stoppingToken)
     {
-        var testSvg = File.ReadAllText(@"D:\Виталик\Cat_Hack\Svg\test.svg");
-
-        var a = await _nodeJsService.Compact(testSvg);
-
-        ////var objectsLabelsToSvgConverter = new ObjectsLabelsToSvgConverter();
-        //var labelsSvg = await _objectsLabelsToSvgConverter.Convert();
-        //File.WriteAllText(@"D:\Виталик\Cat_Hack\Svg\test_labels.svg", labelsSvg);
-
-        Console.ReadKey();
-        return;
-
         var watch = Stopwatch.StartNew();
 
         Console.WriteLine("Start parsing!");
@@ -89,11 +77,20 @@ public class Plain3DObjectsToSvgHostedService : IHostedService
         watch.Stop();
 
         var resultCurvesCount = meshesObjects.SelectMany(mo => mo.Objects.Select(o => o.Loops.Count())).Sum();
-        Console.WriteLine();
         Console.WriteLine($"Finished parsing, processed {meshesObjects.Count()} meshes, generated {resultCurvesCount} curves, " +
             $"took - {watch.ElapsedMilliseconds / 1000.0} sec");
+        Console.WriteLine();
+
+        var testSvg = File.ReadAllText(@"D:\Виталик\Cat_Hack\Svg\test.svg");
+
+        var compactedSvg = await _svgCompactingService.Compact(svg);
+
+        //var objectsLabelsToSvgConverter = new ObjectsLabelsToSvgConverter();
+        var labelsSvg = await _objectsLabelsToSvgConverter.Convert(compactedSvg);
+        File.WriteAllText(@"D:\Виталик\Cat_Hack\Svg\test_labels.svg", labelsSvg);
 
         Console.ReadKey();
+        return;
     }
 
     public Task StopAsync(CancellationToken stoppingToken)
