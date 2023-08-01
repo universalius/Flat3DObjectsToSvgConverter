@@ -9,7 +9,7 @@ public static class ServiceRegistration
     {
         services.AddHostedService<Plain3DObjectsToSvgHostedService>()
             .AddSingleton<ObjectsLabelsToSvgConverter>()
-            .AddTransient<IJavaScriptService, JavaScriptService>();
+            .AddTransient<ISvgCompactingService, SvgCompactingService>();
 
         services.AddNodeServices(options =>
         {

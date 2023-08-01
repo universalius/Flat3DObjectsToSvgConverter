@@ -2,8 +2,8 @@
 
 namespace Plain3DObjectsToSvgConverter.Services
 {
-    public interface IJavaScriptService
+    public interface ISvgCompactingService
     {
-        Task<string> GetCompactedSvg(string inputSvg);
+        Task<string> Compact(string inputSvg);
     }
 }

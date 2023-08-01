@@ -47,7 +47,7 @@ namespace SvgNest
         public SvgDocument ParseSvg(string svgstring)
         {
             // reset if in progress
-            //this.stop();
+            //stop();
 
             _bin = null;
             //binPolygon = null;
@@ -56,11 +56,11 @@ namespace SvgNest
             // parse svg
             _svg = _svgParser.Load(svgstring);
 
-            //this.style = svgParser.getStyle();
+            //style = svgParser.getStyle();
 
             _svg = _svgParser.CleanInput();
 
-            _tree = this.GetParts(_svg.Element.ChildNodes.Cast<XmlElement>().ToArray());
+            _tree = GetParts(_svg.Element.ChildNodes.Cast<XmlElement>().ToArray());
 
             return _svg;
         }
@@ -95,12 +95,12 @@ namespace SvgNest
             //}
 
             // build tree without bin
-            //tree = this.getParts(parts.ToArray());
+            //tree = getParts(parts.ToArray());
 
             OffsetTree(_tree, 0.5 * _config.Spacing);
 
             PolygonWithBounds binPolygon = new PolygonWithBounds { Points = _svgParser.Polygonify(_bin) };
-            binPolygon.Points = this.CleanPolygon(binPolygon.Points);
+            binPolygon.Points = CleanPolygon(binPolygon.Points);
 
             if (binPolygon == null || binPolygon.Points.Length < 3)
             {
@@ -111,7 +111,7 @@ namespace SvgNest
 
             if (_config.Spacing > 0)
             {
-                var offsetBin = this.PolygonOffset(binPolygon.Points, -0.5 * _config.Spacing);
+                var offsetBin = PolygonOffset(binPolygon.Points, -0.5 * _config.Spacing);
                 if (offsetBin.Count == 1)
                 {
                     // if the offset contains 0 or more than 1 path, something went wrong.
@@ -195,7 +195,7 @@ namespace SvgNest
             await LaunchWorkers(_tree, binPolygon);
 
             //var self = this;
-            //this.working = false;
+            //working = false;
 
             //workerTimer = setInterval(function(){
             //    if (!self.working)
@@ -415,7 +415,7 @@ namespace SvgNest
             for (i = 0; i < numChildren; i++)
             {
                 var poly = _svgParser.Polygonify(paths[i]);
-                poly = this.CleanPolygon(poly)?.ToArray();
+                poly = CleanPolygon(poly)?.ToArray();
 
                 // todo: warn user if poly could not be processed and is excluded from the nest
                 if (poly != null && poly.Length > 2 && Math.Abs(GeometryUtil.PolygonArea(poly)) > _config.CurveTolerance * _config.CurveTolerance)

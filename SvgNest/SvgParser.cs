@@ -268,7 +268,7 @@ namespace SvgNest
                 switch (element.Name)
                 {
                     case "path":
-                        var seglist = this.PathToAbsolute(element);
+                        var seglist = PathToAbsolute(element);
                         var prevx = 0.0;
                         var prevy = 0.0;
                         var transformedPath = "";
@@ -380,7 +380,7 @@ namespace SvgNest
         public void Flatten(XmlElement element)
         {
             var childNodes = element.ChildNodes.Cast<XmlElement>().ToList();
-            childNodes.ForEach(this.Flatten);
+            childNodes.ForEach(Flatten);
 
             if (element.Name != "svg")
             {
@@ -401,7 +401,7 @@ namespace SvgNest
             }
 
             var childNodes = element.ChildNodes.Cast<XmlElement>().ToList();
-            childNodes.ForEach(this.Filter);
+            childNodes.ForEach(Filter);
 
             if (!childNodes.Any() && !_allowedElements.Contains(element.Name))
             {
@@ -505,7 +505,7 @@ namespace SvgNest
         public void SplitCompoundPaths(XmlElement element)
         {
             var childNodes = element.ChildNodes.Cast<XmlElement>().ToList();
-            childNodes.ForEach(this.SplitCompoundPaths);
+            childNodes.ForEach(SplitCompoundPaths);
 
             SplitPath(element);
         }
@@ -551,7 +551,7 @@ namespace SvgNest
                 //    var cy = parseFloat(element.getAttribute("cy"));
 
                 //    // num is the smallest number of segments required to approximate the circle to the given tolerance
-                //    var num = Math.ceil((2 * Math.PI) / Math.acos(1 - (this.conf.tolerance / radius)));
+                //    var num = Math.ceil((2 * Math.PI) / Math.acos(1 - (conf.tolerance / radius)));
 
                 //    if (num < 3)
                 //    {
@@ -577,7 +577,7 @@ namespace SvgNest
                 //    var cx = parseFloat(element.getAttribute("cx"));
                 //    var cy = parseFloat(element.getAttribute("cy"));
 
-                //    var num = Math.ceil((2 * Math.PI) / Math.acos(1 - (this.conf.tolerance / maxradius)));
+                //    var num = Math.ceil((2 * Math.PI) / Math.acos(1 - (conf.tolerance / maxradius)));
 
                 //    if (num < 3)
                 //    {
@@ -666,7 +666,7 @@ namespace SvgNest
                             //    }
                             //case "q":
                             //case "Q":
-                            //    var pointlist = GeometryUtil.QuadraticBezier.linearize({ x: prevx, y: prevy }, { x: x, y: y }, { x: x1, y: y1 }, this.conf.tolerance);
+                            //    var pointlist = GeometryUtil.QuadraticBezier.linearize({ x: prevx, y: prevy }, { x: x, y: y }, { x: x1, y: y1 }, conf.tolerance);
                             //    pointlist.shift(); // firstpoint would already be in the poly
                             //    for (var j = 0; j < pointlist.Count(); j++)
                             //    {
@@ -690,7 +690,7 @@ namespace SvgNest
                             //    }
                             //case "c":
                             //case "C":
-                            //    var pointlist = GeometryUtil.CubicBezier.linearize({ x: prevx, y: prevy }, { x: x, y: y }, { x: x1, y: y1 }, { x: x2, y: y2 }, this.conf.tolerance);
+                            //    var pointlist = GeometryUtil.CubicBezier.linearize({ x: prevx, y: prevy }, { x: x, y: y }, { x: x1, y: y1 }, { x: x2, y: y2 }, conf.tolerance);
                             //    pointlist.shift(); // firstpoint would already be in the poly
                             //    for (var j = 0; j < pointlist.Count(); j++)
                             //    {
@@ -702,7 +702,7 @@ namespace SvgNest
                             //    break;
                             //case "a":
                             //case "A":
-                            //    var pointlist = GeometryUtil.Arc.linearize({ x: prevx, y: prevy }, { x: x, y: y }, s.r1, s.r2, s.angle, s.largeArcFlag, s.sweepFlag, this.conf.tolerance);
+                            //    var pointlist = GeometryUtil.Arc.linearize({ x: prevx, y: prevy }, { x: x, y: y }, s.r1, s.r2, s.angle, s.largeArcFlag, s.sweepFlag, conf.tolerance);
                             //    pointlist.shift();
 
                             //    for (var j = 0; j < pointlist.Count(); j++)
@@ -731,8 +731,8 @@ namespace SvgNest
             }
 
             // do not include last point if coincident with starting point
-            while (poly.Count() > 0 && GeometryUtil.AlmostEqual(poly[0].X, poly[poly.Count() - 1].X, this._conf.ToleranceSvg) &&
-                GeometryUtil.AlmostEqual(poly[0].Y, poly[poly.Count() - 1].Y, this._conf.ToleranceSvg))
+            while (poly.Count() > 0 && GeometryUtil.AlmostEqual(poly[0].X, poly[poly.Count() - 1].X, _conf.ToleranceSvg) &&
+                GeometryUtil.AlmostEqual(poly[0].Y, poly[poly.Count() - 1].Y, _conf.ToleranceSvg))
             {
                 poly.Pop();
             }

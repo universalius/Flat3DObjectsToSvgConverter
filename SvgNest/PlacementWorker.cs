@@ -21,12 +21,12 @@ namespace SvgNest
         public PlacementWorker(PolygonWithBounds binPolygon, List<Node> paths, List<int> ids, List<double> rotations, SvgNestConfig config,
             Dictionary<string, List<DPath>> nfpCache)
         {
-            this._binPolygon = binPolygon;
-            this._paths = paths;
-            this._ids = ids;
-            this._rotations = rotations;
-            this._config = config;
-            this.NfpCache = nfpCache ?? new Dictionary<string, List<DPath>>();
+            _binPolygon = binPolygon;
+            _paths = paths;
+            _ids = ids;
+            _rotations = rotations;
+            _config = config;
+            NfpCache = nfpCache ?? new Dictionary<string, List<DPath>>();
         }
 
         public Dictionary<string, List<DPath>> NfpCache { get; set; }

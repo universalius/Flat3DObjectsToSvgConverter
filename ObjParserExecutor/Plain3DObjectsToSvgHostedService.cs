@@ -10,9 +10,9 @@ namespace Plain3DObjectsToSvgConverter;
 public class Plain3DObjectsToSvgHostedService : IHostedService
 {
     private readonly ObjectsLabelsToSvgConverter _objectsLabelsToSvgConverter;
-    private readonly IJavaScriptService _nodeJsService;
+    private readonly ISvgCompactingService _nodeJsService;
 
-    public Plain3DObjectsToSvgHostedService(ObjectsLabelsToSvgConverter objectsLabelsToSvgConverter, IJavaScriptService nodeJsService)
+    public Plain3DObjectsToSvgHostedService(ObjectsLabelsToSvgConverter objectsLabelsToSvgConverter, ISvgCompactingService nodeJsService)
     {
         _objectsLabelsToSvgConverter = objectsLabelsToSvgConverter;
         _nodeJsService = nodeJsService;
@@ -22,7 +22,7 @@ public class Plain3DObjectsToSvgHostedService : IHostedService
     {
         var testSvg = File.ReadAllText(@"D:\Виталик\Cat_Hack\Svg\test.svg");
 
-        var a = await _nodeJsService.GetCompactedSvg(testSvg);
+        var a = await _nodeJsService.Compact(testSvg);
 
         ////var objectsLabelsToSvgConverter = new ObjectsLabelsToSvgConverter();
         //var labelsSvg = await _objectsLabelsToSvgConverter.Convert();

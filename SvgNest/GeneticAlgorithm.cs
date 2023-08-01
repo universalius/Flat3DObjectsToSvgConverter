@@ -13,19 +13,19 @@ namespace SvgNest
 
         public GeneticAlgorithm(List<Node> adam, DoublePoint[] binPolygon, SvgNestConfig config)
         {
-            this._config = config ?? new SvgNestConfig { PopulationSize = 10, MutationRate = 10, Rotations = 4 };
-            this._binBounds = GeometryUtil.GetPolygonBounds(binPolygon);
+            _config = config ?? new SvgNestConfig { PopulationSize = 10, MutationRate = 10, Rotations = 4 };
+            _binBounds = GeometryUtil.GetPolygonBounds(binPolygon);
             _random = new Random();
 
             // population is an array of individuals. Each individual is a object representing the order of insertion and the angle each part is rotated
-            var angles = adam.Select(node => this.RandomAngle(node.Points)).ToList();
+            var angles = adam.Select(node => RandomAngle(node.Points)).ToList();
 
-            this.Population = new List<Individual> { new Individual { Placement = adam, Rotation = angles } };
+            Population = new List<Individual> { new Individual { Placement = adam, Rotation = angles } };
 
-            while (this.Population.Count < config.PopulationSize)
+            while (Population.Count < config.PopulationSize)
             {
-                var mutant = this.Mutate(this.Population[0]);
-                this.Population.Add(mutant);
+                var mutant = Mutate(Population[0]);
+                Population.Add(mutant);
             }
         }
 
@@ -49,9 +49,9 @@ namespace SvgNest
         private double RandomAngle(List<DoublePoint> part)
         {
             var angleList = new List<double>();
-            for (var i = 0; i < Math.Max(this._config.Rotations, 1); i++)
+            for (var i = 0; i < Math.Max(_config.Rotations, 1); i++)
             {
-                angleList.Add(i * (360 / this._config.Rotations));
+                angleList.Add(i * (360 / _config.Rotations));
             }
 
             angleList = ShuffleArray(angleList);
@@ -61,7 +61,7 @@ namespace SvgNest
                 var rotatedPart = GeometryUtil.RotatePolygon(part.ToArray(), angleList[i]);
 
                 // don't use obviously bad angles where the part doesn't fit in the bin
-                if (rotatedPart.Bounds.Width < this._binBounds.Width && rotatedPart.Bounds.Height < this._binBounds.Height)
+                if (rotatedPart.Bounds.Width < _binBounds.Width && rotatedPart.Bounds.Height < _binBounds.Height)
                 {
                     return angleList[i];
                 }
@@ -82,7 +82,7 @@ namespace SvgNest
             {
                 var random = new Random();
                 var rand = random.NextDouble();
-                if (rand < 0.01 * this._config.MutationRate)
+                if (rand < 0.01 * _config.MutationRate)
                 {
                     // swap current part with next part
                     var j = i + 1;
@@ -96,9 +96,9 @@ namespace SvgNest
                 }
 
                 rand = random.NextDouble();
-                if (rand < 0.01 * this._config.MutationRate)
+                if (rand < 0.01 * _config.MutationRate)
                 {
-                    clone.Rotation[i] = this.RandomAngle(clone.Placement[i].Points);
+                    clone.Rotation[i] = RandomAngle(clone.Placement[i].Points);
                 }
             }
 
@@ -158,32 +158,32 @@ namespace SvgNest
             Population = Population.OrderByDescending(i=>i.Fitness).ToList();
 
             // fittest individual is preserved in the new generation (elitism)
-            var newpopulation = new List<Individual> { this.Population[0] };
+            var newpopulation = new List<Individual> { Population[0] };
 
-            while (newpopulation.Count < this.Population.Count)
+            while (newpopulation.Count < Population.Count)
             {
-                var male = this.RandomWeightedIndividual();
-                var female = this.RandomWeightedIndividual(male);
+                var male = RandomWeightedIndividual();
+                var female = RandomWeightedIndividual(male);
 
                 // each mating produces two children
-                var children = this.Mate(male, female);
+                var children = Mate(male, female);
 
                 // slightly mutate children
-                newpopulation.Add(this.Mutate(children[0]));
+                newpopulation.Add(Mutate(children[0]));
 
-                if (newpopulation.Count < this.Population.Count)
+                if (newpopulation.Count < Population.Count)
                 {
-                    newpopulation.Add(this.Mutate(children[1]));
+                    newpopulation.Add(Mutate(children[1]));
                 }
             }
 
-            this.Population = newpopulation;
+            Population = newpopulation;
         }
 
         // returns a random individual from the population, weighted to the front of the list (lower fitness value is more likely to be selected)
         private Individual RandomWeightedIndividual(Individual exclude = null)
         {
-            var pop = new List<Individual>(this.Population);
+            var pop = new List<Individual>(Population);
 
             if (exclude != null && pop.IndexOf(exclude) >= 0)
             {
