@@ -9,7 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Plain3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services
 {
     public class ObjectsToSvgConverter
     {

@@ -1,7 +1,7 @@
 ﻿using SvgNest.Models;
 using System.Diagnostics;
 
-namespace Plain3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services
 {
     public class SvgCompactingService : ISvgCompactingService
     {

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Plain3DObjectsToSvgConverter;
+namespace Flat3DObjectsToSvgConverter;
 
 internal class Startup
 {

@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 
-namespace Plain3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services
 {
     public class EdgeLoopParser
     {

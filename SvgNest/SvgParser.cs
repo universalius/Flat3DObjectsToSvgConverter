@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using System.Globalization;
 using SvgNest.Utils;
 using ClipperLib;
-using Plain3DObjectsToSvgConverter.Common.Extensions;
+using Flat3DObjectsToSvgConverter.Common.Extensions;
 using SvgNest.Models;
 using SvgNest.Models.SVGPathSeg;
 

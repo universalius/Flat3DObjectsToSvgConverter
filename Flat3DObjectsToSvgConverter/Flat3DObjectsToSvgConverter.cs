@@ -1,17 +1,17 @@
 ﻿using Microsoft.Extensions.Hosting;
 using ObjParser;
 using ObjParserExecutor.Models;
-using Plain3DObjectsToSvgConverter.Services;
+using Flat3DObjectsToSvgConverter.Services;
 using System.Diagnostics;
 
-namespace Plain3DObjectsToSvgConverter;
+namespace Flat3DObjectsToSvgConverter;
 
-public class Plain3DObjectsToSvgHostedService : IHostedService
+public class Flat3DObjectsToSvgHostedService : IHostedService
 {
     private readonly ObjectsLabelsToSvgConverter _objectsLabelsToSvgConverter;
     private readonly ISvgCompactingService _svgCompactingService;
 
-    public Plain3DObjectsToSvgHostedService(ObjectsLabelsToSvgConverter objectsLabelsToSvgConverter, ISvgCompactingService svgCompactingService)
+    public Flat3DObjectsToSvgHostedService(ObjectsLabelsToSvgConverter objectsLabelsToSvgConverter, ISvgCompactingService svgCompactingService)
     {
         _objectsLabelsToSvgConverter = objectsLabelsToSvgConverter;
         _svgCompactingService = svgCompactingService;

@@ -1,10 +1,10 @@
 ﻿using ObjParser.Types;
 using ObjParserExecutor.Helpers;
 using ObjParserExecutor.Models;
-using Plain3DObjectsToSvgConverter.Common.Extensions;
+using Flat3DObjectsToSvgConverter.Common.Extensions;
 using System.Diagnostics;
 
-namespace Plain3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services
 {
     public class MeshObjectsParser
     {

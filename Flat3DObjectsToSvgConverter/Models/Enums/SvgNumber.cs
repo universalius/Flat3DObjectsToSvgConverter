@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Plain3DObjectsToSvgConverter.Models.Enums
+namespace Flat3DObjectsToSvgConverter.Models.Enums
 {
     public enum SvgNumber
     {

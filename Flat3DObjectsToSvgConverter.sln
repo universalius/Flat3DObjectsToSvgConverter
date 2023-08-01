@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ObjParser", "ObjParser\ObjP
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ObjParser_Tests", "ObjParser_Tests\ObjParser_Tests.csproj", "{067456C0-086C-46A8-B37F-1405717B7BFC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Plain3DObjectsToSvgConverter", "ObjParserExecutor\Plain3DObjectsToSvgConverter.csproj", "{72563175-EC42-42F3-91B8-CD4184203B14}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Flat3DObjectsToSvgConverter", "Flat3DObjectsToSvgConverter\Flat3DObjectsToSvgConverter.csproj", "{72563175-EC42-42F3-91B8-CD4184203B14}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SvgLib", "SvgLib\SvgLib.csproj", "{605113AB-C2C9-45D8-9703-8C37FA3A7E42}"
 EndProject

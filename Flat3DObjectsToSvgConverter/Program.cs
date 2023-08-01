@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Builder;
-using Plain3DObjectsToSvgConverter;
+using Flat3DObjectsToSvgConverter;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()

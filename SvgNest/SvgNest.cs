@@ -4,7 +4,7 @@ using SvgNest.Utils;
 using ClipperLib;
 using Path = System.Collections.Generic.List<ClipperLib.IntPoint>;
 using DPath = System.Collections.Generic.List<ClipperLib.DoublePoint>;
-using Plain3DObjectsToSvgConverter.Common.Extensions;
+using Flat3DObjectsToSvgConverter.Common.Extensions;
 using Newtonsoft.Json;
 using SvgNest.Helpers;
 using SvgNest.Constants;

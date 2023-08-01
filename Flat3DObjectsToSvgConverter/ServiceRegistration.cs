@@ -1,21 +1,15 @@
 using Microsoft.Extensions.DependencyInjection;
-using Plain3DObjectsToSvgConverter.Services;
+using Flat3DObjectsToSvgConverter.Services;
 
-namespace Plain3DObjectsToSvgConverter;
+namespace Flat3DObjectsToSvgConverter;
 
 public static class ServiceRegistration
 {
     public static IServiceCollection AddServices(this IServiceCollection services)
     {
-        services.AddHostedService<Plain3DObjectsToSvgHostedService>()
+        services.AddHostedService<Flat3DObjectsToSvgHostedService>()
             .AddSingleton<ObjectsLabelsToSvgConverter>()
             .AddTransient<ISvgCompactingService, SvgCompactingService>();
-
-        services.AddNodeServices(options =>
-        {
-            options.LaunchWithDebugging = true;
-            //options.UseSocketHosting();
-        });
 
         return services;
     }

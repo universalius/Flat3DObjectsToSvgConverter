@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace Plain3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services
 {
     public interface ISvgCompactingService
     {

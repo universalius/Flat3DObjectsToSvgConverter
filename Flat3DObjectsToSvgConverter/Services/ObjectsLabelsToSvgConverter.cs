@@ -1,7 +1,7 @@
 ﻿using ClipperLib;
 using Microsoft.Extensions.Logging;
 using ObjParser;
-using Plain3DObjectsToSvgConverter.Models;
+using Flat3DObjectsToSvgConverter.Models;
 using SvgLib;
 using System.Diagnostics;
 using System.Globalization;
@@ -9,7 +9,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Xml;
 
-namespace Plain3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services
 {
     public class ObjectsLabelsToSvgConverter
     {
