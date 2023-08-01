@@ -1,89 +1,58 @@
 ﻿using SvgNest.Utils;
-using SvgNest;
 using DPath = System.Collections.Generic.List<ClipperLib.DoublePoint>;
 using Path = System.Collections.Generic.List<ClipperLib.IntPoint>;
-using static SvgNest.SvgNest;
-using SvgNest.Models.SvgNest;
-using System.IO;
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 using ClipperLib;
 using SvgNest.Helpers;
 using SvgNest.Constants;
+using SvgNest.Models;
+using SvgNest.Models.GeometryUtil;
 
 namespace SvgNest
 {
     public class PlacementWorker
     {
-        public class PlacementsFitness : DoublePoint
+        private PolygonWithBounds _binPolygon;
+        private List<Node> _paths;
+        private List<int> _ids;
+        private List<double> _rotations;
+        private SvgNestConfig _config;
+
+        public PlacementWorker(PolygonWithBounds binPolygon, List<Node> paths, List<int> ids, List<double> rotations, SvgNestConfig config,
+            Dictionary<string, List<DPath>> nfpCache)
         {
-            public List<List<Placement>> placements { get; set; }
-            public List<RotatedPolygons> paths { get; set; }
-            public double fitness { get; set; }
-            public double area { get; set; }
+            this._binPolygon = binPolygon;
+            this._paths = paths;
+            this._ids = ids;
+            this._rotations = rotations;
+            this._config = config;
+            this.NfpCache = nfpCache ?? new Dictionary<string, List<DPath>>();
         }
 
-        public class RotatedPolygons
+        public Dictionary<string, List<DPath>> NfpCache { get; set; }
+
+        public static RotatedPolygons RotatePolygon(Node polygon, double degrees)
         {
-            public DPath points { get; set; }
+            var rotatedPolygon = GeometryUtil.RotatePolygon(polygon.Points.ToArray(), degrees);
+            var rotated = new RotatedPolygons { Points = rotatedPolygon.Points.ToList() };
 
-            public List<RotatedPolygons> children { get; set; }
-
-            public double rotation { get; set; }
-
-            public int source { get; set; }
-
-            public int id { get; set; }
-        }
-
-        public class Placement : DoublePoint
-        {
-            public int id { get; set; }
-            public double rotation { get; set; }
-            public List<Path> nfp { get; set; }
-        }
-
-        public static RotatedPolygons rotatePolygon(Node polygon, double degrees)
-        {
-            var rotatedPolygon = GeometryUtil.rotatePolygon(polygon.points.ToArray(), degrees);
-            var rotated = new RotatedPolygons { points = rotatedPolygon.Points.ToList() };
-
-            if (polygon.children != null && polygon.children.Any())
+            if (polygon.Children != null && polygon.Children.Any())
             {
-                rotated.children = new List<RotatedPolygons>();
-                for (var j = 0; j < polygon.children.Count; j++)
+                rotated.Children = new List<RotatedPolygons>();
+                for (var j = 0; j < polygon.Children.Count; j++)
                 {
-                    rotated.children.Add(rotatePolygon(polygon.children[j], degrees));
+                    rotated.Children.Add(RotatePolygon(polygon.Children[j], degrees));
                 }
             }
 
             return rotated;
         }
 
-        private PolygonWithBounds binPolygon;
-        private List<Node> paths;
-        private List<int> ids;
-        private List<double> rotations;
-        private SvgNestConfig config;
-
-        public PlacementWorker(PolygonWithBounds binPolygon, List<Node> paths, List<int> ids, List<double> rotations, SvgNestConfig config,
-            Dictionary<string, List<DPath>> nfpCache)
-        {
-            this.binPolygon = binPolygon;
-            this.paths = paths;
-            this.ids = ids;
-            this.rotations = rotations;
-            this.config = config;
-            this.nfpCache = nfpCache ?? new Dictionary<string, List<DPath>>();
-        }
-
-        public Dictionary<string, List<DPath>> nfpCache { get; set; }
-
         // return a placement for the paths/rotations given
         // happens inside a webworker
-        public async Task<PlacementsFitness> placePaths(List<Node> nodes)
+        public async Task<PlacementsFitness> PlacePaths(List<Node> nodes)
         {
-            if (binPolygon == null)
+            if (_binPolygon == null)
             {
                 throw new ArgumentNullException("binPolygon is null");
             }
@@ -91,10 +60,10 @@ namespace SvgNest
             // rotate paths by given rotation
             var rotated = nodes.Select(n =>
             {
-                var r = rotatePolygon(n, n.rotation);
-                r.rotation = n.rotation;
-                r.source = n.source;
-                r.id = n.id;
+                var r = RotatePolygon(n, n.Rotation);
+                r.Rotation = n.Rotation;
+                r.Source = n.Source;
+                r.Id = n.Id;
 
                 return r;
             }).ToList();
@@ -103,7 +72,7 @@ namespace SvgNest
 
             var allplacements = new List<List<Placement>>();
             double fitness = 0;
-            var binarea = Math.Abs(GeometryUtil.polygonArea(binPolygon.Points));
+            var binarea = Math.Abs(GeometryUtil.PolygonArea(_binPolygon.Points));
             string key;
             List<DPath> nfp;
 
@@ -122,12 +91,12 @@ namespace SvgNest
                     key = JsonConvert.SerializeObject(new SvgNestPair
                     {
                         A = -1,
-                        B = path.id,
-                        inside = true,
-                        Arotation = 0,
-                        Brotation = path.rotation
+                        B = path.Id,
+                        Inside = true,
+                        ARotation = 0,
+                        BRotation = path.Rotation
                     });
-                    var binNfp = nfpCache[key];
+                    var binNfp = NfpCache[key];
 
                     // part unplaceable, skip
                     if (binNfp == null)
@@ -141,13 +110,13 @@ namespace SvgNest
                     {
                         key = JsonConvert.SerializeObject(new SvgNestPair
                         {
-                            A = placed[j].id,
-                            B = path.id,
-                            inside = false,
-                            Arotation = placed[j].rotation,
-                            Brotation = path.rotation
+                            A = placed[j].Id,
+                            B = path.Id,
+                            Inside = false,
+                            ARotation = placed[j].Rotation,
+                            BRotation = path.Rotation
                         });
-                        nfp = nfpCache[key];
+                        nfp = NfpCache[key];
 
                         if (nfp == null)
                         {
@@ -170,14 +139,14 @@ namespace SvgNest
                         {
                             for (var k = 0; k < binNfp[j].Count; k++)
                             {
-                                if (position == null || binNfp[j][k].X - path.points[0].X < position.X)
+                                if (position == null || binNfp[j][k].X - path.Points[0].X < position.X)
                                 {
                                     position = new Placement
                                     {
-                                        X = binNfp[j][k].X - path.points[0].X,
-                                        Y = binNfp[j][k].Y - path.points[0].Y,
-                                        id = path.id,
-                                        rotation = path.rotation
+                                        X = binNfp[j][k].X - path.Points[0].X,
+                                        Y = binNfp[j][k].Y - path.Points[0].Y,
+                                        Id = path.Id,
+                                        Rotation = path.Rotation
                                     };
                                 }
                             }
@@ -197,13 +166,13 @@ namespace SvgNest
                     {
                         key = JsonConvert.SerializeObject(new SvgNestPair
                         {
-                            A = placed[j].id,
-                            B = path.id,
-                            inside = false,
-                            Arotation = placed[j].rotation,
-                            Brotation = path.rotation
+                            A = placed[j].Id,
+                            B = path.Id,
+                            Inside = false,
+                            ARotation = placed[j].Rotation,
+                            BRotation = path.Rotation
                         });
-                        nfp = nfpCache[key];
+                        nfp = NfpCache[key];
 
                         if (nfp == null)
                         {
@@ -273,7 +242,7 @@ namespace SvgNest
                     for (var j = 0; j < finalNfp.Count; j++)
                     {
                         var nf = finalNfp[j];
-                        if (Math.Abs(GeometryUtil.polygonArea(nf)) < 2)
+                        if (Math.Abs(GeometryUtil.PolygonArea(nf)) < 2)
                         {
                             continue;
                         }
@@ -283,32 +252,32 @@ namespace SvgNest
                             var allpoints = new DPath();
                             for (var m = 0; m < placed.Count; m++)
                             {
-                                for (var n = 0; n < placed[m].points.Count; n++)
+                                for (var n = 0; n < placed[m].Points.Count; n++)
                                 {
-                                    allpoints.Add(new DoublePoint(placed[m].points[n].X + placements[m].X, placed[m].points[n].Y + placements[m].Y));
+                                    allpoints.Add(new DoublePoint(placed[m].Points[n].X + placements[m].X, placed[m].Points[n].Y + placements[m].Y));
                                 }
                             }
 
                             var shiftvector = new Placement
                             {
-                                X = nf[k].X - path.points[0].X,
-                                Y = nf[k].Y - path.points[0].Y,
-                                id = path.id,
-                                rotation = path.rotation,
-                                nfp = combinedNfp
+                                X = nf[k].X - path.Points[0].X,
+                                Y = nf[k].Y - path.Points[0].Y,
+                                Id = path.Id,
+                                Rotation = path.Rotation,
+                                Nfp = combinedNfp
                             };
 
-                            for (var m = 0; m < path.points.Count; m++)
+                            for (var m = 0; m < path.Points.Count; m++)
                             {
-                                allpoints.Add(new DoublePoint(path.points[m].X + shiftvector.X, path.points[m].Y + shiftvector.Y));
+                                allpoints.Add(new DoublePoint(path.Points[m].X + shiftvector.X, path.Points[m].Y + shiftvector.Y));
                             }
 
-                            var rectbounds = GeometryUtil.getPolygonBounds(allpoints.ToArray());
+                            var rectbounds = GeometryUtil.GetPolygonBounds(allpoints.ToArray());
 
                             // weigh width more, to help compress in direction of gravity
                             var area = rectbounds.Width * 2 + rectbounds.Height;
 
-                            if (minarea == null || area < minarea || (GeometryUtil.almostEqual(minarea.Value, area) && (minx == null || shiftvector.X < minx)))
+                            if (minarea == null || area < minarea || (GeometryUtil.AlmostEqual(minarea.Value, area) && (minx == null || shiftvector.X < minx)))
                             {
                                 minarea = area;
                                 minwidth = rectbounds.Width;
@@ -351,7 +320,7 @@ namespace SvgNest
             // there were parts that couldn't be placed
             fitness += 2 * paths.Count;
 
-            return new PlacementsFitness { placements = allplacements, fitness = fitness, paths = paths, area = binarea };
+            return new PlacementsFitness { Placements = allplacements, Fitness = fitness, Paths = paths, Area = binarea };
         }
     }
 }

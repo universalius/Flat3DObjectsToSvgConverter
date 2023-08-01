@@ -46,10 +46,10 @@ namespace Plain3DObjectsToSvgConverter.Services
             c.Add(new DoublePoint(4, 4));
 
             var svgNest = new SvgNest.SvgNest();
-            svgNest.parsesvg(inputSvg);
-            await svgNest.start();
+            svgNest.ParseSvg(inputSvg);
+            await svgNest.Start();
 
-            File.WriteAllText(@"D:\Виталик\Cat_Hack\Svg\result_compacted.svg", svgNest.compactedSvgs.First().OuterXml);
+            File.WriteAllText(@"D:\Виталик\Cat_Hack\Svg\result_compacted.svg", svgNest.CompactedSvgs.First().OuterXml);
 
 
             return null;

@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using SvgNest.Utils;
 
-namespace SvgNest.Utils
+namespace SvgNest.Models.SVGPathSeg
 {
     public class SVGPathSeg
     {
@@ -29,27 +25,20 @@ namespace SvgNest.Utils
         public const int PATHSEG_CURVETO_QUADRATIC_SMOOTH_ABS = 18;
         public const int PATHSEG_CURVETO_QUADRATIC_SMOOTH_REL = 19;
 
-        public int pathSegType;
-        public string pathSegTypeAsLetter;
+        public int _pathSegType;
         private SVGPathSegList _owningPathSegList;
-
 
         public SVGPathSeg(int type, string typeAsLetter, SVGPathSegList owningPathSegList)
         {
-            pathSegType = type;
-            pathSegTypeAsLetter = typeAsLetter;
+            _pathSegType = type;
+            PathSegTypeAsLetter = typeAsLetter;
             _owningPathSegList = owningPathSegList;
         }
+
+        public string PathSegTypeAsLetter { get; set; }
 
         public double X { get; set; }
 
         public double Y { get; set; }
-
-        //window.SVGPathSeg = function(type, typeAsLetter, owningPathSegList)
-        //{
-        //    this.pathSegType = type;
-        //    this.pathSegTypeAsLetter = typeAsLetter;
-        //    this._owningPathSegList = owningPathSegList;
-        //}
     }
 }
