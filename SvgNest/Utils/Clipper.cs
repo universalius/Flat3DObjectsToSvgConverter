@@ -70,8 +70,10 @@ namespace ClipperLib
 
     public class DoublePoint
     {
-        public double X;
-        public double Y;
+        public double X { get; set; }
+        public double Y { get; set; }
+
+        public DoublePoint() { }
 
         public DoublePoint(double x = 0, double y = 0)
         {

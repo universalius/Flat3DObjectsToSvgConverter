@@ -45,8 +45,7 @@ namespace SvgNest
 
         public static RotatedPolygons rotatePolygon(Node polygon, double degrees)
         {
-            var angle = degrees * Math.PI / 180;
-            var rotatedPolygon = GeometryUtil.rotatePolygon(polygon.points.ToArray(), angle);
+            var rotatedPolygon = GeometryUtil.rotatePolygon(polygon.points.ToArray(), degrees);
             var rotated = new RotatedPolygons { points = rotatedPolygon.Points.ToList() };
 
             if (polygon.children != null && polygon.children.Any())

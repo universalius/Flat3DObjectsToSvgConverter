@@ -8,6 +8,6 @@ namespace SvgNest.Constants
 {
     public class SvgNestConstants
     {
-        public const int ClipperScale = 10000000;
+        public const double ClipperScale = 10000000;
     }
 }

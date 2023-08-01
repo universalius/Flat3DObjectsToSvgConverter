@@ -11,12 +11,16 @@ using SvgNest.Models.SvgNest;
 using SvgNest.Helpers;
 using SvgNest.Constants;
 using System.Reflection.Metadata;
+using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace SvgNest
 {
     public class SvgNest
     {
         private SvgDocument svg = null;
+
+        public List<XmlElement> compactedSvgs = null;
 
         // keep a reference to any style nodes, to maintain color/fill info
         private string style = null;
@@ -26,9 +30,10 @@ namespace SvgNest
         private List<Node> tree = null;
 
         private XmlElement bin = null;
-        //private DoublePoint[] binPolygon = null;
         private PolygonBounds binBounds = null;
         private Dictionary<string, List<DPath>> nfpCache = null;
+
+        private CultureInfo culture = new CultureInfo("en-US", false);
 
         private SvgNestConfig config;
 
@@ -40,88 +45,6 @@ namespace SvgNest
             config = new SvgNestConfig();
             nfpCache = new Dictionary<string, List<DPath>>();
         }
-
-        //        /*!
-        // * SvgNest
-        // * Licensed under the MIT license
-        // */
-
-        //        (function(root){
-        //	"use strict";
-
-        //	root.SvgNest = new SvgNest();
-
-        //        function SvgNest()
-        //        {
-        //            var self = this;
-
-        //            var svg = null;
-
-        //            // keep a reference to any style nodes, to maintain color/fill info
-        //            this.style = null;
-
-        //            var parts = null;
-
-        //            var tree = null;
-
-
-        //            var bin = null;
-        //            var binPolygon = null;
-        //            var binBounds = null;
-        //            var nfpCache = { };
-        //            var config = {
-        //            clipperScale: 10000000,
-        //			curveTolerance: 0.3, 
-        //			spacing: 0,
-        //			rotations: 4,
-        //			populationSize: 10,
-        //			mutationRate: 10,
-        //			useHoles: false,
-        //			exploreConcave: false
-
-        //        };
-
-        //		this.working = false;
-
-        //		var GA = null;
-        //        var best = null;
-        //        var workerTimer = null;
-        //        var progress = 0;
-
-        //		this.parsesvg(svgstring)
-        //        {
-        //            // reset if in progress
-        //            this.stop();
-
-        //            bin = null;
-        //            binPolygon = null;
-        //            tree = null;
-
-        //            // parse svg
-        //            svg = SvgParser.load(svgstring);
-
-        //            this.style = SvgParser.getStyle();
-
-        //            svg = SvgParser.clean();
-
-        //            tree = this.getParts(svg.childNodes);
-
-        //            //re-order elements such that deeper elements are on top, so they can be moused over
-        //            function zorder(paths)
-        //            {
-        //                // depth-first
-        //                var length = paths.Length;
-        //                for (var i = 0; i < length; i++)
-        //                {
-        //                    if (paths[i].children && paths[i].children.Length > 0)
-        //                    {
-        //                        zorder(paths[i].children);
-        //                    }
-        //                }
-        //            }
-
-        //            return svg;
-        //        }
 
         public SvgDocument parsesvg(string svgstring)
         {
@@ -143,68 +66,6 @@ namespace SvgNest
 
             return svg;
         }
-
-
-
-        //		this.setbin(element)
-        //        {
-        //            if (!svg)
-        //            {
-        //                return;
-        //            }
-        //            bin = element;
-        //        }
-
-        //		this.config(c)
-        //        {
-        //            // clean up inputs
-
-        //            if (!c)
-        //            {
-        //                return config;
-        //            }
-
-        //            if (c.curveTolerance && !GeometryUtil.almostEqual(parseFloat(c.curveTolerance), 0))
-        //            {
-        //                config.curveTolerance = parseFloat(c.curveTolerance);
-        //            }
-
-        //            if ("spacing" in c){
-        //                config.spacing = parseFloat(c.spacing);
-        //            }
-
-        //            if (c.rotations && parseInt(c.rotations) > 0)
-        //            {
-        //                config.rotations = parseInt(c.rotations);
-        //            }
-
-        //            if (c.populationSize && parseInt(c.populationSize) > 2)
-        //            {
-        //                config.populationSize = parseInt(c.populationSize);
-        //            }
-
-        //            if (c.mutationRate && parseInt(c.mutationRate) > 0)
-        //            {
-        //                config.mutationRate = parseInt(c.mutationRate);
-        //            }
-
-        //            if ("useHoles" in c){
-        //                config.useHoles = !!c.useHoles;
-        //            }
-
-        //            if ("exploreConcave" in c){
-        //                config.exploreConcave = !!c.exploreConcave;
-        //            }
-
-        //            SvgParser.config({ tolerance: config.curveTolerance});
-
-        //            best = null;
-        //            nfpCache = { };
-        //            binPolygon = null;
-        //            GA = null;
-
-        //            return config;
-        //        }
 
         // progressCallback is called when progress is made
         // displayCallback is called when a new placement has been made
@@ -370,27 +231,6 @@ namespace SvgNest
         });
         }
 
-        //private void shuffle(array)
-        //{
-        //    var currentIndex = array.Length, temporaryValue, randomIndex;
-
-        //    // While there remain elements to shuffle...
-        //    while (0 !== currentIndex)
-        //    {
-
-        //        // Pick a remaining element...
-        //        randomIndex = Math.floor(Math.random() * currentIndex);
-        //        currentIndex -= 1;
-
-        //        // And swap it with the current element.
-        //        temporaryValue = array[currentIndex];
-        //        array[currentIndex] = array[randomIndex];
-        //        array[randomIndex] = temporaryValue;
-        //    }
-
-        //    return array;
-        //}
-
         private async Task<List<XmlElement>> launchWorkers(List<Node> tree, PolygonWithBounds binPolygon/*, progressCallback, displayCallback*/)
         {
             PlacementsFitness best = null;
@@ -487,6 +327,17 @@ namespace SvgNest
 
             var worker = new PlacementWorker(binPolygon, new List<Node>(placelist), ids, rotations, config, nfpCache);
 
+            ////var b = "";
+            //var b = "{\r\n    \"A\": [\r\n        {\r\n            \"x\": 300,\r\n            \"y\": 400\r\n        },\r\n        {\r\n            \"x\": 0,\r\n            \"y\": 400\r\n        },\r\n        {\r\n            \"x\": 0,\r\n            \"y\": 0\r\n        },\r\n        {\r\n            \"x\": 300,\r\n            \"y\": 0\r\n        }\r\n    ],\r\n    \"B\": [\r\n        {\r\n            \"x\": 459.3695005,\r\n            \"y\": -34.2\r\n        },\r\n        {\r\n            \"x\": 459.1624005,\r\n            \"y\": -24.387\r\n        },\r\n        {\r\n            \"x\": 460.7934005,\r\n            \"y\": -24.711\r\n        },\r\n        {\r\n            \"x\": 460.3695005,\r\n            \"y\": -25.876\r\n        },\r\n        {\r\n            \"x\": 460.3695005,\r\n            \"y\": -34.2\r\n        },\r\n        {\r\n            \"x\": 462.8695005,\r\n            \"y\": -34.2\r\n        },\r\n        {\r\n            \"x\": 463.5094005,\r\n            \"y\": -31.1\r\n        },\r\n        {\r\n            \"x\": 462.8695005,\r\n            \"y\": -31.1\r\n        },\r\n        {\r\n            \"x\": 462.8695005,\r\n            \"y\": -27.1\r\n        },\r\n        {\r\n            \"x\": 486.3195005,\r\n            \"y\": -27.1\r\n        },\r\n        {\r\n            \"x\": 486.3195005,\r\n            \"y\": -31.1\r\n        },\r\n        {\r\n            \"x\": 485.6796005,\r\n            \"y\": -31.1\r\n        },\r\n        {\r\n            \"x\": 486.3195005,\r\n            \"y\": -34.2\r\n        },\r\n        {\r\n            \"x\": 488.8195005,\r\n            \"y\": -34.2\r\n        },\r\n        {\r\n            \"x\": 488.6124005,\r\n            \"y\": -24.387\r\n        },\r\n        {\r\n            \"x\": 490.2434005,\r\n            \"y\": -24.711\r\n        },\r\n        {\r\n            \"x\": 489.8195005,\r\n            \"y\": -25.876\r\n        },\r\n        {\r\n            \"x\": 489.8195005,\r\n            \"y\": -34.2\r\n        },\r\n        {\r\n            \"x\": 492.3195005,\r\n            \"y\": -34.2\r\n        },\r\n        {\r\n            \"x\": 492.9594005,\r\n            \"y\": -31.1\r\n        },\r\n        {\r\n            \"x\": 492.3195005,\r\n            \"y\": -31.1\r\n        },\r\n        {\r\n            \"x\": 492.3195005,\r\n            \"y\": -27.1\r\n        },\r\n        {\r\n            \"x\": 495.3795005,\r\n            \"y\": -27.1\r\n        },\r\n        {\r\n            \"x\": 495.3795005,\r\n            \"y\": -23.102\r\n        },\r\n        {\r\n            \"x\": 493.1295005,\r\n            \"y\": -20.1\r\n        },\r\n        {\r\n            \"x\": 492.5945005,\r\n            \"y\": -17.1\r\n        },\r\n        {\r\n            \"x\": 493.1295005,\r\n            \"y\": -14.1\r\n        },\r\n        {\r\n            \"x\": 495.3795005,\r\n            \"y\": -11.099\r\n        },\r\n        {\r\n            \"x\": 495.3795005,\r\n            \"y\": -7.1\r\n        },\r\n        {\r\n            \"x\": 492.3195005,\r\n            \"y\": -7.1\r\n        },\r\n        {\r\n            \"x\": 492.3195005,\r\n            \"y\": -3.1\r\n        },\r\n        {\r\n            \"x\": 492.9594005,\r\n            \"y\": -3.1\r\n        },\r\n        {\r\n            \"x\": 492.3195005,\r\n            \"y\": 0\r\n        },\r\n        {\r\n            \"x\": 489.8195005,\r\n            \"y\": 0\r\n        },\r\n        {\r\n            \"x\": 490.0266005,\r\n            \"y\": -9.813\r\n        },\r\n        {\r\n            \"x\": 488.3956005,\r\n            \"y\": -9.489\r\n        },\r\n        {\r\n            \"x\": 488.8195005,\r\n            \"y\": -8.324\r\n        },\r\n        {\r\n            \"x\": 488.8195005,\r\n            \"y\": 0\r\n        },\r\n        {\r\n            \"x\": 486.3195005,\r\n            \"y\": 0\r\n        },\r\n        {\r\n            \"x\": 485.6796005,\r\n            \"y\": -3.1\r\n        },\r\n        {\r\n            \"x\": 486.3195005,\r\n            \"y\": -3.1\r\n        },\r\n        {\r\n            \"x\": 486.3195005,\r\n            \"y\": -7.1\r\n        },\r\n        {\r\n            \"x\": 462.8695005,\r\n            \"y\": -7.1\r\n        },\r\n        {\r\n            \"x\": 462.8695005,\r\n            \"y\": -3.1\r\n        },\r\n        {\r\n            \"x\": 463.5094005,\r\n            \"y\": -3.1\r\n        },\r\n        {\r\n            \"x\": 462.8695005,\r\n            \"y\": 0\r\n        },\r\n        {\r\n            \"x\": 460.3695005,\r\n            \"y\": 0\r\n        },\r\n        {\r\n            \"x\": 460.5766005,\r\n            \"y\": -9.813\r\n        },\r\n        {\r\n            \"x\": 458.9456005,\r\n            \"y\": -9.489\r\n        },\r\n        {\r\n            \"x\": 459.3695005,\r\n            \"y\": -8.324\r\n        },\r\n        {\r\n            \"x\": 459.3695005,\r\n            \"y\": 0\r\n        },\r\n        {\r\n            \"x\": 456.8695005,\r\n            \"y\": 0\r\n        },\r\n        {\r\n            \"x\": 456.2296005,\r\n            \"y\": -3.1\r\n        },\r\n        {\r\n            \"x\": 456.8695005,\r\n            \"y\": -3.1\r\n        },\r\n        {\r\n            \"x\": 456.8695005,\r\n            \"y\": -7.1\r\n        },\r\n        {\r\n            \"x\": 455.0195005,\r\n            \"y\": -7.1\r\n        },\r\n        {\r\n            \"x\": 455.0195005,\r\n            \"y\": -10.1\r\n        },\r\n        {\r\n            \"x\": 451.0195005,\r\n            \"y\": -10.1\r\n        },\r\n        {\r\n            \"x\": 451.0195005,\r\n            \"y\": -7.1\r\n        },\r\n        {\r\n            \"x\": 448.4695005,\r\n            \"y\": -7.1\r\n        },\r\n        {\r\n            \"x\": 448.4695005,\r\n            \"y\": -3.6\r\n        },\r\n        {\r\n            \"x\": 446.3816005,\r\n            \"y\": -3.6\r\n        },\r\n        {\r\n            \"x\": 444.6195005,\r\n            \"y\": -7.1\r\n        },\r\n        {\r\n            \"x\": 443.8195005,\r\n            \"y\": -17.1\r\n        },\r\n        {\r\n            \"x\": 444.6195005,\r\n            \"y\": -27.1\r\n        },\r\n        {\r\n            \"x\": 446.3816005,\r\n            \"y\": -30.6\r\n        },\r\n        {\r\n            \"x\": 448.4695005,\r\n            \"y\": -30.6\r\n        },\r\n        {\r\n            \"x\": 448.4695005,\r\n            \"y\": -27.1\r\n        },\r\n        {\r\n            \"x\": 451.0195005,\r\n            \"y\": -27.1\r\n        },\r\n        {\r\n            \"x\": 451.0195005,\r\n            \"y\": -24.1\r\n        },\r\n        {\r\n            \"x\": 455.0195005,\r\n            \"y\": -24.1\r\n        },\r\n        {\r\n            \"x\": 455.0195005,\r\n            \"y\": -27.1\r\n        },\r\n        {\r\n            \"x\": 456.8695005,\r\n            \"y\": -27.1\r\n        },\r\n        {\r\n            \"x\": 456.8695005,\r\n            \"y\": -31.1\r\n        },\r\n        {\r\n            \"x\": 456.2296005,\r\n            \"y\": -31.1\r\n        },\r\n        {\r\n            \"x\": 456.8695005,\r\n            \"y\": -34.2\r\n        }\r\n    ],\r\n    \"key\": {\r\n        \"A\": -1,\r\n        \"B\": 11,\r\n        \"inside\": true,\r\n        \"Arotation\": 0,\r\n        \"Brotation\": 180\r\n    }\r\n}";
+            ////var b = "{\"A\":null,\"B\":null,\"key\":null}";
+
+            //var test = b.Replace("[", "{\"points\":[").Replace("]", "]}");   //b.Replace("\"x\"", "\"X\"").Replace("\"y\"", "\"Y\"").Replace("\r\n", "");
+
+            //var input = JsonConvert.DeserializeObject<NodesPair>(test);
+
+            //await GetNodesPairsPathes(input);
+            //return null;
+
             var generatedNfp = await Task.WhenAll(nfpPairs.Select(GetNodesPairsPathes));
 
             if (generatedNfp != null && generatedNfp.Any())
@@ -504,7 +355,7 @@ namespace SvgNest
                 }
             }
             worker.nfpCache = nfpCache;
-
+            
             var placements = await Task.WhenAll(new List<List<Node>> { new List<Node>(placelist) }.Select(worker.placePaths));
 
             if (placements == null || !placements.Any())
@@ -557,13 +408,12 @@ namespace SvgNest
             }
         }
 
-
         // assuming no intersections, return a tree where odd leaves are parts and even ones are holes
         // might be easier to use the DOM, but paths can"t have paths as children. So we"ll just make our own tree.
         private List<Node> getParts(XmlElement[] paths)
         {
             int i, j;
-            var polygons = new List<DoublePoint[]>();
+            var nodes = new List<Node>();
 
             var numChildren = paths.Count();
             for (i = 0; i < numChildren; i++)
@@ -574,14 +424,10 @@ namespace SvgNest
                 // todo: warn user if poly could not be processed and is excluded from the nest
                 if (poly != null && poly.Length > 2 && Math.Abs(GeometryUtil.polygonArea(poly)) > config.curveTolerance * config.curveTolerance)
                 {
-                    polygons.Add(poly);
+                    nodes.Add(new Node { points = poly.ToList(), source = i});
                 }
             }
 
-            var nodes = polygons.Select(p => new Node
-            {
-                points = p.ToList()
-            }).ToList();
             // turn the list into a tree
             toTree(nodes);
 
@@ -708,7 +554,6 @@ namespace SvgNest
             return ClipperHelper.ToSvgNestCoordinates(clean);
         }
 
-
         // returns an array of SVG elements that represent the placement, for export or rendering
         public List<XmlElement> applyPlacement(List<List<Placement>> placement)
         {
@@ -721,11 +566,11 @@ namespace SvgNest
                 newsvg.SetAttribute("viewBox", "0 0 " + binBounds.Width + " " + binBounds.Height);
                 newsvg.SetAttribute("width", binBounds.Width + "px");
                 newsvg.SetAttribute("height", binBounds.Height + "px");
-                var binclone = bin.CloneNode(false) as XmlElement;
 
-                binclone.SetAttribute("class", "bin");
-                binclone.SetAttribute("transform", "translate(" + (-binBounds.X) + " " + (-binBounds.Y) + ")");
-                newsvg.AppendChild(binclone);
+                //var binclone = bin.CloneNode(false) as XmlElement;
+                //binclone.SetAttribute("class", "bin");
+                //binclone.SetAttribute("transform", "translate(" + (-binBounds.X) + " " + (-binBounds.Y) + ")");
+                //newsvg.AppendChild(binclone);
 
                 for (var j = 0; j < placement[i].Count; j++)
                 {
@@ -733,8 +578,8 @@ namespace SvgNest
                     var part = tree[p.id];
 
                     // the original path could have transforms and stuff on it, so apply our transforms on a group
-                    var partgroup = svg._document.CreateElement("g");
-                    partgroup.SetAttribute("transform", "translate(" + p.X + " " + p.Y + ") rotate(" + p.rotation + ")");
+                    var partgroup = svg._document.CreateElement("g", newsvg.OwnerDocument.DocumentElement.NamespaceURI);
+                    partgroup.SetAttribute("transform", "translate(" + p.X.ToString(culture) + " " + p.Y.ToString(culture) + ") rotate(" + p.rotation + ")");
                     partgroup.AppendChild(clone[part.source]);
 
                     if (part.children != null && part.children.Any())
@@ -761,6 +606,8 @@ namespace SvgNest
 
                 svglist.Add(newsvg);
             }
+
+            compactedSvgs = svglist;
 
             return svglist;
         }
@@ -792,208 +639,6 @@ namespace SvgNest
 
             return flat;
         }
-
-        //this.stop(){
-        //    this.working = false;
-        //    if (workerTimer)
-        //    {
-        //        clearInterval(workerTimer);
-        //    }
-        //};
-        //	}
-
-        //	function GeneticAlgorithm(adam, bin, config)
-        //{
-
-        //    this.config = config || { populationSize: 10, mutationRate: 10, rotations: 4 };
-        //    this.binBounds = GeometryUtil.getPolygonBounds(bin);
-
-        //    // population is an array of individuals. Each individual is a object representing the order of insertion and the angle each part is rotated
-        //    var angles = [];
-        //    for (var i = 0; i < adam.Length; i++)
-        //    {
-        //        angles.Add(this.randomAngle(adam[i]));
-        //    }
-
-        //    this.population = [{ placement: adam, rotation: angles}];
-
-        //    while (this.population.Length < config.populationSize)
-        //    {
-        //        var mutant = this.mutate(this.population[0]);
-        //        this.population.Add(mutant);
-        //    }
-        //}
-
-        //// returns a random angle of insertion
-        //GeneticAlgorithm.prototype.randomAngle(part){
-
-        //    var angleList = [];
-        //    for (var i = 0; i < Math.max(this.config.rotations, 1); i++)
-        //    {
-        //        angleList.Add(i * (360 / this.config.rotations));
-        //    }
-
-        //    function shuffleArray(array)
-        //    {
-        //        for (var i = array.Length - 1; i > 0; i--)
-        //        {
-        //            var j = Math.floor(Math.random() * (i + 1));
-        //            var temp = array[i];
-        //            array[i] = array[j];
-        //            array[j] = temp;
-        //        }
-        //        return array;
-        //    }
-
-        //    angleList = shuffleArray(angleList);
-
-        //    for (i = 0; i < angleList.Length; i++)
-        //    {
-        //        var rotatedPart = GeometryUtil.rotatePolygon(part, angleList[i]);
-
-        //        // don"t use obviously bad angles where the part doesn"t fit in the bin
-        //        if (rotatedPart.Width < this.binBounds.Width && rotatedPart.Height < this.binBounds.Height)
-        //        {
-        //            return angleList[i];
-        //        }
-        //    }
-
-        //    return 0;
-        //}
-
-        //// returns a mutated individual with the given mutation rate
-        //GeneticAlgorithm.prototype.mutate(individual){
-        //    var clone = { placement: individual.placement.slice(0), rotation: individual.rotation.slice(0)};
-        //for (var i = 0; i < clone.placement.Length; i++)
-        //{
-        //    var rand = Math.random();
-        //    if (rand < 0.01 * this.config.mutationRate)
-        //    {
-        //        // swap current part with next part
-        //        var j = i + 1;
-
-        //        if (j < clone.placement.Length)
-        //        {
-        //            var temp = clone.placement[i];
-        //            clone.placement[i] = clone.placement[j];
-        //            clone.placement[j] = temp;
-        //        }
-        //    }
-
-        //    rand = Math.random();
-        //    if (rand < 0.01 * this.config.mutationRate)
-        //    {
-        //        clone.rotation[i] = this.randomAngle(clone.placement[i]);
-        //    }
-        //}
-
-        //return clone;
-        //	}
-
-        //	// single point crossover
-        //	GeneticAlgorithm.prototype.mate(male, female){
-        //    var cutpoint = Math.round(Math.min(Math.max(Math.random(), 0.1), 0.9) * (male.placement.Length - 1));
-
-        //    var gene1 = male.placement.slice(0, cutpoint);
-        //    var rot1 = male.rotation.slice(0, cutpoint);
-
-        //    var gene2 = female.placement.slice(0, cutpoint);
-        //    var rot2 = female.rotation.slice(0, cutpoint);
-
-        //    var i;
-
-        //    for (i = 0; i < female.placement.Length; i++)
-        //    {
-        //        if (!contains(gene1, female.placement[i].id))
-        //        {
-        //            gene1.Add(female.placement[i]);
-        //            rot1.Add(female.rotation[i]);
-        //        }
-        //    }
-
-        //    for (i = 0; i < male.placement.Length; i++)
-        //    {
-        //        if (!contains(gene2, male.placement[i].id))
-        //        {
-        //            gene2.Add(male.placement[i]);
-        //            rot2.Add(male.rotation[i]);
-        //        }
-        //    }
-
-        //    function contains(gene, id)
-        //    {
-        //        for (var i = 0; i < gene.Length; i++)
-        //        {
-        //            if (gene[i].id == id)
-        //            {
-        //                return true;
-        //            }
-        //        }
-        //        return false;
-        //    }
-
-        //    return [{ placement: gene1, rotation: rot1},{ placement: gene2, rotation: rot2}];
-        //}
-
-        //GeneticAlgorithm.prototype.generation(){
-
-        //    // Individuals with higher fitness are more likely to be selected for mating
-        //    this.population.sort(function(a, b){
-        //        return a.fitness - b.fitness;
-        //    });
-
-        //    // fittest individual is preserved in the new generation (elitism)
-        //    var newpopulation = [this.population[0]];
-
-        //    while (newpopulation.Length < this.population.Length)
-        //    {
-        //        var male = this.randomWeightedIndividual();
-        //        var female = this.randomWeightedIndividual(male);
-
-        //        // each mating produces two children
-        //        var children = this.mate(male, female);
-
-        //        // slightly mutate children
-        //        newpopulation.Add(this.mutate(children[0]));
-
-        //        if (newpopulation.Length < this.population.Length)
-        //        {
-        //            newpopulation.Add(this.mutate(children[1]));
-        //        }
-        //    }
-
-        //    this.population = newpopulation;
-        //}
-
-        //// returns a random individual from the population, weighted to the front of the list (lower fitness value is more likely to be selected)
-        //GeneticAlgorithm.prototype.randomWeightedIndividual(exclude){
-        //    var pop = this.population.slice(0);
-
-        //    if (exclude && pop.indexOf(exclude) >= 0)
-        //    {
-        //        pop.splice(pop.indexOf(exclude), 1);
-        //    }
-
-        //    var rand = Math.random();
-
-        //    var lower = 0;
-        //    var weight = 1 / pop.Length;
-        //    var upper = weight;
-
-        //    for (var i = 0; i < pop.Length; i++)
-        //    {
-        //        // if the random number falls between lower and upper bounds, select this individual
-        //        if (rand > lower && rand < upper)
-        //        {
-        //            return pop[i];
-        //        }
-        //        lower = upper;
-        //        upper += 2 * weight * ((pop.Length - i) / pop.Length);
-        //    }
-
-        //    return pop[0];
-        //}
-
 
         private async Task<KeyValuePair<SvgNestPair, List<DPath>>?> GetNodesPairsPathes(NodesPair pair)
         {
