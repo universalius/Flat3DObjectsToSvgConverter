@@ -16,6 +16,7 @@ namespace ObjParser.Types
         public string UseMtl { get; set; }
         public int[] VertexIndexList { get; set; }
         public int[] TextureVertexIndexList { get; set; }
+        public List<int> NormalVertexIndexList { get; set; }
 
         public int Id { get; set; }
 
@@ -25,13 +26,14 @@ namespace ObjParser.Types
                 throw new ArgumentException("Input array must be of minimum length " + MinimumDataLength, "data");
 
             if (!data[0].ToLower().Equals(Prefix))
-                throw new ArgumentException("Data prefix must be '" + Prefix + "'", "data");            
+                throw new ArgumentException("Data prefix must be '" + Prefix + "'", "data");
 
             int vcount = data.Count() - 1;
             VertexIndexList = new int[vcount];
             TextureVertexIndexList = new int[vcount];
+            NormalVertexIndexList = new List<int>();
 
-			bool success;
+            bool success;
 
             for (int i = 0; i < vcount; i++)
             {
@@ -45,15 +47,22 @@ namespace ObjParser.Types
                 if (parts.Count() > 1)
                 {
                     success = int.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out vindex);
-                    if (success) {
+                    if (success)
+                    {
                         TextureVertexIndexList[i] = vindex;
+                    }
+
+                    if (parts.Count() > 2)
+                    {
+                        int vnIndex;
+                        success = int.TryParse(parts[2], NumberStyles.Any, CultureInfo.InvariantCulture, out vnIndex);
+                        if (!success) throw new ArgumentException("Could not parse parameter as int");
+                        NormalVertexIndexList.Add(vnIndex);
                     }
                 }
             }
         }
 
-        // HACKHACK this will write invalid files if there are no texture vertices in
-        // the faces, need to identify that and write an alternate format
         public override string ToString()
         {
             StringBuilder b = new StringBuilder();
@@ -61,13 +70,16 @@ namespace ObjParser.Types
 
             for (int i = 0; i < VertexIndexList.Count(); i++)
             {
-                if (i < TextureVertexIndexList.Length)
+                b.AppendFormat(" {0}", VertexIndexList[i]);
+
+                if (TextureVertexIndexList.Any())
                 {
-                    b.AppendFormat(" {0}/{1}", VertexIndexList[i], TextureVertexIndexList[i]);
+                    b.AppendFormat("/{0}", TextureVertexIndexList[i]);
                 }
-                else
+
+                if (NormalVertexIndexList.Any())
                 {
-                    b.AppendFormat(" {0}", VertexIndexList[i]);
+                    b.AppendFormat("/{0}", NormalVertexIndexList[i]);
                 }
             }
 
