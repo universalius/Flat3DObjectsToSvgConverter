@@ -11,8 +11,10 @@ namespace ObjParser
         public List<Vertex> VertexList;
         public List<Face> FaceList;
         public List<TextureVertex> TextureList;
+        public List<NormalVertex> NormalList;
 
         public int VertexListShift { get; set; } = 0;
+        public int NormalListShift { get; set; } = 0;
 
         public Extent Size { get; set; }
 
@@ -27,6 +29,7 @@ namespace ObjParser
             VertexList = new List<Vertex>();
             FaceList = new List<Face>();
             TextureList = new List<TextureVertex>();
+            NormalList = new List<NormalVertex>();
         }
 
         /// <summary>
@@ -185,7 +188,12 @@ namespace ObjParser
                         TextureList.Add(vt);
                         vt.Index = TextureList.Count();
                         break;
-
+                    case "vn":
+                        NormalVertex vn = new NormalVertex();
+                        vn.LoadFromStringArray(parts);
+                        NormalList.Add(vn);
+                        vn.Index = NormalList.Count() + NormalListShift;
+                        break;
                 }
             }
         }

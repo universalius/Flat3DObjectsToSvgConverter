@@ -33,6 +33,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                 var meshLines = t.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
                 var obj = new Obj();
                 obj.VertexListShift = meshes.Any() ? meshes.Last().Obj.VertexList.Last().Index : 0;
+                obj.NormalListShift = meshes.Any() ? meshes.Last().Obj.NormalList.Last().Index : 0;
                 obj.LoadObj(meshLines.Skip(1));
                 meshes.Add(new Mesh
                 {
