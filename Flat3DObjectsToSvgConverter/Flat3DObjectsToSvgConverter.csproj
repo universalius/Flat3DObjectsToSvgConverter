@@ -24,6 +24,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Asserts\Letters.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

@@ -1,11 +1,9 @@
 ﻿using ClipperLib;
 using Microsoft.Extensions.Logging;
 using ObjParser;
-using Flat3DObjectsToSvgConverter.Models;
 using SvgLib;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Text.RegularExpressions;
 using System.Xml;
 
@@ -18,8 +16,9 @@ namespace Flat3DObjectsToSvgConverter.Services
         private readonly double _letterWidth;
         private readonly double _letterHeight;
         private readonly ILogger<ObjectsLabelsToSvgConverter> _logger;
+        private readonly IOFileService _file;
 
-        public ObjectsLabelsToSvgConverter(ILogger<ObjectsLabelsToSvgConverter> logger)
+        public ObjectsLabelsToSvgConverter(ILogger<ObjectsLabelsToSvgConverter> logger, IOFileService file)
         {
             var mainFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -28,6 +27,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             _svgLetters = pathElements.Select(e => new SvgPath(e));
             _letterHeight = GetOrHeight();
             _letterWidth = GetUnderscoreWidth();
+            _file = file;
 
             _logger = logger;
         }
@@ -66,7 +66,10 @@ namespace Flat3DObjectsToSvgConverter.Services
             Console.WriteLine($"Finished placing labels for svg curves! Took - {watch.ElapsedMilliseconds / 1000.0} sec");
             Console.WriteLine();
 
-            return svgDocument._document.OuterXml;
+            var labelsSvg = svgDocument._document.OuterXml;
+            _file.SaveSvg("labels", labelsSvg);
+
+            return labelsSvg;
         }
 
         private string GetLabel(string pathId)

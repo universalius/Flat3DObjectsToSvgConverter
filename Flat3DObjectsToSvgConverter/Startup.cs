@@ -12,5 +12,5 @@ internal class Startup
 
     private IConfiguration Configuration { get; }
 
-    public void ConfigureServices(IServiceCollection services) => services.AddServices();
+    public void ConfigureServices(IServiceCollection services) => services.AddServices(Configuration);
 }

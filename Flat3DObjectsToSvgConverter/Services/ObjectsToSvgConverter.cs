@@ -13,6 +13,13 @@ namespace Flat3DObjectsToSvgConverter.Services
 {
     public class ObjectsToSvgConverter
     {
+        private readonly IOFileService _file;
+
+        public ObjectsToSvgConverter(IOFileService file)
+        {
+            _file = file;
+        }
+
         public string Convert(IEnumerable<MeshObjects> meshes)
         {
             var objectsSizes = meshes.SelectMany(m =>
@@ -34,7 +41,6 @@ namespace Flat3DObjectsToSvgConverter.Services
                     };
                 }).ToList();
             }).ToList();
-
 
             var objectsTransorms = objectsSizes.Select((o, i) =>
             {
@@ -73,13 +79,15 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             var svgGroupsString = string.Join("\r\n", svgGroups);
 
-            var body = @$"
+            var svg = @$"
             <svg xmlns=""http://www.w3.org/2000/svg"" width=""300mm"" height=""400mm"" viewBox=""0 0 300 400"">
               {svgGroupsString}
             </svg>
             ";
 
-            return body;
+            _file.SaveSvg("parsed", svg);
+
+            return svg;
         }
 
         private string GetTransformToXYZero(PointF point, double shiftByX)
