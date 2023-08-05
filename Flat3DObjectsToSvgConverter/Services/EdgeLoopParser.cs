@@ -14,7 +14,7 @@ namespace Flat3DObjectsToSvgConverter.Services
         {
             var watch = Stopwatch.StartNew();
 
-            var verts = meshObject.PlainVerts;
+            var verts = meshObject.Verts;
             var faces = meshObject.Faces;
             var axis = meshObject.Axis;
 
