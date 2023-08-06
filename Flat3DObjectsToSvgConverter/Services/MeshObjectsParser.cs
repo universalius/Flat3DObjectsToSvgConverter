@@ -6,6 +6,7 @@ using System.Diagnostics;
 using GeometRi;
 using System.Linq;
 using ObjParser;
+using Flat3DObjectsToSvgConverter.Helpers;
 
 namespace Flat3DObjectsToSvgConverter.Services
 {
@@ -24,74 +25,6 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             meshObjects.ForEach(AllignObjectWithAxis);
 
-            //var normalFaces = obj.FaceList.Where(f => f.NormalVertexIndexList.GroupBy(i => i).Count() == 1).ToList();
-            //var facesGroupedByNormal = normalFaces.GroupBy(f => f.NormalVertexIndexList.First()).ToList();
-
-
-            //var groupedVertexNormals = obj.NormalList
-            //    .GroupBy(vn => $"{Math.Abs(vn.X)}-{Math.Abs(vn.Y)}-{Math.Abs(vn.Z)}")
-            //    .Where(g => g.Count() >= 2)
-            //    .Select(g => new
-            //    {
-            //        AbsKey = g.Key,
-            //        VnsGroupedByCoords = g.GroupBy(vn => $"{vn.X}-{vn.Y}-{vn.Z}").ToList()
-            //    })
-            //    .ToList();
-
-            //var parallelFaces = groupedVertexNormals
-            //    .Select(g =>
-            //        g.VnsGroupedByCoords.Select(gvn =>
-            //        {
-            //            var sameVns = gvn.Select(vn => vn).ToList();
-            //            var sameVnsIndexes = sameVns.Select(vn => vn.Index).ToList();
-            //            var faces = obj.FaceList.Where(f =>
-            //            {
-            //                var leftVns = f.NormalVertexIndexList.Except(sameVnsIndexes);
-            //                return !leftVns.Any();
-            //            }).ToList();
-
-            //            return new
-            //            {
-            //                SameVns = sameVns,
-            //                Faces = faces,
-            //                FacesCount = faces.Count
-            //            };
-            //        }).ToList())
-            //    //.Where(g =>
-            //    //{
-            //    //    return (g.First().FacesCount - g.Last().FacesCount) == 0;
-            //    //})
-            //    .ToList();
-
-
-
-            //var groupedOrthogonalVertexNormals = obj.NormalList.Where(vn => IsOrthogonal(vn))
-            //    .GroupBy(vn => $"{Math.Abs(vn.X)}-{Math.Abs(vn.Y)}-{Math.Abs(vn.Z)}")
-            //    .Where(g => g.Count() == 2)
-            //    .ToList();
-
-
-            //var parallelFaces = groupedOrthogonalVertexNormals
-            //    .Select(g =>
-            //        g.Select(vn =>
-            //        {
-            //            var faces = facesGroupedByNormal.Where(gf => gf.Key == vn.Index).SelectMany(gf => gf).ToList();
-            //            return new
-            //            {
-            //                Vn = vn,
-            //                Faces = faces,
-            //                FacesCount = faces.Count
-            //            };
-            //        }))
-            //    .Where(g =>
-            //    {
-            //        return (g.First().FacesCount - g.Last().FacesCount) == 0;
-            //    })
-            //    .ToList();
-
-
-
-
             var meshObjectsLoopsFaces = meshObjects.Select(GetObjectLoopFaces).ToList();
 
             watch.Stop();
@@ -100,11 +33,11 @@ namespace Flat3DObjectsToSvgConverter.Services
             return meshObjectsLoopsFaces;
         }
 
-        private MeshObject GetObjectLoopFaces(MeshObject obj)
+        private MeshObject GetObjectLoopFaces(MeshObject obj, int i)
         {
-            var xOrientedPlanes = obj.Verts.GroupBy(x => x.X).ToList();
-            var yOrientedPlanes = obj.Verts.GroupBy(x => x.Y).ToList();
-            var zOrientedPlanes = obj.Verts.GroupBy(x => x.Z).ToList();
+            var xOrientedPlanes = obj.Verts.GroupBy(v => v.X.ToInt()).ToList();
+            var yOrientedPlanes = obj.Verts.GroupBy(v => v.Y.ToInt()).ToList();
+            var zOrientedPlanes = obj.Verts.GroupBy(v => v.Z.ToInt()).ToList();
 
             var axisesPlanes = new[] {
                 new { Planes= xOrientedPlanes, VertexCount = xOrientedPlanes.Select(g => g.Count()).Max(), Axis = "x", PlanesCount = xOrientedPlanes.Count() },
@@ -124,60 +57,66 @@ namespace Flat3DObjectsToSvgConverter.Services
             var targetAxis = targetAxisVerts.Axis;
             var orderedMeshObjects = targetAxisVerts.Planes.OrderBy(g => g.Key).ToList(); // parallel vert planes should be in pairs between plains in pair should be 4 mms
 
+            if (orderedMeshObjects.Count > 2)
+            {
+                throw new Exception("Found more then 2 parallel planes for an object");
+            }
+
+
             //if (mesh.Name.ToLower() == "74_bearing")
             //{
             //    var c = 0;
             //}
 
-            var meshObjects = orderedMeshObjects.Chunks(2).Select((mo, i) =>
+            var verts = orderedMeshObjects.SelectMany(g => g.ToList()).ToList();
+            var paralelVerts = verts
+                .Select(v => new
+                {
+                    Id = AxisSelectHelpers.GetPararelVertsIdByAxis(targetAxis, v.ToIntCoords()),
+                    Vertex = v
+                })
+                .GroupBy(v => v.Id)
+                .Where(g => g.Count() > 1)
+                .ToList();
+
+            // can contain edges that match totally by vertexes, so in pair group can be more then 2 verts
+            var edgesVerts = paralelVerts.Select(g => g.Select(v => v.Vertex)).ToList();
+            var edgesVertsIndexes = edgesVerts.Select(ev => ev.Select(v => v.Index)).ToList();
+
+            var leftVerts = verts.Except(edgesVerts.SelectMany(ev => ev).ToList());
+            if (leftVerts.Count() > 2)
             {
-                var verts = mo.Select(g => g).ToList();
-                var paralelVerts = verts
-                    .SelectMany(g => g.ToList())
-                    .Select(v => new
-                    {
-                        Id = AxisSelectHelpers.GetPararelVertsIdByAxis(targetAxis, v),
-                        Vertex = v
-                    })
-                    .GroupBy(v => v.Id)
-                    .Where(g => g.Count() > 1)
-                    .ToList();
+                Console.WriteLine($"        Has some none parallel verts");
+            }
 
-                // can contain edges that match totally by vertexes, so in pair group can be more then 2 verts
-                var edgesVerts = paralelVerts.Select(g => g.Select(v => v.Vertex)).ToList();
-                var edgesVertsIndexes = edgesVerts.Select(ev => ev.Select(v => v.Index)).ToList();
 
-                // get faces that perpendicular to parralel box planes with most verts in one axis
-                var targetFaces = obj.Faces
+            // get faces that perpendicular to parralel box planes with most verts in one axis
+            var targetFaces = obj.Faces
                     .Where(f => edgesVertsIndexes.Any(evi => f.VertexIndexList.Intersect(evi).Count() == 2))
                     .DistinctBy(f => f.Id).ToList();
 
-                //if (mesh.Name.ToLower() == "74_bearing" && targetFaces.Any(f => f.Id == 264))
-                //{
-                //    var c = 0;
-                //}
+            //if (mesh.Name.ToLower() == "74_bearing" && targetFaces.Any(f => f.Id == 264))
+            //{
+            //    var c = 0;
+            //}
 
-                //var b = obj.FaceList
-                //    .Where(f => edgesVertsIndexes.Any(evi => f.VertexIndexList.Intersect(new[] { 109 }).Any()));
+            //var b = obj.FaceList
+            //    .Where(f => edgesVertsIndexes.Any(evi => f.VertexIndexList.Intersect(new[] { 109 }).Any()));
 
-                Console.WriteLine($"        Finished parse object - {i + 1}");
+            Console.WriteLine($"        Finished parse object - {i + 1}");
 
-                var firstVertOfAllEdges = edgesVerts.SelectMany(ev => ev.Select(v => v))
-                    .GroupBy(v => AxisSelectHelpers.GetVertCoordinateByAxis(targetAxis, v))
-                    .First()
-                    .Select(v => v)
-                    .ToList();
+            var firstVertOfAllEdges = edgesVerts.SelectMany(ev => ev.Select(v => v))
+                .GroupBy(v => AxisSelectHelpers.GetVertCoordinateByAxis(targetAxis, v.ToIntCoords()))
+                .First()
+                .Select(v => v)
+                .ToList();
 
-                return new MeshObject
-                {
-                    Verts = firstVertOfAllEdges,
-                    Faces = targetFaces,
-                    Axis = targetAxis,
-                };
-            }).ToList();
-
-
-            return meshObjects.First();
+            return new MeshObject
+            {
+                Verts = firstVertOfAllEdges,
+                Faces = targetFaces,
+                Axis = targetAxis,
+            };
         }
 
         private void AllignObjectWithAxis(MeshObject meshObject)

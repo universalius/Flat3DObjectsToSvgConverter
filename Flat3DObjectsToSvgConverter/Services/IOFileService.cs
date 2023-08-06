@@ -11,7 +11,7 @@ namespace Flat3DObjectsToSvgConverter.Services
         public IOFileService(IOptions<IOSettings> options)
         {
             _settings = options.Value;
-            _resultsFolderName = DateTime.Now.ToString().Replace(":", "-");
+            _resultsFolderName = $"{_settings.ObjFileName} {DateTime.Now.ToString().Replace(":", "-")}";
         }
 
         public async Task<string[]> ReadObjFile()
