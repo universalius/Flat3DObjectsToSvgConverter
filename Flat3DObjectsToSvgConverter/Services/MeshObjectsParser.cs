@@ -1,17 +1,20 @@
 ﻿using ObjParser.Types;
 using ObjParserExecutor.Helpers;
 using ObjParserExecutor.Models;
-using Flat3DObjectsToSvgConverter.Common.Extensions;
 using System.Diagnostics;
 using GeometRi;
-using System.Linq;
 using ObjParser;
 using Flat3DObjectsToSvgConverter.Helpers;
+using System.Drawing;
 
 namespace Flat3DObjectsToSvgConverter.Services
 {
     public class MeshObjectsParser
     {
+        private Vector3d _axisXVector = new Vector3d(1.0, 0.0, 0.0);
+        private Vector3d _axisYVector = new Vector3d(0.0, 1.0, 0.0);
+        private Vector3d _axisZVector = new Vector3d(0.0, 0.0, 1.0);
+
         public IEnumerable<MeshObject> Parse(Mesh mesh)
         {
             var watch = Stopwatch.StartNew();
@@ -22,6 +25,11 @@ namespace Flat3DObjectsToSvgConverter.Services
             var meshObjects = GetMeshObjects(obj, obj.FaceList.First().VertexIndexList.ToList(), new List<MeshObject>());
 
             //AllignObjectWithAxis(meshObjects[1]);
+
+            //if (mesh.Name == "142")
+            //{
+            //    var a = 0;
+            //}
 
             meshObjects.ForEach(AllignObjectWithAxis);
 
@@ -121,20 +129,25 @@ namespace Flat3DObjectsToSvgConverter.Services
 
         private void AllignObjectWithAxis(MeshObject meshObject)
         {
-            var axisXVector = new Vector3d(1.0, 0.0, 0.0);
-            var axisYVector = new Vector3d(0.0, 1.0, 0.0);
-            var axisZVector = new Vector3d(0.0, 0.0, 1.0);
-
             var facesVerts = meshObject.Faces.Select(f =>
             {
-                var verts = meshObject.Verts.Where(v => f.VertexIndexList.Contains(v.Index)).ToList();
+                var vertsDictionary = meshObject.Verts.Where(v => f.VertexIndexList.Contains(v.Index)).ToDictionary(v => v.Index, v => v);
+                var verts = f.VertexIndexList.Select(v => vertsDictionary[v]).ToList();
                 var gain = 100000;
                 var points = verts.Select(v => new Point3d(v.X * gain, v.Y * gain, v.Z * gain)).ToList();
+
+                if (points.Count > 4)
+                {
+                    var last = points.Last();
+                    points.Remove(last);
+                    points.Insert(0, last);
+                }
+
                 var plane = new Plane3d(points[0], points[1], points[2]);
                 var normal = plane.Normal;
                 var angleX = normal.AngleToDeg(new Line3d());
-                var angleY = normal.AngleToDeg(new Line3d(new Point3d(), axisYVector));
-                var angleZ = normal.AngleToDeg(new Line3d(new Point3d(), axisZVector));
+                var angleY = normal.AngleToDeg(new Line3d(new Point3d(), _axisYVector));
+                var angleZ = normal.AngleToDeg(new Line3d(new Point3d(), _axisZVector));
                 var roudedAngles = new Point3d(Math.Round(angleX), Math.Round(angleY), Math.Round(angleZ));
                 return new
                 {
@@ -150,42 +163,40 @@ namespace Flat3DObjectsToSvgConverter.Services
                     RotationDirection = new Point3d(
                         normal.X > 0 ? -1 : 1,
                         normal.Y > 0 ? -1 : 1,
-                        normal.Z > 0 ? -1 : 1)
+                        normal.Z > 0 ? -1 : 1),
+                    NormalDirection = new Point3d(
+                        normal.X > 0 ? 1 : -1,
+                        normal.Y > 0 ? 1 : -1,
+                        normal.Z > 0 ? 1 : -1)
+
                 };
-            }).ToList();
+            })
+            //.Where(f => !IsNormalOrthogonal(f.RoundedAngles))
+            .ToList();
 
             var groupedByAngles = facesVerts.GroupBy(fv => $"{fv.RoundedAngles.X}-{fv.RoundedAngles.Y}-{fv.RoundedAngles.Z}");
 
             var rotatedFacesWithMaxCount = groupedByAngles.Select(g => new { AnglesGroup = g, Count = g.Count() }).MaxBy(g => g.Count);
+
+            //var dir = rotatedFacesWithMaxCount.AnglesGroup.Select(g => g.NormalDirection).ToList();
 
             if (!IsNormalOrthogonal(rotatedFacesWithMaxCount.AnglesGroup.First().RoundedAngles))
             {
                 var rotationVert = rotatedFacesWithMaxCount.AnglesGroup.First().Verts.First();
                 var angles = rotatedFacesWithMaxCount.AnglesGroup.Select(g => g.Angles);
 
-                var rotationPontFace = rotatedFacesWithMaxCount.AnglesGroup.First();
-                var roundedAngles = rotationPontFace.RoundedAngles;
-                var rotationDirection = rotationPontFace.RotationDirection;
-                var normalAngles = new AxisAngle[]
-                {
-                    new AxisAngle{ Axis = "X", Angle= roundedAngles.X, Vector = axisXVector, RotationDirection = (int)rotationDirection.X },
-                    new AxisAngle{ Axis = "Y", Angle= roundedAngles.Y, Vector = axisYVector, RotationDirection = (int)rotationDirection.Y },
-                    new AxisAngle{ Axis = "Z", Angle= roundedAngles.Z, Vector = axisZVector, RotationDirection = (int)rotationDirection.Z },
-                };
+                var rotationPointFace = rotatedFacesWithMaxCount.AnglesGroup.First();
+                var normalAngles = GetNormaAngles(rotationPointFace.RoundedAngles, rotationPointFace.NormalDirection);
 
-                var orthogonalAxe = normalAngles.FirstOrDefault(na => na.Angle % 90 == 0);
-                if (orthogonalAxe != null)
+                var orthogonalAngle = normalAngles.FirstOrDefault(na => na.Angle % 90 == 0);
+                if (orthogonalAngle != null)
                 {
-                    var rotationAxe = normalAngles.Where(na => na.Axis != orthogonalAxe.Axis).MinBy(na => na.Angle);
-
+                    var closestAxis = normalAngles.Where(na => na.Axis != orthogonalAngle.Axis).MinBy(na => na.Angle);
+                    var closestAxisDirection = orthogonalAngle.OrthogonalAxises.First(a => a.Axis == closestAxis.Axis).Horizontal ?
+                        1 : -1;
+                    
+                    var rotationAngle = closestAxisDirection * orthogonalAngle.RotationDirection * closestAxis.Angle * Math.PI / 180;
                     var rotationPoint = new Point3d(rotationVert.X, rotationVert.Y, rotationVert.Z);
-
-                    //var vert = rotatedFacesWithMaxCount.AnglesGroup.ToArray()[3].Verts.First();
-
-                    //var point = new Point3d(vert.X, vert.Y, vert.Z);
-
-                    //var newPoint = point.Rotate(new Rotation(rotationAxe.Vector, rotationAxe.Angle), rotationPoint);
-
                     var rotatedPoints = new Dictionary<int, Point3d> { { rotationVert.Index, rotationPoint } };
                     rotatedFacesWithMaxCount.AnglesGroup.ToList().ForEach(faceVerts =>
                     {
@@ -195,14 +206,15 @@ namespace Flat3DObjectsToSvgConverter.Services
                             {
                                 var point = new Point3d(vert.X, vert.Y, vert.Z);
                                 var newPoint = point.Rotate(
-                                    new Rotation(orthogonalAxe.Vector, rotationAxe.RotationDirection * rotationAxe.Angle * Math.PI / 180),
+                                    new Rotation(orthogonalAngle.Vector, rotationAngle),
                                     rotationPoint);
                                 rotatedPoints.Add(vert.Index, newPoint);
                             }
                         });
                     });
 
-                    meshObject.Verts = rotatedPoints
+
+                    var rotatedVerts = rotatedPoints
                         .OrderBy(p => p.Key)
                         .Select(p => new Vertex
                         {
@@ -211,8 +223,25 @@ namespace Flat3DObjectsToSvgConverter.Services
                             Z = p.Value.Z,
                             Index = p.Key
                         }).ToList();
+
+                    var rotatedVertsIds = rotatedVerts.Select(v => v.Index).ToArray();
+                    var leftVerts = meshObject.Verts.Where(v => !rotatedVertsIds.Contains(v.Index)).ToList();
+                    if (leftVerts.Any())
+                    {
+                        var leftVertsIds = leftVerts.Select(v => v.Index).ToList();
+                        var leftFaces = facesVerts.Where(fv => fv.Face.VertexIndexList.Intersect(leftVertsIds).Any()).ToList();
+                        Console.WriteLine($"        Has some none rotated verts");
+                    }
+
+                    meshObject.Verts = rotatedVerts;
                 }
             }
+        }
+
+        private int GetRotationDirection(Point normalPoint, bool invert = false)
+        {
+            var direction = normalPoint.X * normalPoint.Y > 0 ? 1 : -1;
+            return invert ? -direction : direction;
         }
 
         private bool IsOrthogonal(NormalVertex nv)
@@ -233,6 +262,78 @@ namespace Flat3DObjectsToSvgConverter.Services
         {
             var angles = new double[] { anglesPoint.X, anglesPoint.Y, anglesPoint.Z };
             return angles.Where(i => i == 0 || i % 90 > 0).Count() == 1;
+        }
+
+        private NormalToAxisAngle[] GetNormaAngles(Point3d roundedAngles, Point3d normalDirection)
+        {
+            var normalAngles = new NormalToAxisAngle[]
+            {
+                new NormalToAxisAngle
+                {
+                    Axis = "X",
+                    Angle= roundedAngles.X,
+                    Vector = _axisXVector,
+                    RotationDirection = GetRotationDirection(new Point((int)normalDirection.Y, (int)normalDirection.Z)),
+                    OrthogonalAxises = new List<AxisOrientation>
+                    {
+                        new AxisOrientation
+                        {
+                            Axis = "Y",
+                            Horizontal = false
+                        },
+                        new AxisOrientation
+                        {
+                            Axis = "Z",
+                            Horizontal = true
+                        },
+
+                    }
+                },
+                new NormalToAxisAngle
+                {
+                    Axis = "Y",
+                    Angle= roundedAngles.Y,
+                    Vector = _axisYVector,
+                    RotationDirection = GetRotationDirection(new Point((int)normalDirection.X, (int)normalDirection.Z)),
+                    OrthogonalAxises = new List<AxisOrientation>
+                    {
+                        new AxisOrientation
+                        {
+                            Axis = "X",
+                            Horizontal = true
+                        },
+                        new AxisOrientation
+                        {
+                            Axis = "Z",
+                            Horizontal = false
+                        },
+
+                    }
+                },
+                new NormalToAxisAngle
+                {
+                    Axis = "Z",
+                    Angle= roundedAngles.Z,
+                    Vector = _axisZVector,
+                    RotationDirection = GetRotationDirection(new Point((int)normalDirection.X, (int)normalDirection.Y)),
+                    OrthogonalAxises = new List<AxisOrientation>
+                    {
+                        new AxisOrientation
+                        {
+                            Axis = "X",
+                            Horizontal = true
+                        },
+                        new AxisOrientation
+                        {
+                            Axis = "Y",
+                            Horizontal = false
+                        },
+
+                    }
+                },
+            };
+
+            return normalAngles;
         }
 
         private List<MeshObject> GetMeshObjects(Obj obj, List<int> firstFaceVetexIds, List<MeshObject> meshObjects)
@@ -285,11 +386,18 @@ namespace Flat3DObjectsToSvgConverter.Services
         public string Axis { get; set; }
     }
 
-    public class AxisAngle
+    public class NormalToAxisAngle
     {
         public string Axis { get; set; }
         public double Angle { get; set; }
         public Vector3d Vector { get; set; }
         public int RotationDirection { get; set; }
+        public List<AxisOrientation> OrthogonalAxises { get; set; }
+    }
+
+    public class AxisOrientation
+    {
+        public string Axis { get; set; }
+        public bool Horizontal { get; set; }
     }
 }
