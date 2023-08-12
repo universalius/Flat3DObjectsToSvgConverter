@@ -133,8 +133,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             {
                 var vertsDictionary = meshObject.Verts.Where(v => f.VertexIndexList.Contains(v.Index)).ToDictionary(v => v.Index, v => v);
                 var verts = f.VertexIndexList.Select(v => vertsDictionary[v]).ToList();
-                var gain = 100000;
-                var points = verts.Select(v => new Point3d(v.X * gain, v.Y * gain, v.Z * gain)).ToList();
+                var points = verts.Select(v => new Point3d(v.X * VertexHelper.ScaleGain, v.Y * VertexHelper.ScaleGain, v.Z * VertexHelper.ScaleGain)).ToList();
 
                 if (points.Count > 4)
                 {
@@ -160,10 +159,6 @@ namespace Flat3DObjectsToSvgConverter.Services
                         normal.Y > 0 ? -angleY : angleY,
                         normal.Z > 0 ? -angleZ : angleZ
                         ),
-                    RotationDirection = new Point3d(
-                        normal.X > 0 ? -1 : 1,
-                        normal.Y > 0 ? -1 : 1,
-                        normal.Z > 0 ? -1 : 1),
                     NormalDirection = new Point3d(
                         normal.X > 0 ? 1 : -1,
                         normal.Y > 0 ? 1 : -1,
@@ -183,7 +178,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             if (!IsNormalOrthogonal(rotatedFacesWithMaxCount.AnglesGroup.First().RoundedAngles))
             {
                 var rotationVert = rotatedFacesWithMaxCount.AnglesGroup.First().Verts.First();
-                var angles = rotatedFacesWithMaxCount.AnglesGroup.Select(g => g.Angles);
+                //var angles = rotatedFacesWithMaxCount.AnglesGroup.Select(g => g.Angles);
 
                 var rotationPointFace = rotatedFacesWithMaxCount.AnglesGroup.First();
                 var normalAngles = GetNormaAngles(rotationPointFace.RoundedAngles, rotationPointFace.NormalDirection);
@@ -192,12 +187,13 @@ namespace Flat3DObjectsToSvgConverter.Services
                 if (orthogonalAngle != null)
                 {
                     var closestAxis = normalAngles.Where(na => na.Axis != orthogonalAngle.Axis).MinBy(na => na.Angle);
-                    var closestAxisDirection = orthogonalAngle.OrthogonalAxises.First(a => a.Axis == closestAxis.Axis).Horizontal ?
-                        1 : -1;
-                    
-                    var rotationAngle = closestAxisDirection * orthogonalAngle.RotationDirection * closestAxis.Angle * Math.PI / 180;
+                    var isClosestAxisHorizontal = orthogonalAngle.OrthogonalAxises.First(a => a.Axis == closestAxis.Axis).Horizontal;
+
+                    var rotationDirection = GetRotationDirection(orthogonalAngle.NormalPoint, isClosestAxisHorizontal);
+                    var rotationAngle = rotationDirection * closestAxis.Angle * Math.PI / 180;
                     var rotationPoint = new Point3d(rotationVert.X, rotationVert.Y, rotationVert.Z);
                     var rotatedPoints = new Dictionary<int, Point3d> { { rotationVert.Index, rotationPoint } };
+
                     rotatedFacesWithMaxCount.AnglesGroup.ToList().ForEach(faceVerts =>
                     {
                         faceVerts.Verts.ToList().ForEach(vert =>
@@ -212,7 +208,6 @@ namespace Flat3DObjectsToSvgConverter.Services
                             }
                         });
                     });
-
 
                     var rotatedVerts = rotatedPoints
                         .OrderBy(p => p.Key)
@@ -238,24 +233,18 @@ namespace Flat3DObjectsToSvgConverter.Services
             }
         }
 
-        private int GetRotationDirection(Point normalPoint, bool invert = false)
+        private int GetRotationDirection(Point normalPoint, bool toHorizontalAxis)
         {
-            var direction = normalPoint.X * normalPoint.Y > 0 ? 1 : -1;
-            return invert ? -direction : direction;
-        }
-
-        private bool IsOrthogonal(NormalVertex nv)
-        {
-            var ortogonal = (nv.X == 0 || Math.Abs(nv.X) == 1) &&
-                (nv.Y == 0 || Math.Abs(nv.Y) == 1) &&
-                (nv.Z == 0 || Math.Abs(nv.Z) == 1);
-
-            if (ortogonal)
+            int direction = 0;
+            if (toHorizontalAxis)
             {
-                ortogonal = (Math.Abs(nv.X) + Math.Abs(nv.Y) + Math.Abs(nv.Z)) == 1;
+                direction = normalPoint.X * normalPoint.Y > 0 ? -1 : 1;
             }
-
-            return ortogonal;
+            else
+            {
+                direction = normalPoint.X * normalPoint.Y > 0 ? 1 : -1;
+            }
+            return direction;
         }
 
         private bool IsNormalOrthogonal(Point3d anglesPoint)
@@ -272,8 +261,8 @@ namespace Flat3DObjectsToSvgConverter.Services
                 {
                     Axis = "X",
                     Angle= roundedAngles.X,
-                    Vector = _axisXVector,
-                    RotationDirection = GetRotationDirection(new Point((int)normalDirection.Y, (int)normalDirection.Z)),
+                    Vector = new Vector3d(-1.0,0,0),
+                    NormalPoint = new Point((int)normalDirection.Z, (int)normalDirection.Y),
                     OrthogonalAxises = new List<AxisOrientation>
                     {
                         new AxisOrientation
@@ -294,7 +283,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                     Axis = "Y",
                     Angle= roundedAngles.Y,
                     Vector = _axisYVector,
-                    RotationDirection = GetRotationDirection(new Point((int)normalDirection.X, (int)normalDirection.Z)),
+                    NormalPoint = new Point((int)normalDirection.X, (int)normalDirection.Z),
                     OrthogonalAxises = new List<AxisOrientation>
                     {
                         new AxisOrientation
@@ -315,7 +304,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                     Axis = "Z",
                     Angle= roundedAngles.Z,
                     Vector = _axisZVector,
-                    RotationDirection = GetRotationDirection(new Point((int)normalDirection.X, (int)normalDirection.Y)),
+                    NormalPoint = new Point((int)normalDirection.X, (int)normalDirection.Y),
                     OrthogonalAxises = new List<AxisOrientation>
                     {
                         new AxisOrientation
@@ -391,7 +380,7 @@ namespace Flat3DObjectsToSvgConverter.Services
         public string Axis { get; set; }
         public double Angle { get; set; }
         public Vector3d Vector { get; set; }
-        public int RotationDirection { get; set; }
+        public Point NormalPoint { get; set; }
         public List<AxisOrientation> OrthogonalAxises { get; set; }
     }
 
