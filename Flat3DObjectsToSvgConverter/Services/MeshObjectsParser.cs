@@ -26,14 +26,14 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             //AllignObjectWithAxis(meshObjects[1]);
 
-            //if (mesh.Name == "142")
-            //{
-            //    var a = 0;
-            //}
+            if (mesh.Name == "183")
+            {
+                var a = 0;
+            }
 
             meshObjects.ForEach(AllignObjectWithAxis);
 
-            var meshObjectsLoopsFaces = meshObjects.Select(GetObjectLoopFaces).ToList();
+            var meshObjectsLoopsFaces = meshObjects.Select((mo, i) => GetObjectLoopFaces(mo, i, mesh)).ToList();
 
             watch.Stop();
             Console.WriteLine($"    Finished mesh parse, found {meshObjects.Count} objects, took - {watch.ElapsedMilliseconds / 1000.0} sec");
@@ -41,7 +41,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             return meshObjectsLoopsFaces;
         }
 
-        private MeshObject GetObjectLoopFaces(MeshObject obj, int i)
+        private MeshObject GetObjectLoopFaces(MeshObject obj, int i, Mesh mesh)
         {
             var xOrientedPlanes = obj.Verts.GroupBy(v => v.X.ToInt()).ToList();
             var yOrientedPlanes = obj.Verts.GroupBy(v => v.Y.ToInt()).ToList();
@@ -70,11 +70,10 @@ namespace Flat3DObjectsToSvgConverter.Services
                 throw new Exception("Found more then 2 parallel planes for an object");
             }
 
-
-            //if (mesh.Name.ToLower() == "74_bearing")
-            //{
-            //    var c = 0;
-            //}
+            if (mesh.Name.ToLower() == "183")
+            {
+                var c = 0;
+            }
 
             var verts = orderedMeshObjects.SelectMany(g => g.ToList()).ToList();
             var paralelVerts = verts
@@ -89,27 +88,40 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             // can contain edges that match totally by vertexes, so in pair group can be more then 2 verts
             var edgesVerts = paralelVerts.Select(g => g.Select(v => v.Vertex)).ToList();
-            var edgesVertsIndexes = edgesVerts.Select(ev => ev.Select(v => v.Index)).ToList();
 
             var leftVerts = verts.Except(edgesVerts.SelectMany(ev => ev).ToList());
-            if (leftVerts.Count() > 2)
+            if (leftVerts.Count() > 0)
             {
-                Console.WriteLine($"        Has some none parallel verts");
+                var leftParalelVerts = leftVerts
+                .Select(v => new
+                {
+                    Id = AxisSelectHelpers.GetPararelVertsIdByAxis(targetAxis, v.ToIntCoords(round: true)),
+                    Vertex = v
+                })
+                .GroupBy(v => v.Id)
+                .Where(g => g.Count() > 1)
+                .ToList();
+
+                if (leftParalelVerts.Any())
+                {
+                    edgesVerts.AddRange(leftParalelVerts.Select(g => g.Select(v => v.Vertex)));
+                    Console.WriteLine($"        Found more paralel verts with round precision");
+                }
+                else
+                {
+                    var leftVertsIndexes = leftVerts.Select(v => v.Index).ToList();
+                    var originalVerts = mesh.Obj.VertexList.Where(v => leftVertsIndexes.Contains(v.Index));
+                    Console.WriteLine($"        Has some none parallel verts");
+                }
+
             }
 
+            var edgesVertsIndexes = edgesVerts.Select(ev => ev.Select(v => v.Index)).ToList();
 
             // get faces that perpendicular to parralel box planes with most verts in one axis
             var targetFaces = obj.Faces
                     .Where(f => edgesVertsIndexes.Any(evi => f.VertexIndexList.Intersect(evi).Count() == 2))
                     .DistinctBy(f => f.Id).ToList();
-
-            //if (mesh.Name.ToLower() == "74_bearing" && targetFaces.Any(f => f.Id == 264))
-            //{
-            //    var c = 0;
-            //}
-
-            //var b = obj.FaceList
-            //    .Where(f => edgesVertsIndexes.Any(evi => f.VertexIndexList.Intersect(new[] { 109 }).Any()));
 
             Console.WriteLine($"        Finished parse object - {i + 1}");
 

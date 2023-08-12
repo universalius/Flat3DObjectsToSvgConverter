@@ -9,20 +9,22 @@ namespace Flat3DObjectsToSvgConverter.Helpers
 {
     public static class VertexHelper
     {
-        public const int ScaleGain= 100000;
+        public const int ScaleGain = 100000;
 
-        public static int ToInt(this double coord, int scale = ScaleGain) {
-            return (int)(coord * scale);
+        public static int ToInt(this double coord, int scale = ScaleGain, bool round = false)
+        {
+            var scaled = coord * scale;
+            return round ? (int)Math.Round(scaled, 1) : (int)scaled;
         }
 
-        public static Vertex ToIntCoords(this Vertex vertex, int scale = ScaleGain)
+        public static Vertex ToIntCoords(this Vertex vertex, int scale = ScaleGain, bool round = false)
         {
             return new Vertex
             {
                 Index = vertex.Index,
-                X = vertex.X.ToInt(scale),
-                Y = vertex.Y.ToInt(scale),
-                Z = vertex.Z.ToInt(scale),
+                X = vertex.X.ToInt(scale, round),
+                Y = vertex.Y.ToInt(scale, round),
+                Z = vertex.Z.ToInt(scale, round),
             };
         }
     }
