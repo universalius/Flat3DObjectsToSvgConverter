@@ -1,4 +1,5 @@
-﻿using ObjParser;
+﻿using GeometRi;
+using ObjParser;
 using ObjParser.Types;
 using System;
 using System.Collections.Generic;
@@ -13,14 +14,19 @@ namespace ObjParserExecutor.Helpers
     {
         public static string GetPararelVertsIdByAxis(string axis, Vertex vertex)
         {
+            return GetIdByAxis(axis, new Point3d(vertex.X, vertex.Y, vertex.Z));
+        }
+
+        public static string GetIdByAxis(string axis, Point3d point)
+        {
             if (axis.ToLower() == "x")
-                return $"{vertex.Y} {vertex.Z}";
+                return $"{point.Y} {point.Z}";
 
             if (axis.ToLower() == "y")
-                return $"{vertex.X} {vertex.Z}";
+                return $"{point.X} {point.Z}";
 
             if (axis.ToLower() == "z")
-                return $"{vertex.X} {vertex.Y}";
+                return $"{point.X} {point.Y}";
 
             throw new NotImplementedException();
         }
