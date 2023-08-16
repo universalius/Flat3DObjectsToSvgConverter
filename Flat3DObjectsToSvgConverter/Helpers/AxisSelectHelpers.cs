@@ -33,14 +33,19 @@ namespace ObjParserExecutor.Helpers
 
         public static double GetVertCoordinateByAxis(string axis, Vertex vertex)
         {
+            return GetCoordinateByAxis(axis, new Point3d(vertex.X, vertex.Y, vertex.Z));
+        }
+
+        public static double GetCoordinateByAxis(string axis, Point3d point)
+        {
             if (axis.ToLower() == "x")
-                return vertex.X;
+                return point.X;
 
             if (axis.ToLower() == "y")
-                return vertex.Y;
+                return point.Y;
 
             if (axis.ToLower() == "z")
-                return vertex.Z;
+                return point.Z;
 
             throw new NotImplementedException();
         }

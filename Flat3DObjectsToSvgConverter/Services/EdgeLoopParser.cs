@@ -142,22 +142,21 @@ namespace Flat3DObjectsToSvgConverter.Services
 
         private IEnumerable<Loops> GroupLoopsByBoundaries(string axis, List<LoopEdges> allLoopsEdges)
         {
-            var loopsSizes = allLoopsEdges.Select(lef => new
+            var loopsSizes = allLoopsEdges.Select((lef, i) => new
             {
+                Id = i,
                 Loop = lef,
                 Size = Obj.GetObjSize(lef.Edges.SelectMany(ef => ef.Edge).ToList())
             });
 
             var loops = new List<Loops>();
-
-            var groupedLoops = loopsSizes.Select((secondLoop, i) =>
+            var groupedLoops = loopsSizes.Select((secondLoop) =>
             {
                 var children = loopsSizes.Where(firstLoop => IsFistLoopInsideSecondLoop(axis, firstLoop.Size, secondLoop.Size)).ToList();
                 return new Loops
                 {
-                    Id = i,
-                    Main = new LoopEdges { Edges = secondLoop.Loop.Edges },
-                    Children = children.Select(x => new LoopEdges { Edges = x.Loop.Edges }).ToList()
+                    Main = new LoopEdges { Id = secondLoop.Id, Edges = secondLoop.Loop.Edges },
+                    Children = children.Select(x => new LoopEdges { Id = x.Id, Edges = x.Loop.Edges }).ToList()
                 };
             }).ToList();
 
@@ -165,6 +164,11 @@ namespace Flat3DObjectsToSvgConverter.Services
             var singleLoops = groupedLoops.Except(loopsWithChildren);
             var allChildrensEdges = loopsWithChildren.SelectMany(l => l.Children.SelectMany(le => le.Edges).ToList()).ToList();
             var singleLoopsNotChildOfOthers = singleLoops.Where(l => allChildrensEdges.Intersect(l.Main.Edges).Count() != l.Main.Edges.Count()).ToList();
+
+            // exclude main loops that are located inside another loop with children, because they are already there in children (connected to boundaries intersection)
+            loopsWithChildren = loopsWithChildren.Where(lwc =>
+                !loopsWithChildren.Any(lwc1 => lwc1.Children.Select(c => c.Id).Contains(lwc.Main.Id)))
+                .ToList();
 
             return loopsWithChildren.Concat(singleLoopsNotChildOfOthers);
         }
@@ -203,13 +207,13 @@ namespace Flat3DObjectsToSvgConverter.Services
     }
     public class Loops
     {
-        public int Id { get; set; }
         public LoopEdges Main { get; set; }
         public IEnumerable<LoopEdges> Children { get; set; }
     }
 
     public class LoopEdges
     {
+        public int Id { get; set; }
         public IEnumerable<EdgeFace> Edges { get; set; }
     }
 

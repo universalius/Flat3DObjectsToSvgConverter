@@ -40,7 +40,6 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             //_logger.LogInformation("Test qwer asdf cvbbb");
 
-            //SvgDocument svgDocument = ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\test_compacted.svg");
             SvgDocument svgDocument = ParseSvgString(svg);
             var groupElements = svgDocument.Element.GetElementsByTagName("g").Cast<XmlElement>().ToArray();
 
@@ -52,7 +51,12 @@ namespace Flat3DObjectsToSvgConverter.Services
                     var pathes = group.Element.GetElementsByTagName("path").Cast<XmlElement>()
                     .Select(pe => new SvgPath(pe));
 
-                    var path = pathes.First(p => p.GetClasses().Contains("main"));
+                    var path = pathes.FirstOrDefault(p => p.GetClasses().Contains("main"));
+                    if(path == null)
+                    {
+                        throw new Exception("At least one path in a group should have main class");
+                    }
+
                     var label = GetLabel(path.Id);
 
                     var labelGroup = group.AddGroup();
@@ -160,13 +164,13 @@ namespace Flat3DObjectsToSvgConverter.Services
             return $"translate({leftTopPoint.XMin.ToString(culture)} {leftTopPoint.YMin.ToString(culture)}) rotate({-rotate})";
         }
 
-        private SvgDocument ParseSvgFile(string filePath)
+        public static SvgDocument ParseSvgFile(string filePath)
         {
             var content = File.ReadAllText(filePath);
             return ParseSvgString(content);
         }
 
-        private SvgDocument ParseSvgString(string svg)
+        private static SvgDocument ParseSvgString(string svg)
         {
             XmlDocument xmlDocument = new XmlDocument();
             xmlDocument.LoadXml(svg);

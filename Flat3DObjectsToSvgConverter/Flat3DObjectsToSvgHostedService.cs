@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Flat3DObjectsToSvgConverter.Services;
+using SvgLib;
 
 namespace Flat3DObjectsToSvgConverter;
 
@@ -28,6 +29,9 @@ public class Flat3DObjectsToSvgHostedService : IHostedService
         var svg = _objectsToSvgConverter.Convert(meshesObjects);
 
         var compactedSvg = await _svgCompactingService.Compact(svg);
+
+        //SvgDocument svgDocument = ObjectsLabelsToSvgConverter.ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\test6 15.08.2023 20-07-25\test6_compacted.svg");
+        //var compactedSvg = svgDocument.Element.OuterXml;
 
         await _objectsLabelsToSvgConverter.Convert(compactedSvg);
 

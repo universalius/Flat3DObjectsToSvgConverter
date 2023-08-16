@@ -21,12 +21,9 @@ namespace Flat3DObjectsToSvgConverter.Services
             Console.WriteLine($"    Starting parse");
 
             var obj = mesh.Obj;
-
             var meshObjects = GetMeshObjects(obj, obj.FaceList.First().VertexIndexList.ToList(), new List<MeshObject>());
 
-            //AllignObjectWithAxis(meshObjects[1]);
-
-            if (mesh.Name == "172")
+            if (mesh.Name == "94_stoper")
             {
                 var a = 0;
             }
@@ -70,10 +67,10 @@ namespace Flat3DObjectsToSvgConverter.Services
                 throw new Exception("Found more then 2 parallel planes for an object");
             }
 
-            if (mesh.Name.ToLower() == "172")
-            {
-                var c = 0;
-            }
+            //if (mesh.Name.ToLower() == "172")
+            //{
+            //    var c = 0;
+            //}
 
             Console.WriteLine($"        Finished parse object - {i + 1}");
 
@@ -111,8 +108,8 @@ namespace Flat3DObjectsToSvgConverter.Services
                 var angleX = normal.AngleToDeg(new Line3d());
                 var angleY = normal.AngleToDeg(new Line3d(new Point3d(), _axisYVector));
                 var angleZ = normal.AngleToDeg(new Line3d(new Point3d(), _axisZVector));
-                var roudedAngles = new Point3d(Math.Round(angleX), Math.Round(angleY), Math.Round(angleZ));
-                return new
+                var roudedAngles = new Point3d(Math.Round(angleX, 2), Math.Round(angleY, 2), Math.Round(angleZ, 2));
+                return new RotatedFace
                 {
                     Face = f,
                     Verts = verts,
@@ -132,8 +129,10 @@ namespace Flat3DObjectsToSvgConverter.Services
             })
             .ToList();
 
-            var groupedByAngles = facesVerts.GroupBy(fv => $"{fv.RoundedAngles.X}-{fv.RoundedAngles.Y}-{fv.RoundedAngles.Z}");
-            var rotatedFacesWithMaxCount = groupedByAngles.Select(g => new { AnglesGroup = g, Count = g.Count() }).MaxBy(g => g.Count);
+            var groupedByAngles = GroupByAngles(facesVerts);
+
+            //var groupedByAngles = facesVerts.GroupBy(fv => $"{fv.RoundedAngles.X}-{fv.RoundedAngles.Y}-{fv.RoundedAngles.Z}");
+            var rotatedFacesWithMaxCount = groupedByAngles.Select(g => new { AnglesGroup = g.Value, Count = g.Value.Count() }).MaxBy(g => g.Count);
             var objectRotationAngles = rotatedFacesWithMaxCount.AnglesGroup.First().RoundedAngles;
             var paralelFaces = rotatedFacesWithMaxCount.AnglesGroup.Select(g => g.Face).ToList();
 
@@ -159,12 +158,11 @@ namespace Flat3DObjectsToSvgConverter.Services
                         .SelectMany(g => g.Group.ToList()).ToList();
                     paralelFaces = facesToRotate.Select(g => g.Face).ToList();
 
-                    //var angles = rotatedFacesWithMaxCount.AnglesGroup.Select(g => g.Angles);
-
                     var rotationPointFace = facesToRotate.First();
                     var rotationVert = rotationPointFace.Verts.First();
 
-                    var normalAxises = GetNormaAngles(rotationPointFace.RoundedAngles, rotationPointFace.NormalDirection);
+                    var normalAngles = GetPreciseNormalAngles(facesToRotate.Select(f => f.Angles).ToArray());
+                    var normalAxises = GetNormaAxises(normalAngles, rotationPointFace.NormalDirection);
 
                     var orthogonalAxis = normalAxises.FirstOrDefault(na => na.Axis == orthogonalAxisAngle.Axis);
                     var closestAxis = normalAxises.Where(na => na.Axis != orthogonalAxis.Axis).MinBy(na => na.Angle);
@@ -240,7 +238,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             return angles.Where(i => i == 0 || i % 90 > 0).Count() == 1;
         }
 
-        private NormalToAxisAngle[] GetNormaAngles(Point3d roundedAngles, Point3d normalDirection)
+        private NormalToAxisAngle[] GetNormaAxises(Point3d roundedAngles, Point3d normalDirection)
         {
             var normalAngles = new NormalToAxisAngle[]
             {
@@ -312,6 +310,16 @@ namespace Flat3DObjectsToSvgConverter.Services
             return normalAngles;
         }
 
+        private Point3d GetPreciseNormalAngles(IEnumerable<Point3d> paralelFacesAngles)
+        {
+            var angles = paralelFacesAngles.Select(p => new Point3d(Math.Round(p.X, 2), Math.Round(p.Y, 2), Math.Round(p.Z, 2))).ToArray();
+            var xAngle = angles.GroupBy(p => Math.Abs(p.X)).Select(g => new { X = g.Key, Count = g.Count() }).MaxBy(i => i.Count).X;
+            var yAngle = angles.GroupBy(p => Math.Abs(p.Y)).Select(g => new { Y = g.Key, Count = g.Count() }).MaxBy(i => i.Count).Y;
+            var zAngle = angles.GroupBy(p => Math.Abs(p.Z)).Select(g => new { Z = g.Key, Count = g.Count() }).MaxBy(i => i.Count).Z;
+
+            return new Point3d(xAngle, yAngle, zAngle);
+        }
+
         private List<MeshObject> GetMeshObjects(Obj obj, List<int> firstFaceVetexIds, List<MeshObject> meshObjects)
         {
             var (objectFacesIds, objectVertsIds) = GetObjectFaces(obj,
@@ -353,6 +361,33 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             return (faceIds, vertIds);
         }
+
+        private List<KeyValuePair<string, List<RotatedFace>>> GroupByAngles(List<RotatedFace> rotatedFaces)
+        {
+            var groupedByAngles = rotatedFaces.GroupBy(fv => $"{fv.RoundedAngles.X}-{fv.RoundedAngles.Y}-{fv.RoundedAngles.Z}");
+
+            var groupsRoundedAngles = groupedByAngles.Select(g => new { Id = g.Key, Angles = g.First().RoundedAngles }).ToList();
+
+            var groupedAnglesIds = new List<string[]>();
+            groupsRoundedAngles.ForEach(gra =>
+            {
+                if (!groupedAnglesIds.SelectMany(g => g).Contains(gra.Id))
+                {
+                    var roundedAnglesInOneDegreeRange = groupsRoundedAngles.Where(g =>
+                        Math.Abs(g.Angles.X - gra.Angles.X) <= 1 && Math.Abs(g.Angles.Y - gra.Angles.Y) <= 1 && Math.Abs(g.Angles.Z - gra.Angles.Z) <= 1
+                    );
+                    var sameIds = roundedAnglesInOneDegreeRange.Select(g => g.Id).ToArray();
+                    groupedAnglesIds.Add(sameIds);
+                    //groupsRoundedAngles.RemoveAll(g => sameIds.Contains(g.Id));
+                }
+            });
+
+            return groupedAnglesIds.Select(ids => new KeyValuePair<string, List<RotatedFace>>(
+                ids.First(),
+                groupedByAngles.Where(g => ids.Contains(g.Key)).SelectMany(g => g).ToList())
+            ).ToList();
+
+        }
     }
 
     public class MeshObject
@@ -375,5 +410,15 @@ namespace Flat3DObjectsToSvgConverter.Services
     {
         public string Axis { get; set; }
         public bool Horizontal { get; set; }
+    }
+
+    public class RotatedFace
+    {
+        public Face Face { get; set; }
+        public List<Vertex> Verts { get; set; }
+        public Plane3d Plane { get; set; }
+        public Point3d RoundedAngles { get; set; }
+        public Point3d Angles { get; set; }
+        public Point3d NormalDirection { get; set; }
     }
 }
