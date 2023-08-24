@@ -6,6 +6,7 @@ using GeometRi;
 using ObjParser;
 using Flat3DObjectsToSvgConverter.Helpers;
 using System.Drawing;
+using System.Linq;
 
 namespace Flat3DObjectsToSvgConverter.Services
 {
@@ -40,14 +41,14 @@ namespace Flat3DObjectsToSvgConverter.Services
 
         private MeshObject GetObjectLoopFaces(MeshObject obj, int i, Mesh mesh)
         {
-            var xOrientedPlanes = obj.Verts.GroupBy(v => v.X.ToInt()).ToList();
-            var yOrientedPlanes = obj.Verts.GroupBy(v => v.Y.ToInt()).ToList();
-            var zOrientedPlanes = obj.Verts.GroupBy(v => v.Z.ToInt()).ToList();
+            var xOrientedPlanes = GroupVertsByCoordinateWithDelta(obj.Verts, "X");
+            var yOrientedPlanes = GroupVertsByCoordinateWithDelta(obj.Verts, "Y");
+            var zOrientedPlanes = GroupVertsByCoordinateWithDelta(obj.Verts, "Z");
 
             var axisesPlanes = new[] {
-                new { Planes= xOrientedPlanes, VertexCount = xOrientedPlanes.Select(g => g.Count()).Max(), Axis = "x", PlanesCount = xOrientedPlanes.Count() },
-                new { Planes= yOrientedPlanes, VertexCount = yOrientedPlanes.Select(g => g.Count()).Max(), Axis = "y", PlanesCount = yOrientedPlanes.Count() },
-                new { Planes= zOrientedPlanes, VertexCount = zOrientedPlanes.Select(g => g.Count()).Max(), Axis = "z", PlanesCount = zOrientedPlanes.Count() },
+                new { Planes= xOrientedPlanes, VertexCount = xOrientedPlanes.Select(g => g.Value.Count()).Max(), Axis = "x", PlanesCount = xOrientedPlanes.Keys.Count() },
+                new { Planes= yOrientedPlanes, VertexCount = yOrientedPlanes.Select(g => g.Value.Count()).Max(), Axis = "y", PlanesCount = yOrientedPlanes.Keys.Count() },
+                new { Planes= zOrientedPlanes, VertexCount = zOrientedPlanes.Select(g => g.Value.Count()).Max(), Axis = "z", PlanesCount = zOrientedPlanes.Keys.Count() },
             };
 
             var axisesBoxPlanes = axisesPlanes.Where(p => p.PlanesCount % 2 == 0).ToList();
@@ -60,9 +61,9 @@ namespace Flat3DObjectsToSvgConverter.Services
             var targetAxisVerts = axisesPlanes.First(p => p.VertexCount == maxAxisesVertsCount);
 
             var targetAxis = targetAxisVerts.Axis;
-            var orderedMeshObjects = targetAxisVerts.Planes.OrderBy(g => g.Key).ToList(); // parallel vert planes should be in pairs between plains in pair should be 4 mms
+            var orderedPlanes = targetAxisVerts.Planes.OrderBy(g => g.Key).ToList(); // parallel vert planes should be in pairs between plains in pair should be 4 mms
 
-            if (orderedMeshObjects.Count > 2)
+            if (orderedPlanes.Count > 2)
             {
                 throw new Exception("Found more then 2 parallel planes for an object");
             }
@@ -74,15 +75,11 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             Console.WriteLine($"        Finished parse object - {i + 1}");
 
-            var firstVertOfAllEdges = obj.Verts
-                .GroupBy(v => AxisSelectHelpers.GetVertCoordinateByAxis(targetAxis, v.ToIntCoords()))
-                .First()
-                .Select(v => v)
-                .ToList();
+            var vertsOfFirstPlane = orderedPlanes.First().Value;
 
             return new MeshObject
             {
-                Verts = firstVertOfAllEdges,
+                Verts = vertsOfFirstPlane,
                 Faces = obj.Faces,
                 Axis = targetAxis,
             };
@@ -105,9 +102,9 @@ namespace Flat3DObjectsToSvgConverter.Services
 
                 var plane = new Plane3d(points[0], points[1], points[2]);
                 var normal = plane.Normal;
-                var angleX = normal.AngleToDeg(new Line3d());
-                var angleY = normal.AngleToDeg(new Line3d(new Point3d(), _axisYVector));
-                var angleZ = normal.AngleToDeg(new Line3d(new Point3d(), _axisZVector));
+                var angleX = normal.AngleToDeg(new Line3d(points[0], _axisXVector));
+                var angleY = normal.AngleToDeg(new Line3d(points[0], _axisYVector));
+                var angleZ = normal.AngleToDeg(new Line3d(points[0], _axisZVector));
                 var roudedAngles = new Point3d(Math.Round(angleX, roundAnglePrecision), Math.Round(angleY, roundAnglePrecision), Math.Round(angleZ, roundAnglePrecision));
                 return new RotatedFace
                 {
@@ -129,7 +126,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             })
             .ToList();
 
-            var groupedByAngles = GroupByAngles(facesVerts);
+            var groupedByAngles = GroupFacesByNormalAngles(facesVerts);
 
             //var groupedByAngles = facesVerts.GroupBy(fv => $"{fv.RoundedAngles.X}-{fv.RoundedAngles.Y}-{fv.RoundedAngles.Z}");
             var rotatedFacesWithMaxCount = groupedByAngles.Select(g => new { AnglesGroup = g.Value, Count = g.Value.Count() }).MaxBy(g => g.Count);
@@ -212,8 +209,8 @@ namespace Flat3DObjectsToSvgConverter.Services
                 }
                 else
                 {
-                    var closestAxisToBeOrthogonal = axisAngles.MaxBy(aa => aa.Angle); // normal angle is closest to 90 degrees
-                    var firstRotationAxisName = GetRotationAxisToMakeClosestAxisOrthogonal(closestAxisToBeOrthogonal.Axis);
+                    var closestAxisToBeOrthogonal = new { Axis = "Y" }; // axisAngles.Where(a => a.Axis != "Z").MaxBy(aa => aa.Angle); // normal angle is closest to 90 degrees
+                    var firstRotationAxisName = "X"; // GetRotationAxisToMakeClosestAxisOrthogonal(closestAxisToBeOrthogonal.Axis);
                     //var firstRotationAxis = axisAngles.First(aa => aa.Axis == firstRotationAxisName);
 
                     var facesToRotate = rotatedFacesWithMaxCount.AnglesGroup;
@@ -221,8 +218,9 @@ namespace Flat3DObjectsToSvgConverter.Services
                     var rotationVert = rotationPointFace.Verts.First();
 
                     var normalAngles = GetPreciseNormalAngles(facesToRotate.Select(f => f.Angles).ToArray());
-                    normalAngles.UpdateCoordinateByAxis(closestAxisToBeOrthogonal.Axis, 90 - AxisSelectHelpers.GetCoordinateByAxis(closestAxisToBeOrthogonal.Axis, normalAngles));
-                    var normalAxises = GetNormaAxises(normalAngles, rotationPointFace.NormalDirection);
+                    var rotationAngle = 90 - AxisSelectHelpers.GetCoordinateByAxis(closestAxisToBeOrthogonal.Axis, normalAngles);
+                    normalAngles.UpdateCoordinateByAxis(closestAxisToBeOrthogonal.Axis, rotationAngle);
+                    var normalAxises = GetNormaAxises(normalAngles, rotationPointFace.NormalDirection, true);
 
                     var rotatedVerts = RotatePoints(facesToRotate,
                         normalAxises.First(na => na.Axis == closestAxisToBeOrthogonal.Axis),
@@ -230,6 +228,10 @@ namespace Flat3DObjectsToSvgConverter.Services
                         rotationVert);
 
                     meshObject.Verts = rotatedVerts;
+
+                    Console.WriteLine($"        Rotated verts over {firstRotationAxisName} axis by {rotationAngle} degrees");
+
+
                     MakeObjectOrthogonalWithAxises(meshObject, 0);
 
                     return;
@@ -263,7 +265,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             return angles.Where(i => i == 0 || i % 90 == 0).Count() == 3;
         }
 
-        private NormalToAxisAngle[] GetNormaAxises(Point3d roundedAngles, Point3d normalDirection)
+        private NormalToAxisAngle[] GetNormaAxises(Point3d roundedAngles, Point3d normalDirection, bool allAxisesPositive = false)
         {
             var normalAngles = new NormalToAxisAngle[]
             {
@@ -271,8 +273,8 @@ namespace Flat3DObjectsToSvgConverter.Services
                 {
                     Axis = "X",
                     Angle= roundedAngles.X,
-                    Vector = new Vector3d(-1.0,0,0),
-                    NormalPoint = new Point((int)normalDirection.Z, (int)normalDirection.Y),
+                    Vector = allAxisesPositive ? _axisXVector : new Vector3d(-1.0,0,0),
+                    NormalPoint =  new Point((int)normalDirection.Z, (int)normalDirection.Y),
                     OrthogonalAxises = new List<AxisOrientation>
                     {
                         new AxisOrientation
@@ -292,7 +294,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                 {
                     Axis = "Y",
                     Angle= roundedAngles.Y,
-                    Vector = _axisYVector,
+                    Vector = allAxisesPositive ? _axisYVector : new Vector3d(0,-1.0,0),
                     NormalPoint = new Point((int)normalDirection.X, (int)normalDirection.Z),
                     OrthogonalAxises = new List<AxisOrientation>
                     {
@@ -387,7 +389,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             return (faceIds, vertIds);
         }
 
-        private List<KeyValuePair<string, List<RotatedFace>>> GroupByAngles(List<RotatedFace> rotatedFaces)
+        private List<KeyValuePair<string, List<RotatedFace>>> GroupFacesByNormalAngles(List<RotatedFace> rotatedFaces)
         {
             var groupedByAngles = rotatedFaces.GroupBy(fv => $"{fv.RoundedAngles.X}-{fv.RoundedAngles.Y}-{fv.RoundedAngles.Z}");
 
@@ -412,6 +414,31 @@ namespace Flat3DObjectsToSvgConverter.Services
                 groupedByAngles.Where(g => ids.Contains(g.Key)).SelectMany(g => g).ToList())
             ).ToList();
 
+        }
+
+        private Dictionary<double, List<Vertex>> GroupVertsByCoordinateWithDelta(IEnumerable<Vertex> verts, string axis)
+        {
+            var vertsCoordinates = verts.Select(v => new { Id = v.Index, Value = AxisSelectHelpers.GetVertCoordinateByAxis(axis, v).ToInt() }).ToList();
+            var processedVerts = new List<int>();
+            var groupedVerts = new Dictionary<double, List<Vertex>>();
+
+            vertsCoordinates.ForEach(firstVert =>
+            {
+                if (!processedVerts.Contains(firstVert.Id))
+                {
+                    var sameVerts = vertsCoordinates.Where(v =>
+                    {
+                        var difference = Math.Abs(firstVert.Value) - Math.Abs(v.Value);
+                        return Math.Abs(difference) < 100;
+                    }).ToList();
+
+                    var sameVertsIds = sameVerts.Select(sv => sv.Id).ToList();
+                    groupedVerts.Add(firstVert.Value, verts.Where(v1 => sameVertsIds.Contains(v1.Index)).ToList());
+                    processedVerts.AddRange(sameVertsIds);
+                }
+            });
+
+            return groupedVerts;
         }
 
         private IEnumerable<Vertex> RotatePoints(List<RotatedFace> facesToRotate, NormalToAxisAngle closestAxis, NormalToAxisAngle rotationlAxis, Vertex rotationVert)
@@ -451,36 +478,16 @@ namespace Flat3DObjectsToSvgConverter.Services
             return rotatedVerts;
         }
 
-        //private IEnumerable<Vertex> RotatePointsWithOrthogonalNormalToOneAxis()
-        //{
-        //    var facesGroupedByNormals = rotatedFacesWithMaxCount.AnglesGroup
-        //        .GroupBy(g => AxisSelectHelpers.GetIdByAxis(orthogonalAxisAngle.Axis, g.NormalDirection))
-        //        .Select(g => new { Group = g, Count = g.Count() }).ToList();
-
-        //    var oneDirectionOrientedFacesMaxCount = facesGroupedByNormals.Max(g => g.Count);
-
-        //    var facesToRotate = facesGroupedByNormals.Where(g => g.Count == oneDirectionOrientedFacesMaxCount)
-        //        .SelectMany(g => g.Group.ToList()).ToList();
-        //    paralelFaces = facesToRotate.Select(g => g.Face).ToList();
-
-        //    var rotationPointFace = facesToRotate.First();
-        //    var rotationVert = rotationPointFace.Verts.First();
-
-        //    var normalAngles = GetPreciseNormalAngles(facesToRotate.Select(f => f.Angles).ToArray());
-        //    var normalAxises = GetNormaAxises(normalAngles, rotationPointFace.NormalDirection);
-
-        //    var orthogonalAxis = normalAxises.FirstOrDefault(na => na.Axis == orthogonalAxisAngle.Axis);
-        //    var closestAxis = normalAxises.Where(na => na.Axis != orthogonalAxis.Axis).MinBy(na => na.Angle);
-
-        //}
-
-
-
         private string GetRotationAxisToMakeClosestAxisOrthogonal(string axis)
         {
             if (axis == "X")
             {
                 return "Y";
+            };
+
+            if (axis == "Y")
+            {
+                return "X";
             };
 
             return null;

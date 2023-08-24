@@ -132,6 +132,11 @@ namespace Flat3DObjectsToSvgConverter.Services
                 throw new Exception("Found more then 1 second edge vertex");
             }
 
+            if (nextVertIndexes.FirstOrDefault() == null)
+            {
+                throw new Exception("Can not determine next vertex for edge");
+            }
+
             return new EdgeFace
             {
                 FirstVertex = firstVertex,
