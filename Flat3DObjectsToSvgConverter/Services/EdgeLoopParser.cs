@@ -134,7 +134,7 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             if (nextVertIndexes.FirstOrDefault() == null)
             {
-                throw new Exception("Can not determine next vertex for edge");
+                throw new Exception("Can not determine next vertex for edge. Mesh has some defects (hidden polygons inside)");
             }
 
             return new EdgeFace
