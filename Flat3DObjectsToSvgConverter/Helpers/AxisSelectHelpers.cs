@@ -31,6 +31,20 @@ namespace ObjParserExecutor.Helpers
             throw new NotImplementedException();
         }
 
+        public static void UpdateCoordinateByAxis(this Point3d point, string axis, double value)
+        {
+            if (axis.ToLower() == "x")
+                point.X = value;
+
+            if (axis.ToLower() == "y")
+                point.Y = value;
+
+            if (axis.ToLower() == "z")
+                point.Z = value;
+
+            return;
+        }
+
         public static double GetVertCoordinateByAxis(string axis, Vertex vertex)
         {
             return GetCoordinateByAxis(axis, new Point3d(vertex.X, vertex.Y, vertex.Z));
