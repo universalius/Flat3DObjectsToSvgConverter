@@ -86,6 +86,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             ";
 
             _file.SaveSvg("parsed", svg);
+            _file.CopyObjFile();
 
             return svg;
         }
