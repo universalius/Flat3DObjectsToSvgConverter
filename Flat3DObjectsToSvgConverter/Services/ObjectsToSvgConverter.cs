@@ -1,4 +1,6 @@
-﻿using ObjParser;
+﻿using Flat3DObjectsToSvgConverter.Models;
+using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
+using ObjParser;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -99,12 +101,5 @@ namespace Flat3DObjectsToSvgConverter.Services
             return transform;
         }
 
-    }
-
-    public class MeshObjects
-    {
-        public string MeshName { get; set; }
-
-        public IEnumerable<ObjectLoops> Objects { get; set; }
     }
 }

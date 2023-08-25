@@ -1,10 +1,9 @@
-﻿using ObjParser;
+﻿using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
+using ObjParser;
 using ObjParser.Types;
 using ObjParserExecutor.Helpers;
-using ObjParserExecutor.Models;
 using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
 
 namespace Flat3DObjectsToSvgConverter.Services
 {
@@ -194,48 +193,6 @@ namespace Flat3DObjectsToSvgConverter.Services
             var firstVertex = loopEdgeFaces.First().FirstVertex;
             return points.Prepend(AxisSelectHelpers.GetPointByAxis(axis, firstVertex, mmGain));
         }
-    }
-
-    public class VertexFaces
-    {
-        public Vertex Vertex { get; set; }
-        public IEnumerable<Face> Faces { get; set; }
-    }
-
-    public class EdgeFace
-    {
-        public Vertex FirstVertex { get; set; }
-        public Vertex SecondVertex { get; set; }
-        public Face Face { get; set; }
-
-        public Vertex[] Edge => new[] { FirstVertex, SecondVertex };
-    }
-    public class Loops
-    {
-        public LoopEdges Main { get; set; }
-        public IEnumerable<LoopEdges> Children { get; set; }
-    }
-
-    public class LoopEdges
-    {
-        public int Id { get; set; }
-        public IEnumerable<EdgeFace> Edges { get; set; }
-    }
-
-    public class LoopPoints
-    {
-        public IEnumerable<PointF> Points { get; set; }
-    }
-
-
-    public class ObjectLoops
-    {
-        public IEnumerable<LoopPoints> Loops { get; set; }
-    }
-
-    public class MeshObjectsLoops
-    {
-        public IEnumerable<ObjectLoops> Objects { get; set; }
     }
 }
 
