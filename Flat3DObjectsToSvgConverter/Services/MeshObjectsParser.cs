@@ -7,6 +7,7 @@ using ObjParser;
 using Flat3DObjectsToSvgConverter.Helpers;
 using System.Drawing;
 using System.Linq;
+using Flat3DObjectsToSvgConverter.Models.MeshObjectsParser;
 
 namespace Flat3DObjectsToSvgConverter.Services
 {
@@ -492,37 +493,5 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             return null;
         }
-    }
-
-    public class MeshObject
-    {
-        public IEnumerable<Vertex> Verts { get; set; }
-        public IEnumerable<Face> Faces { get; set; }
-        public string Axis { get; set; }
-    }
-
-    public class NormalToAxisAngle
-    {
-        public string Axis { get; set; }
-        public double Angle { get; set; }
-        public Vector3d Vector { get; set; }
-        public Point NormalPoint { get; set; }
-        public List<AxisOrientation> OrthogonalAxises { get; set; }
-    }
-
-    public class AxisOrientation
-    {
-        public string Axis { get; set; }
-        public bool Horizontal { get; set; }
-    }
-
-    public class RotatedFace
-    {
-        public Face Face { get; set; }
-        public List<Vertex> Verts { get; set; }
-        public Plane3d Plane { get; set; }
-        public Point3d RoundedAngles { get; set; }
-        public Point3d Angles { get; set; }
-        public Point3d NormalDirection { get; set; }
     }
 }

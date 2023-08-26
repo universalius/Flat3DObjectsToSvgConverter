@@ -1,4 +1,5 @@
 ﻿using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
+using Flat3DObjectsToSvgConverter.Models.MeshObjectsParser;
 using ObjParser;
 using ObjParser.Types;
 using ObjParserExecutor.Helpers;
