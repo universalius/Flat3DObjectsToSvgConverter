@@ -120,7 +120,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                 //var d = vertexFaces.Where(vf => vf.Faces.Count() < 2).ToList();
                 var face = firstVertexFaces.Faces.First();
                 var faceVerts = vertexFaces.Where(v => face.VertexIndexList.Contains(v.Vertex.Index));
-                throw new Exception("Can not find next face");
+                throw new Exception("Can not find next face, mesh can contain a missing face in a loop, check your model");
             }
 
             var nextFaceVertIndexes = nextFace.VertexIndexList.Except(new[] { firstVertex.Index }).ToList();
@@ -129,7 +129,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             if (nextVertIndexes.Count() > 1)
             {
                 var nextFaces = firstVertexFaces.Faces.Select(f => new { Face = f, Verts = vertexFaces.Where(vf => f.VertexIndexList.Contains(vf.Vertex.Index)) });
-                throw new Exception("Found more then 1 second edge vertex");
+                throw new Exception("Found more then one second edge vertex, mesh loop face has more then 4 verts, expected always 4 verts, check your model");
             }
 
             if (nextVertIndexes.FirstOrDefault() == null)
