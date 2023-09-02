@@ -567,7 +567,7 @@ namespace SvgNest.Utils
         // returns the intersection of AB and EF
         // or null if there are no intersections or other numerical error
         // if the infinite flag is set, AE and EF describe infinite lines without endpoints, they are finite line segments otherwise
-        private static DoublePoint LineIntersect(DoublePoint A, DoublePoint B, DoublePoint E, DoublePoint F, bool infinite = false)
+        public static DoublePoint LineIntersect(DoublePoint A, DoublePoint B, DoublePoint E, DoublePoint F, bool infinite = false)
         {
             var a1 = B.Y - A.Y;
             var b1 = A.X - B.X;
@@ -1320,6 +1320,42 @@ namespace SvgNest.Utils
             }
 
             return true;
+        }
+
+        public static double GetSegmentLineLength(DoublePoint A, DoublePoint B)
+        {
+            return Math.Sqrt(Math.Pow(B.X - A.X, 2) + Math.Pow(B.Y - A.Y, 2));
+        }
+
+        private static DoublePoint[] GetRectangle(PolygonBounds bounds)
+        {
+            var firstPoint = new DoublePoint(bounds.X, bounds.Y);
+            var secondPoint = new DoublePoint(bounds.X + bounds.Width, bounds.Y);
+            var thirdPoint = new DoublePoint(secondPoint.X, bounds.Y + bounds.Height);
+            var forthPoint = new DoublePoint(bounds.X, thirdPoint.Y);
+
+            return new DoublePoint[] { firstPoint, secondPoint, thirdPoint, forthPoint };
+        }
+
+        public static bool BoundsIntersect(PolygonBounds bounds1, PolygonBounds bounds2)
+        {
+            var rectangle1 = GetRectangle(bounds1);
+            var rectangle2 = GetRectangle(bounds2);
+
+            return rectangle1.Any(p => PointInPolygon(p, rectangle2) ?? true) ||
+                rectangle2.Any(p => PointInPolygon(p, rectangle1) ?? true);
+        }
+
+        public static double GetLineYVectorLength(DoublePoint A, DoublePoint B)
+        {
+            var lineLength = GetSegmentLineLength(A, B);
+            var normalYVector = new DoublePoint[] { A, new DoublePoint(A.X, 1) };
+            var normalYVectorLength = GetSegmentLineLength(normalYVector[0], normalYVector[1]);
+
+            var dotProduct = B.X * normalYVector[1].X + B.Y * normalYVector[1].Y;
+            var cosAngleBetween = dotProduct / (lineLength * normalYVectorLength);
+
+            return lineLength * cosAngleBetween;
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using ObjParser.Types;
+﻿using ClipperLib;
+using ObjParser.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,6 +16,16 @@ namespace Flat3DObjectsToSvgConverter.Helpers
         {
             var scaled = coord * scale;
             return round ? (int)Math.Round(scaled, 1) : (int)scaled;
+        }
+
+        public static DoublePoint ToInt(this DoublePoint point, int scale)
+        {
+            return new DoublePoint((int)point.X * scale, (int)point.Y * scale);
+        }
+
+        public static DoublePoint Scale(this DoublePoint point, double scale)
+        {
+            return new DoublePoint(point.X * scale, point.Y * scale);
         }
 
         public static Vertex ToIntCoords(this Vertex vertex, int scale = ScaleGain, bool round = false)

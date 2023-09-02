@@ -68,5 +68,10 @@ namespace SvgLib
 
             return value.Trim();
         }
+
+        public SvgDocument Clone(bool deep = false)
+        {
+            return new SvgDocument(_document.CloneNode(deep) as XmlDocument, Element.CloneNode(deep) as XmlElement);
+        }
     }
 }

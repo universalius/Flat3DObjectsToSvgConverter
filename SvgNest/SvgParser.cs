@@ -224,7 +224,7 @@ namespace SvgNest
         }
 
         // recursively apply the transform property to the given element
-        private void ApplyTransform(XmlElement element, string globalTransform = "")
+        public void ApplyTransform(XmlElement element, string globalTransform = "")
         {
 
             var transformString = element.GetAttribute("transform");

@@ -33,5 +33,11 @@ namespace SvgLib
             get => Element.GetAttribute<SvgFillRule>("fill-rule", SvgDefaults.Attributes.FillAndStroke.FillRule);
             set => Element.SetAttribute("fill-rule", value);
         }
+
+        public SvgPath Clone(bool deep = false)
+        {
+            var newElement = Element.CloneNode(deep);
+            return new SvgPath(newElement as XmlElement);
+        }
     }
 }
