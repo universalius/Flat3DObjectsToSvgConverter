@@ -41,4 +41,14 @@ namespace SvgNest.Models.SVGPathSeg
 
         public double Y { get; set; }
     }
+
+    public class SVGPathSegCurvetoQuadratic : SVGPathSeg
+    {
+        public SVGPathSegCurvetoQuadratic(int type, string typeAsLetter, SVGPathSegList owningPathSegList) : base(type, typeAsLetter, owningPathSegList)
+        {
+        }
+        public double X1 { get; set; }
+
+        public double Y1 { get; set; }
+    }
 }

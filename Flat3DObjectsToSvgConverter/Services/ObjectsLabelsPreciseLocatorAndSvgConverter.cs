@@ -1,5 +1,6 @@
 ﻿using ClipperLib;
 using Flat3DObjectsToSvgConverter.Helpers;
+using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
 using GeometRi;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualBasic;
@@ -9,6 +10,7 @@ using SvgLib;
 using SvgNest;
 using SvgNest.Models.GeometryUtil;
 using SvgNest.Utils;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -22,32 +24,25 @@ namespace Flat3DObjectsToSvgConverter.Services
     public class ObjectsLabelsPreciseLocatorAndSvgConverter
     {
         private CultureInfo culture = new CultureInfo("en-US", false);
-        private readonly IEnumerable<SvgPath> _svgLetters;
+        private readonly IEnumerable<SvgLetter> _svgLetters;
         private readonly SvgParser _svgParser;
 
-        private readonly double _letterWidth;
-        private readonly double _letterHeight;
+        //private readonly double _letterWidth;
+        //private readonly double _letterHeight;
         private readonly ILogger<ObjectsLabelsPreciseLocatorAndSvgConverter> _logger;
         private readonly IOFileService _file;
 
-        private const double WidthBetweenPathes = 10;
-        private const double HeightBetweenPathes = 10;
 
         private int gain = 100000;
 
 
         public ObjectsLabelsPreciseLocatorAndSvgConverter(ILogger<ObjectsLabelsPreciseLocatorAndSvgConverter> logger, IOFileService file)
         {
-            var mainFolder = AppDomain.CurrentDomain.BaseDirectory;
-
-            SvgDocument svgDocument = ParseSvgFile(Path.Combine(mainFolder, "Asserts\\Letters.svg"));
-            var pathElements = svgDocument.Element.GetElementsByTagName("path").Cast<XmlElement>().ToArray();
-            _svgLetters = pathElements.Select(e => new SvgPath(e));
-            _letterHeight = GetOrHeight();
-            _letterWidth = GetUnderscoreWidth();
+            //_letterHeight = GetOrHeight();
+            //_letterWidth = GetUnderscoreWidth();
             _file = file;
             _svgParser = new SvgParser();
-
+            _svgLetters = GetSvgLetters();
             _logger = logger;
         }
 
@@ -64,7 +59,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             SvgDocument svgDocument = ParseSvgString(svg);
             var groupElements = svgDocument.Element.GetElementsByTagName("g").Cast<XmlElement>().ToArray();
 
-            var mainPathPolygons = groupElements.Select((element, i) =>
+            var loops = groupElements.Select((element, i) =>
             {
                 var group = new SvgGroup(element);
                 var pathes = group.Element.GetElementsByTagName("path").Cast<XmlElement>()
@@ -88,18 +83,38 @@ namespace Flat3DObjectsToSvgConverter.Services
 
                     //await AddLabelToGroup(label, labelGroup);
                 }
-                return new PathPolygon { Path = newPath, Label = label, GroupId = i };
+
+                var (lettersGroup, labelWidth) = GetLabelLetters(label, svgDocument);
+                return new LoopPolygon
+                {
+                    LoopPath = new LoopPath
+                    {
+                        Path = newPath,
+                        ParentGroupId = i
+                    },
+                    LabelLetters = new LabelSvgGroup
+                    {
+                        Label = label,
+                        Group = lettersGroup,
+                        Width = labelWidth,
+                        ParentGroupId = i
+                    },
+                };
             }).ToList();
 
-            var labelPathes = GetLabelCoords(mainPathPolygons);
+            CalculateLabelCoords(loops);
+
             var newSvgDocument = svgDocument.Clone();
-            labelPathes.ToList().ForEach(lp =>
+            loops.ForEach(l =>
             {
                 var group = newSvgDocument.AddGroup();
-                var loopsGroupElement = groupElements[lp.GroupId];
-                var labelGroup = group.AddGroup();
-                AddLabelPathToGroup(lp, labelGroup);
+                var loopsGroupElement = groupElements[l.LoopPath.ParentGroupId];
+
+                var coords = l.LabelLetters.GroupLocation;
+                l.LabelLetters.Group.Transform = $"translate({(coords.X - l.LabelLetters.Width).ToString(culture)} {(coords.Y - _svgLetters.First().Height).ToString(culture)})";
+
                 group.Element.AppendChild(loopsGroupElement);
+                group.Element.AppendChild(l.LabelLetters.Group.Element);
             });
 
 
@@ -124,6 +139,31 @@ namespace Flat3DObjectsToSvgConverter.Services
             return null;
         }
 
+        private IEnumerable<SvgLetter> GetSvgLetters()
+        {
+            var mainFolder = AppDomain.CurrentDomain.BaseDirectory;
+            SvgDocument svgDocument = ParseSvgFile(Path.Combine(mainFolder, "Asserts\\Letters.svg"));
+            var pathElements = svgDocument.Element.GetElementsByTagName("path").Cast<XmlElement>().ToArray();
+            var pathes = pathElements.Select(e => new SvgPath(e));
+
+            return pathes.Select(p =>
+            {
+                var points = _svgParser.Polygonify(p.Element);
+
+                var a = string.Join("\n", points.Select(p => $"{p.X.ToString(culture)} {p.Y.ToString(culture)}"));
+
+
+                var bounds = GeometryUtil.GetPolygonBounds(points);
+                return new SvgLetter
+                {
+                    Path = p,
+                    Letter = p.Id,
+                    Height = bounds.Height,
+                    Width = bounds.Width,
+                };
+            }).ToArray();
+        }
+
         private string GetLabel(string pathId)
         {
             var idSections = pathId.Split("-")[0].Split("_");
@@ -142,8 +182,10 @@ namespace Flat3DObjectsToSvgConverter.Services
             return label;
         }
 
-        private void AddLabelPathToGroup(LabelPath labelPath, SvgGroup group)
+        private void AddLabelPathToGroup(LabelSvgGroup labelPath, SvgGroup group)
         {
+            var letterWidth = _svgLetters.First().Width;
+            var letterHeight = _svgLetters.First().Height;
             int i = 0;
             var label = labelPath.Label;
             var shiftByX = 0.0;
@@ -152,83 +194,60 @@ namespace Flat3DObjectsToSvgConverter.Services
                 var s = c.ToString();
                 if (s != " ")
                 {
-                    shiftByX = i * _letterWidth * 0.8;
+                    shiftByX = i * letterWidth;
 
                     var path = group.AddPath();
-                    path.D = _svgLetters.FirstOrDefault(p => p.Id == s).D;
+                    path.D = _svgLetters.FirstOrDefault(p => p.Path.Id == s).Path.D;
                     path.Fill = "#000000";
                     path.Transform = $"translate({shiftByX.ToString(culture)})";
                 }
 
                 i++;
             });
-            var labelWidth = shiftByX + _letterWidth;
-            group.Transform = $"translate({(labelPath.Location.X - labelWidth).ToString(culture)} {(labelPath.Location.Y - _letterHeight).ToString(culture)})";
+            var labelWidth = shiftByX + letterWidth;
+            group.Transform = $"translate({(labelPath.GroupLocation.X - labelWidth).ToString(culture)} {(labelPath.GroupLocation.Y - letterHeight).ToString(culture)})";
         }
 
-        private Extent GetLabelCoords(SvgPath path)
+        private (SvgGroup, double) GetLabelLetters(string label, SvgDocument svgDocument)
         {
-            var pointsString = new Regex("[mz]").Replace(path.D.ToLowerInvariant(), string.Empty).Trim().Split("l");
-            var points = pointsString.Select((s, i) =>
+            var group = new SvgGroup(svgDocument);
+            var shiftByX = 0.0;
+            label.ToList().ForEach(c =>
             {
-                var points = s.Trim().Split(" ");
-                return new DoublePoint(double.Parse(points[0], culture), double.Parse(points[1], culture));
-            }).ToList();
+                var s = c.ToString();
+                if (s != " ")
+                {
+                    var letter = _svgLetters.FirstOrDefault(p => p.Letter == s);
+                    shiftByX += letter.Width;
 
-            return new Extent
-            {
-                XMin = points.Min(p => p.X),
-                XMax = points.Max(p => p.X),
-                YMin = points.Min(p => p.Y),
-                YMax = points.Max(p => p.Y)
-            };
+                    var path = group.AddPath();
+                    path.D = letter.Path.D;
+                    path.Fill = "#000000";
+                    path.Transform = $"translate({shiftByX.ToString(culture)})";
+                }
+            });
+
+            var lastLetter = label.Last().ToString();
+            var labelWidth = shiftByX + _svgLetters.First(p => p.Letter == lastLetter).Width;
+
+            return (group, labelWidth);
         }
 
-        private string GetLabelGroupTransform(SvgPath path, string parentGroupRotate)
+        private DoublePoint GetPolygonCenter(LoopPolygon loop)
         {
-            var leftTopPoint = GetLabelCoords(path);
-            var rotate = int.Parse(parentGroupRotate);
-            var shift = _letterHeight * 1.2;
-            if (rotate == 0)
-            {
-                leftTopPoint.YMin -= shift;
-            }
-
-            if (rotate == 90)
-            {
-                leftTopPoint.XMin -= shift;
-                leftTopPoint.YMin += leftTopPoint.YSize;
-            }
-
-            if (rotate == 180)
-            {
-                leftTopPoint.XMin += leftTopPoint.XSize;
-                leftTopPoint.YMin += leftTopPoint.YSize + shift;
-            }
-
-            if (rotate == 270)
-            {
-                leftTopPoint.XMin += leftTopPoint.XSize + shift;
-            }
-
-            return $"translate({leftTopPoint.XMin.ToString(culture)} {leftTopPoint.YMin.ToString(culture)}) rotate({-rotate})";
-        }
-
-
-        private DoublePoint GetPolygonCenter(PolygonBounds bounds, PathPolygon pathPolygon)
-        {
-            var bound = pathPolygon.Bounds;
+            var bounds = loop.Polygon.Bounds;
             var initialCenter = new DoublePoint(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
-            if (GeometryUtil.PointInPolygon(initialCenter, pathPolygon.Points) ?? false)
+            if (GeometryUtil.PointInPolygon(initialCenter, loop.Polygon.Points) ?? false)
             {
                 return initialCenter;
             }
 
+            var spaceBetweenPathes = loop.LabelLetters.Width * 1.2;
             var axis = new DoublePoint[2] {
-                new DoublePoint(bounds.X - WidthBetweenPathes / 2, initialCenter.Y).ToInt(gain),
-                new DoublePoint(bounds.X + bound.Width + WidthBetweenPathes / 2, initialCenter.Y).ToInt(gain)
+                new DoublePoint(bounds.X - spaceBetweenPathes / 2, initialCenter.Y).ToInt(gain),
+                new DoublePoint(bounds.X + bounds.Width + spaceBetweenPathes / 2, initialCenter.Y).ToInt(gain)
             };
-            var intersections = pathPolygon.Lines
+            var intersections = loop.Polygon.Lines
                 .Select(l => GeometryUtil.LineIntersect(axis[0], axis[1], l[0], l[1]))
                 .Where(intersection => intersection != null).ToArray();
 
@@ -242,61 +261,58 @@ namespace Flat3DObjectsToSvgConverter.Services
             return newCenter;
         }
 
-        private IEnumerable<LabelPath> GetLabelCoords(List<PathPolygon> pathPolygons)
+        private IEnumerable<LoopPolygon> CalculateLabelCoords(List<LoopPolygon> loops)
         {
-            pathPolygons.ForEach(pp =>
+            loops.ForEach(l =>
             {
-                var points = _svgParser.Polygonify(pp.Path.Element);
+                var points = _svgParser.Polygonify(l.LoopPath.Path.Element);
                 var bounds = GeometryUtil.GetPolygonBounds(points);
-                pp.Points = points;
-                pp.Bounds = bounds;
-                pp.Lines = points.Select((p, i) =>
+
+                l.Polygon = new PathPolygon
                 {
-                    if (i == points.Length - 1)
-                        return new DoublePoint[2] { new DoublePoint(p.X, p.Y).ToInt(gain), new DoublePoint(points[0].X, points[0].Y).ToInt(gain) };
+                    Points = points,
+                    Bounds = bounds,
+                    Lines = points.Select((p, i) =>
+                    {
+                        if (i == points.Length - 1)
+                            return new DoublePoint[2] { new DoublePoint(p.X, p.Y).ToInt(gain), new DoublePoint(points[0].X, points[0].Y).ToInt(gain) };
 
-                    return new DoublePoint[2] { new DoublePoint(p.X, p.Y).ToInt(gain), new DoublePoint(points[i + 1].X, points[i + 1].Y).ToInt(gain) };
+                        return new DoublePoint[2] { new DoublePoint(p.X, p.Y).ToInt(gain), new DoublePoint(points[i + 1].X, points[i + 1].Y).ToInt(gain) };
 
-                }).ToArray();
+                    }).ToArray(),
+                };
+                l.Polygon.Center = GetPolygonCenter(l);
 
-                pp.PolygonCenter = GetPolygonCenter(bounds, pp);
-                pp.ScaledPath = "M " +
-                    string.Join(" ", pp.Lines.Select(l => $"{l[0].X}.0 {l[0].Y}.0")) +
-                    " z";
+                l.LoopPath.ScaledPath = $"M {string.Join(" ", l.Polygon.Lines.Select(l => $"{l[0].X}.0 {l[0].Y}.0"))} z";
             });
 
-            var polygonNeighbors = pathPolygons.Select(first =>
+            loops.ForEach(l =>
             {
-                var bounds = new PolygonBounds
+                var spaceBetweenLoops = l.LabelLetters.Width * 1.2;
+                var extendedBounds = new PolygonBounds
                 {
-                    X = first.Bounds.X - WidthBetweenPathes,
-                    Y = first.Bounds.Y - WidthBetweenPathes,
-                    Width = first.Bounds.Width + WidthBetweenPathes,
-                    Height = first.Bounds.Height + WidthBetweenPathes
+                    X = l.Polygon.Bounds.X - spaceBetweenLoops,
+                    Y = l.Polygon.Bounds.Y - spaceBetweenLoops,
+                    Width = l.Polygon.Bounds.Width + spaceBetweenLoops,
+                    Height = l.Polygon.Bounds.Height + spaceBetweenLoops
                 };
-                return new
-                {
-                    PathPolygon = first,
-                    Neighbors = pathPolygons.Where(pp => first.Path.Id != pp.Path.Id && GeometryUtil.BoundsIntersect(bounds, pp.Bounds)).ToArray(),
-                };
-            }).ToArray();
+                l.Neighbors = loops.Where(l1 => l.LoopPath.Path.Id != l1.LoopPath.Path.Id && GeometryUtil.BoundsIntersect(extendedBounds, l1.Polygon.Bounds))
+                    .ToArray();
 
-            var labelsCoords = polygonNeighbors.Select(pn =>
-            {
-                var polygonCenterPoint = pn.PathPolygon.PolygonCenter;
+                var polygonCenterPoint = l.Polygon.Center;
 
                 var raysCount = 360;
                 var raysAngle = 360.0 / raysCount;
-                var radius = new double[] { pn.PathPolygon.Bounds.Width, pn.PathPolygon.Bounds.Height }.Max() / 2 + WidthBetweenPathes;
+                var radius = new double[] { l.Polygon.Bounds.Width, l.Polygon.Bounds.Height }.Max() / 2 + spaceBetweenLoops;
 
                 var sunRays = new int[raysCount].Select((val, j) =>
                 {
                     var angle = j * raysAngle;
                     var x = polygonCenterPoint.X + radius * Math.Cos(angle * Math.PI / 180);
                     var y = polygonCenterPoint.Y + radius * Math.Sin(angle * Math.PI / 180);
-                    return new
+                    return new RayDistance
                     {
-                        Angle = j,
+                        RayId = j,
                         Line = new DoublePoint[] { polygonCenterPoint.ToInt(gain), new DoublePoint(x, y).ToInt(gain) }
                     };
                 }).ToArray();
@@ -305,83 +321,37 @@ namespace Flat3DObjectsToSvgConverter.Services
                 var distanceBetweenPolygons = new List<RayDistance>();
                 var rayIndex = 0;
 
-                var svgTest = SvgDocument.Create();
-                svgTest.Width = 700;
-                svgTest.Height = 700;
-                svgTest.ViewBox = new SvgViewBox
-                {
-                    Height = 700,// gain,
-                    Width = 700// gain,
-                };
+                VisualiseRays(loops, sunRays, raysSectorFirstRay, l.LoopPath.Path.Id);
 
-                pathPolygons.ForEach(e =>
-                {
-                    var path = svgTest.AddPath();
-                    path.D = e.ScaledPath;
-                    path.Id = e.Path.Id;
-                    path.StrokeWidth = 0.3;
-                    path.Stroke = "#000000";
-                    path.Fill = "none";
-                });
-
-                sunRays.Skip(raysSectorFirstRay).Take(90)
-                //sunRays
-                .ToList().ForEach(r =>
-                {
-                    var path = svgTest.AddPath();
-                    path.Id = r.Angle.ToString();
-                    path.D = $"M {r.Line[0].X} {r.Line[0].Y} {r.Line[1].X} {r.Line[1].Y}";
-                    path.StrokeWidth = 0.3;
-                    path.Stroke = "#000000";
-                    path.Fill = "none";
-
-                    var group = svgTest.AddGroup();
-
-
-                    AddLabelPathToGroup(new LabelPath
-                    {
-                        Label = r.Angle.ToString(),
-                        Location = r.Line[1]
-                    }, group);
-                });
-
-
-                _file.SaveSvg("test_transform", svgTest._document.OuterXml);
-
-                var sclaledWidthBetweenPathes = WidthBetweenPathes * gain;
+                var sclaledWidthBetweenPathes = spaceBetweenLoops * gain;
                 sunRays.Skip(raysSectorFirstRay).Take(90).ToList().ForEach(r =>
                 {
-                    var mainWithRayIntersection = pn.PathPolygon.Lines
+                    var mainWithRayIntersection = l.Polygon.Lines
                         .Select(l => GeometryUtil.LineIntersect(r.Line[0], r.Line[1], l[0], l[1]))
                         .Where(intersection => intersection != null)
                         .MinBy(p => p.X);
 
-                    var neighborsWithRayIntersections = pn.Neighbors.Select(n =>
+                    var neighborsWithRayIntersections = l.Neighbors.Select(n =>
                     {
-                        var intersections = n.Lines.Select(l => GeometryUtil.LineIntersect(r.Line[0], r.Line[1], l[0], l[1]))
+                        var intersections = n.Polygon.Lines.Select(l => GeometryUtil.LineIntersect(r.Line[0], r.Line[1], l[0], l[1]))
                             .Where(intersection => intersection != null).ToArray();
                         return new PathIntersection
                         {
-                            PathPolygon = n,
+                            LoopPolygon = n,
                             Intersection = intersections.Any() ? intersections.MinBy(p => p.X) : null
                         };
                     }).Where(pi => pi.Intersection != null).ToArray();
 
-                    PathPolygon neighborPathPolygon = null;
+                    LoopPolygon neighborPathPolygon = null;
                     double distance = sclaledWidthBetweenPathes;
                     if (neighborsWithRayIntersections.Any())
                     {
-                        if (mainWithRayIntersection == null)
-                        {
-                            var c = 0;
-                        }
-
                         var neighborIntersection = neighborsWithRayIntersections
                             .Select(nri =>
                             new
                             {
                                 Distance = GeometryUtil.GetSegmentLineLength(mainWithRayIntersection, nri.Intersection),
-                                Neighbor = nri.PathPolygon
+                                Neighbor = nri.LoopPolygon
                             })
                             .MinBy(nd => nd.Distance);
                         distance = neighborIntersection.Distance;
@@ -390,11 +360,11 @@ namespace Flat3DObjectsToSvgConverter.Services
 
                     distanceBetweenPolygons.Add(new RayDistance
                     {
-                        Ray = r.Line,
-                        RayId = r.Angle,
+                        Line = r.Line,
+                        RayId = r.RayId,
                         Main = new PathIntersection
                         {
-                            PathPolygon = pn.PathPolygon,
+                            LoopPolygon = l,
                             Intersection = mainWithRayIntersection
                         },
                         Neighbor = neighborPathPolygon,
@@ -427,13 +397,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                         rayIntersection = targetRay.Main.Intersection;
                     }
 
-                    return new LabelPath
-                    {
-                        Label = pn.PathPolygon.Label,
-                        Path = pn.PathPolygon.Path,
-                        Location = new DoublePoint(rayIntersection.X, rayIntersection.Y).Scale(1.0 / gain),
-                        GroupId = pn.PathPolygon.GroupId
-                    };
+                    l.LabelLetters.GroupLocation = new DoublePoint(rayIntersection.X, rayIntersection.Y).Scale(1.0 / gain);
                 }
 
                 //var groupedRaysBySequence = new List<Dictionary<int, RayDistance>>();
@@ -504,11 +468,9 @@ namespace Flat3DObjectsToSvgConverter.Services
                 //        return new DoublePoint(rayIntersection.X + WidthBetweenPathes, rayIntersection.Y + HeightBetweenPathes);
                 //    }
                 //}
+            });
 
-                return null;
-            }).ToArray();
-
-            return labelsCoords;
+            return loops;
         }
 
         public static SvgDocument ParseSvgFile(string filePath)
@@ -525,60 +487,102 @@ namespace Flat3DObjectsToSvgConverter.Services
             return new SvgDocument(xmlDocument, xmlDocument.DocumentElement);
         }
 
-        private double GetUnderscoreWidth()
+        private void VisualiseRays(List<LoopPolygon> loops, RayDistance[] sunRays, int raysSectorFirstRay, string name)
         {
-            var undescorePath = _svgLetters.First(p => p.Id == "_");
-            var d = undescorePath.D.ToLower();
-            var marker = "h ";
-            var index = d.IndexOf(marker);
-            var first = index + marker.Count();
-            var last = d.IndexOf(" ", first);
-            return double.Parse(d.Substring(first, last - first), culture);
+            var svgTest = SvgDocument.Create();
+            svgTest.Width = 700;
+            svgTest.Height = 700;
+            svgTest.ViewBox = new SvgViewBox
+            {
+                Height = 700,// gain,
+                Width = 700// gain,
+            };
 
-        }
+            loops.ForEach(e =>
+            {
+                var path = svgTest.AddPath();
+                path.D = e.LoopPath.ScaledPath;
+                path.Id = e.LoopPath.Path.Id;
+                path.StrokeWidth = 0.3;
+                path.Stroke = "#000000";
+                path.Fill = "none";
+            });
 
-        private double GetOrHeight()
-        {
-            var orPath = _svgLetters.First(p => p.Id == "|");
-            var d = orPath.D.ToLower();
-            var marker = "v ";
-            var index = d.LastIndexOf(marker);
-            var first = index + marker.Count();
-            var last = d.IndexOf(" z", first);
-            return double.Parse(d.Substring(first, last - first), culture);
+            sunRays.Skip(raysSectorFirstRay).Take(90)
+            //sunRays
+            .ToList().ForEach(r =>
+            {
+                var path = svgTest.AddPath();
+                path.Id = r.RayId.ToString();
+                path.D = $"M {r.Line[0].X} {r.Line[0].Y} {r.Line[1].X} {r.Line[1].Y}";
+                path.StrokeWidth = 0.3;
+                path.Stroke = "#000000";
+                path.Fill = "none";
+
+                var group = svgTest.AddGroup();
+
+
+                AddLabelPathToGroup(new LabelSvgGroup
+                {
+                    Label = r.RayId.ToString(),
+                    GroupLocation = r.Line[1]
+                }, group);
+            });
+
+            _file.SaveSvg($"test_transform_{name}", svgTest._document.OuterXml);
         }
     }
 
     public class PathPolygon : PolygonWithBounds
     {
-        public SvgPath Path { get; set; }
-        public string Label { get; set; }
         public DoublePoint[][] Lines { get; set; }
-        public DoublePoint PolygonCenter { get; set; }
-        public int GroupId { get; set; }
+        public DoublePoint Center { get; set; }
+    }
+
+    public class LoopPath
+    {
+        public SvgPath Path { get; set; }
+        public int ParentGroupId { get; set; }
         public string ScaledPath { get; set; }
+    }
+
+    public class LoopPolygon
+    {
+        public LoopPath LoopPath { get; set; }
+        public LabelSvgGroup LabelLetters { get; set; }
+        public PathPolygon Polygon { get; set; }
+        public IEnumerable<LoopPolygon> Neighbors { get; set; }
     }
 
     public class RayDistance
     {
-        public DoublePoint[] Ray { get; set; }
+        public DoublePoint[] Line { get; set; }
         public int RayId { get; set; }
         public PathIntersection Main { get; set; }
-        public PathPolygon Neighbor { get; set; }
+        public LoopPolygon Neighbor { get; set; }
         public double Distance { get; set; }
     }
 
     public class PathIntersection
     {
-        public PathPolygon PathPolygon { get; set; }
+        public LoopPolygon LoopPolygon { get; set; }
         public DoublePoint Intersection { get; set; }
     }
 
-    public class LabelPath
+    public class LabelSvgGroup
     {
         public string Label { get; set; }
+        public SvgGroup Group { get; set; }
+        public DoublePoint GroupLocation { get; set; }
+        public int ParentGroupId { get; set; }
+        public double Width { get; set; }
+    }
+
+    public class SvgLetter
+    {
+        public string Letter { get; set; }
         public SvgPath Path { get; set; }
-        public DoublePoint Location { get; set; }
-        public int GroupId { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
     }
 }

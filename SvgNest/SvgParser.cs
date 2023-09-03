@@ -625,18 +625,36 @@ namespace SvgNest
                             //if ("y2" in s) y2 = s.y2;
                             //if ("x" in s) x = s.x;
                             //if ("y" in s) y = s.y;
+
+                            if (new string[] { "Q" }.Contains(s.PathSegTypeAsLetter))
+                            {
+                                var s1 = s as SVGPathSegCurvetoQuadratic;
+                                x1 = s1.X1;
+                                y1 = s1.Y1;
+                            }
+
                             x = s.X;
                             y = s.Y;
                         }
-                        //            else
-                        //            {
-                        //                if ("x1" in s) x1 = x + s.x1;
-                        //        if ("x2" in s) x2 = x + s.x2;
-                        //        if ("y1" in s) y1 = y + s.y1;
-                        //        if ("y2" in s) y2 = y + s.y2;
-                        //        if ("x" in s) x += s.x;
-                        //        if ("y" in s) y += s.y;
-                        //}
+                        else
+                        {
+                            // if ("x1" in s) x1 = x + s.x1;
+                            // if ("x2" in s) x2 = x + s.x2;
+                            // if ("y1" in s) y1 = y + s.y1;
+                            // if ("y2" in s) y2 = y + s.y2;
+                            // if ("x" in s) x += s.x;
+                            // if ("y" in s) y += s.y;
+
+                            if (new string[] { "q" }.Contains(s.PathSegTypeAsLetter))
+                            {
+                                var s1 = s as SVGPathSegCurvetoQuadratic;
+                                x1 += s1.X1;
+                                y1 += s1.Y1;
+                            }
+                            x += s.X;
+                            y += s.Y;
+                        }
+
                         switch (command)
                         {
                             // linear line types
@@ -650,7 +668,7 @@ namespace SvgNest
                             case "V":
                                 poly.Add(new DoublePoint(x, y));
                                 break;
-                            //// Quadratic Beziers
+                            // Quadratic Beziers
                             //case "t":
                             //case "T":
                             //    // implicit control point
@@ -664,18 +682,14 @@ namespace SvgNest
                             //        x1 = prevx;
                             //        y1 = prevy;
                             //    }
-                            //case "q":
-                            //case "Q":
-                            //    var pointlist = GeometryUtil.QuadraticBezier.linearize({ x: prevx, y: prevy }, { x: x, y: y }, { x: x1, y: y1 }, conf.tolerance);
-                            //    pointlist.shift(); // firstpoint would already be in the poly
-                            //    for (var j = 0; j < pointlist.Count(); j++)
-                            //    {
-                            //        var point = { };
-                            //        point.x = pointlist[j].x;
-                            //        point.y = pointlist[j].y;
-                            //        poly.Add(point);
-                            //    }
-                            //    break;
+                            case "q":
+                            case "Q":
+                                var pointlist = GeometryUtil.LinearizeQuadraticBezier(
+                                    new DoublePoint(prevx, prevy), new DoublePoint(x, y), new DoublePoint(x1, y1),
+                                    _conf.Tolerance);
+                                pointlist.RemoveAt(0); // firstpoint would already be in the poly
+                                poly.AddRange(pointlist);
+                                break;
                             //case "s":
                             //case "S":
                             //    if (i > 0 && /[CcSs] /.test(seglist.getItem(i - 1).pathSegTypeAsLetter))

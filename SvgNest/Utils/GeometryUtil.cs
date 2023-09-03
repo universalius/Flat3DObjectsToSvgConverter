@@ -1346,16 +1346,85 @@ namespace SvgNest.Utils
                 rectangle2.Any(p => PointInPolygon(p, rectangle1) ?? true);
         }
 
-        public static double GetLineYVectorLength(DoublePoint A, DoublePoint B)
+        /// <summary>
+        /// turn Bezier into line segments via de Casteljau, returns an array of points
+        /// </summary>
+        public static Path LinearizeQuadraticBezier(DoublePoint p1, DoublePoint p2, DoublePoint c1, double tolerance)
         {
-            var lineLength = GetSegmentLineLength(A, B);
-            var normalYVector = new DoublePoint[] { A, new DoublePoint(A.X, 1) };
-            var normalYVectorLength = GetSegmentLineLength(normalYVector[0], normalYVector[1]);
+            var finished = new Path { p1 }; // list of points to return
+            var todo = new List<BezierSegment> { new BezierSegment { P1 = p1, P2 = p2, C1 = c1 } }; // list of Beziers to divide
 
-            var dotProduct = B.X * normalYVector[1].X + B.Y * normalYVector[1].Y;
-            var cosAngleBetween = dotProduct / (lineLength * normalYVectorLength);
+            // recursion could stack overflow, loop instead
+            while (todo.Count > 0)
+            {
+                var segment = todo[0];
 
-            return lineLength * cosAngleBetween;
+                if (IsQuadraticBezierFlat(segment.P1, segment.P2, segment.C1, tolerance))
+                { 
+                    // reached subdivision limit
+                    finished.Add(new DoublePoint(segment.P2.X, segment.P2.Y));
+                    todo.RemoveAt(0);
+                }
+                else
+                {
+                    var divided = SubdivideQuadraticBezier(segment.P1, segment.P2, segment.C1, 0.5);
+                    todo.RemoveAt(0);
+                    var newTodo = new List<BezierSegment>(divided);
+                    newTodo.AddRange(todo);
+                    todo = newTodo;
+
+
+                    //todo = todo.Prepend(divided[1]).Prepend(divided[0]).ToList();
+
+                    //todo.Prepend(divided[1]);
+                    //todo;
+                    //todo.splice(0, 1, divided[0], divided[1]);
+                }
+            }
+            return finished;
         }
+
+        // Roger Willcocks bezier flatness criterion
+        private static bool IsQuadraticBezierFlat(DoublePoint p1, DoublePoint p2, DoublePoint c1, double tolerance)
+        {
+            tolerance = 4 * tolerance * tolerance;
+
+            var ux = 2 * c1.X - p1.X - p2.X;
+            ux *= ux;
+
+            var uy = 2 * c1.Y - p1.Y - p2.Y;
+            uy *= uy;
+
+            return ux + uy <= tolerance;
+        }
+
+        // subdivide a single Bezier
+        // t is the percent along the Bezier to divide at. eg. 0.5
+        private static BezierSegment[] SubdivideQuadraticBezier(DoublePoint p1, DoublePoint p2, DoublePoint c1, double t)
+        {
+            var mid1 = new DoublePoint(
+                    p1.X + (c1.X - p1.X) * t,
+                    p1.Y + (c1.Y - p1.Y) * t);
+
+            var mid2 = new DoublePoint(
+                        c1.X + (p2.X - c1.X) * t,
+                        c1.Y + (p2.Y - c1.Y) * t);
+
+            var mid3 = new DoublePoint(
+                        mid1.X + (mid2.X - mid1.X) * t,
+                        mid1.Y + (mid2.Y - mid1.Y) * t);
+
+            var seg1 = new BezierSegment { P1 = p1, P2 = mid3, C1 = mid1 };
+            var seg2 = new BezierSegment { P1 = mid3, P2 = p2, C1 = mid2 };
+
+            return new BezierSegment[] { seg1, seg2 };
+        }
+    }
+
+    public class BezierSegment
+    {
+        public DoublePoint P1 { get; set; }
+        public DoublePoint P2 { get; set; }
+        public DoublePoint C1 { get; set; }
     }
 }

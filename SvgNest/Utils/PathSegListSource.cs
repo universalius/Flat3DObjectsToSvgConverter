@@ -109,32 +109,50 @@ namespace SvgNest.Utils
 
             switch (command)
             {
-                //case SVGPathSeg.PATHSEG_MOVETO_REL:
-                //    return new SVGPathSegMovetoRel(owningPathSegList, _parseNumber(), _parseNumber());
+                case SVGPathSeg.PATHSEG_MOVETO_REL:
+                    return new SVGPathSeg(SVGPathSeg.PATHSEG_MOVETO_REL, "m", owningPathSegList)
+                    {
+                        X = ParseNumber().Value,
+                        Y = ParseNumber().Value
+                    };
                 case SVGPathSeg.PATHSEG_MOVETO_ABS:
                     return new SVGPathSeg(SVGPathSeg.PATHSEG_MOVETO_ABS, "M", owningPathSegList)
                     {
                         X = ParseNumber().Value,
                         Y = ParseNumber().Value
                     };
-                //case SVGPathSeg.PATHSEG_LINETO_REL:
-                //    return new SVGPathSegLinetoRel(owningPathSegList, _parseNumber(), _parseNumber());
+                case SVGPathSeg.PATHSEG_LINETO_REL:
+                    return new SVGPathSeg(SVGPathSeg.PATHSEG_LINETO_REL, "l", owningPathSegList)
+                    {
+                        X = ParseNumber().Value,
+                        Y = ParseNumber().Value
+                    };
                 case SVGPathSeg.PATHSEG_LINETO_ABS:
                     return new SVGPathSeg(SVGPathSeg.PATHSEG_LINETO_ABS, "L", owningPathSegList)
                     {
                         X = ParseNumber().Value,
                         Y = ParseNumber().Value
                     };
-
-                //return new SVGPathSegLinetoAbs(owningPathSegList, _parseNumber(), _parseNumber()); //!!!
-                //case SVGPathSeg.PATHSEG_LINETO_HORIZONTAL_REL:
-                //    return new SVGPathSegLinetoHorizontalRel(owningPathSegList, _parseNumber());
-                //case SVGPathSeg.PATHSEG_LINETO_HORIZONTAL_ABS:
-                //    return new SVGPathSegLinetoHorizontalAbs(owningPathSegList, _parseNumber());
-                //case SVGPathSeg.PATHSEG_LINETO_VERTICAL_REL:
-                //    return new SVGPathSegLinetoVerticalRel(owningPathSegList, _parseNumber());
-                //case SVGPathSeg.PATHSEG_LINETO_VERTICAL_ABS:
-                //    return new SVGPathSegLinetoVerticalAbs(owningPathSegList, _parseNumber());
+                case SVGPathSeg.PATHSEG_LINETO_HORIZONTAL_REL:
+                    return new SVGPathSeg(SVGPathSeg.PATHSEG_LINETO_HORIZONTAL_REL, "h", owningPathSegList)
+                    {
+                        X = ParseNumber().Value,
+                    };
+                case SVGPathSeg.PATHSEG_LINETO_HORIZONTAL_ABS:
+                    return new SVGPathSeg(SVGPathSeg.PATHSEG_LINETO_HORIZONTAL_ABS, "H", owningPathSegList)
+                    {
+                        X = ParseNumber().Value,
+                    };
+                case SVGPathSeg.PATHSEG_LINETO_VERTICAL_REL:
+                    return new SVGPathSeg(SVGPathSeg.PATHSEG_LINETO_VERTICAL_REL, "v", owningPathSegList)
+                    {
+                        Y = ParseNumber().Value,
+                    };
+                case SVGPathSeg.PATHSEG_LINETO_VERTICAL_ABS:
+                    return new SVGPathSeg(SVGPathSeg.PATHSEG_LINETO_VERTICAL_ABS, "V", owningPathSegList)
+                    {
+                        Y = ParseNumber().Value,
+                    };
                 case SVGPathSeg.PATHSEG_CLOSEPATH:
                     SkipOptionalSpaces();
                     return new SVGPathSeg(SVGPathSeg.PATHSEG_CLOSEPATH, "z", owningPathSegList);
@@ -152,12 +170,22 @@ namespace SvgNest.Utils
                 //        case SVGPathSeg.PATHSEG_CURVETO_CUBIC_SMOOTH_ABS:
                 //    var points = { x2: _parseNumber(), y2: _parseNumber(), x: _parseNumber(), y: _parseNumber()};
                 //return new SVGPathSegCurvetoCubicSmoothAbs(owningPathSegList, points.x, points.y, points.x2, points.y2);
-                //        case SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_REL:
-                //    var points = { x1: _parseNumber(), y1: _parseNumber(), x: _parseNumber(), y: _parseNumber()};
-                //return new SVGPathSegCurvetoQuadraticRel(owningPathSegList, points.x, points.y, points.x1, points.y1);
-                //        case SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_ABS:
-                //    var points = { x1: _parseNumber(), y1: _parseNumber(), x: _parseNumber(), y: _parseNumber()};
-                //return new SVGPathSegCurvetoQuadraticAbs(owningPathSegList, points.x, points.y, points.x1, points.y1);
+                case SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_REL:
+                    return new SVGPathSegCurvetoQuadratic(SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_REL, "q", owningPathSegList)
+                    {
+                        X = ParseNumber().Value,
+                        Y = ParseNumber().Value,
+                        X1 = ParseNumber().Value,
+                        Y1 = ParseNumber().Value
+                    };
+                case SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_ABS:
+                    return new SVGPathSegCurvetoQuadratic(SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_ABS, "Q", owningPathSegList)
+                    {
+                        X = ParseNumber().Value,
+                        Y = ParseNumber().Value,
+                        X1 = ParseNumber().Value,
+                        Y1 = ParseNumber().Value
+                    };
                 //        case SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_SMOOTH_REL:
                 //    return new SVGPathSegCurvetoQuadraticSmoothRel(owningPathSegList, _parseNumber(), _parseNumber());
                 //case SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_SMOOTH_ABS:

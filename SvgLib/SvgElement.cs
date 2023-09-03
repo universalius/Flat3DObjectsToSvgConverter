@@ -7,11 +7,11 @@ namespace SvgLib
 {
     public abstract class SvgElement
     {
-        public readonly XmlElement Element;
+        public XmlElement Element;
 
         protected SvgElement(XmlElement element)
         {
-            Element = element ?? throw new ArgumentNullException(nameof(element));
+            Element = element;
         }
 
         public string Id

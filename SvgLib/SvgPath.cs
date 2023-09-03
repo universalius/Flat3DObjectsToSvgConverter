@@ -4,6 +4,12 @@ namespace SvgLib
 {
     public sealed class SvgPath : SvgElement
     {
+        public SvgPath(SvgDocument svgDocument) : base(null)
+        {
+            var element = svgDocument._document.CreateElement("path");
+            Element = element;
+        }
+
         public SvgPath(XmlElement element)
             : base(element)
         {
