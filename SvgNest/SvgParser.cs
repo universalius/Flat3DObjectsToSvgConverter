@@ -83,8 +83,8 @@ namespace SvgNest
 
                 if (Regex.IsMatch(command, @"[MLHVCSQTA]"))
                 {
-                    x = s.X;
-                    y = s.Y;
+                    if (s.X.HasValue) x = s.X.Value;
+                    if (s.Y.HasValue) y = s.Y.Value;
                 }
                 else
                 {
@@ -120,7 +120,7 @@ namespace SvgNest
                 }
             }
 
-            return seglist;
+            return seglist.ToArray();
         }
 
         // takes an SVG transform string and returns corresponding SVGMatrix
@@ -296,14 +296,15 @@ namespace SvgNest
                             //    s = seglist.getItem(i);
                             //}
 
-                            //if ("x" in s && "y" in s) {
-                            var transformed = transform.Calc(s.X, s.Y, false);
-                            prevx = s.X;
-                            prevy = s.Y;
+                            DoublePoint transPoints = null;
+                            if (s.X.HasValue && s.Y.HasValue)
+                            {
+                                var transformed = transform.Calc(s.X.Value, s.Y.Value, false);
+                                prevx = s.X.Value;
+                                prevy = s.Y.Value;
 
-                            var transPoints = new { x = transformed[0], y = transformed[1] };
-
-                            //}
+                                transPoints = new DoublePoint(transformed[0], transformed[1]);
+                            }
                             //if ("x1" in s && "y1" in s) {
                             //    var transformed = transform.calc(s.x1, s.y1);
                             //    transPoints.x1 = transformed[0];
@@ -322,10 +323,10 @@ namespace SvgNest
                             switch (command)
                             {
                                 case "M":
-                                    commandStringTransformed += $"{command} {transPoints.x.ToString(culture)} {transPoints.y.ToString(culture)}";
+                                    commandStringTransformed += $"{command} {transPoints.X.ToString(culture)} {transPoints.Y.ToString(culture)}";
                                     break;
                                 case "L":
-                                    commandStringTransformed += $"{command} {transPoints.x.ToString(culture)} {transPoints.y.ToString(culture)}";
+                                    commandStringTransformed += $"{command} {transPoints.X.ToString(culture)} {transPoints.Y.ToString(culture)}";
                                     break;
                                 //case "C":
                                 //    commandStringTransformed += `${ command} ${ transPoints.x1} ${ transPoints.y1}  ${ transPoints.x2} ${ transPoints.y2} ${ transPoints.x} ${ transPoints.y}`;
@@ -410,18 +411,18 @@ namespace SvgNest
         }
 
         // split a compound path (paths with M, m commands) into an array of paths
-        public void SplitPath(XmlElement path)
+        public List<XmlElement> SplitPath(XmlElement path)
         {
             if (path == null || path.Name != "path" || path.ParentNode == null)
             {
-                return;
+                return null;
             }
 
             // make copy of seglist (appending to new path removes it from the original pathseglist)
             var seglist = (new SVGPathSegList(path)).PathSegList.Select(seg => seg).ToList();
 
             double x = 0, y = 0, x0 = 0, y0 = 0;
-            //var paths = [];
+            var paths = new List<KeyValuePair<XmlElement, SVGPathSegList>>();
             //var p;
 
             var lastM = 0;
@@ -436,69 +437,74 @@ namespace SvgNest
 
             if (lastM == 0)
             {
-                return; // only 1 M command, no need to split
+                return null; // only 1 M command, no need to split
             }
 
-            throw new Exception("Path contains more then one M");
+            seglist.ForEach(s =>
+            {
+                var command = s.PathSegTypeAsLetter;
 
-            //            for (i = 0; i < seglist.Count(); i++)
-            //            {
-            //                var s = seglist[i];
-            //                var command = s.pathSegTypeAsLetter;
+                if (command == "M" || command == "m")
+                {
+                    var pathClone = path.CloneNode(true) as XmlElement;
+                    pathClone.SetAttribute("d", "");
+                    paths.Add(new KeyValuePair<XmlElement, SVGPathSegList>(pathClone, new SVGPathSegList(pathClone)));
+                }
 
-            //                if (command == "M" || command == "m")
-            //                {
-            //                    p = path.cloneNode();
-            //                    p.setAttribute("d", "");
-            //                    paths.Add(p);
-            //                }
+                var p = paths.Last();
 
-            //                if (/[MLHVCSQTA] /.test(command))
-            //                {
-            //                    if ("x" in s) x = s.x;
-            //            if ("y" in s) y = s.y;
+                if (Regex.IsMatch(command, @"[MLHVCSQTA]"))
+                {
+                    if (s.X.HasValue) x = s.X.Value;
+                    if (s.Y.HasValue) y = s.Y.Value;
 
-            //            p.pathSegList.appendItem(s);
-            //        }
-            //                else
-            //        {
-            //            if ("x" in s) x += s.x;
-            //            if ("y" in s) y += s.y;
-            //            if (command == "m")
-            //            {
-            //                p.pathSegList.appendItem(path.createSVGPathSegMovetoAbs(x, y));
-            //            }
-            //            else
-            //            {
-            //                if (command == "Z" || command == "z")
-            //                {
-            //                    x = x0;
-            //                    y = y0;
-            //                }
-            //p.pathSegList.appendItem(s);
-            //            }
-            //        }
-            //        // Record the start of a subpath
-            //        if (command == "M" || command == "m")
-            //{
-            //    x0 = x, y0 = y;
-            //}
-            //            }
+                    p.Value.AppendItem(s);
+                }
+                else
+                {
+                    if (s.X.HasValue) x += s.X.Value;
+                    if (s.Y.HasValue) y += s.Y.Value;
+                    if (command == "m")
+                    {
+                        p.Value.AppendItem(new SVGPathSeg(SVGPathSeg.PATHSEG_MOVETO_ABS, "M", null)
+                        {
+                            X = x,
+                            Y = y
+                        });
+                    }
+                    else
+                    {
+                        if (command == "Z" || command == "z")
+                        {
+                            x = x0;
+                            y = y0;
+                        }
+                        p.Value.AppendItem(s);
+                    }
+                }
+                // Record the start of a subpath
+                if (command == "M" || command == "m")
+                {
+                    x0 = x;
+                    y0 = y;
+                }
+            });
 
-            //            var addedPaths = [];
-            //for (i = 0; i < paths.Count(); i++)
-            //{
-            //    // don"t add trivial paths from sequential M commands
-            //    if (paths[i].pathSegList.numberOfItems > 1)
-            //    {
-            //        path.parentElement.insertBefore(paths[i], path);
-            //        addedPaths.Add(paths[i]);
-            //    }
-            //}
+            var addedPaths = new List<XmlElement>();
+
+            paths.ForEach(p =>
+            {
+                // don"t add trivial paths from sequential M commands
+                if (p.Value.PathSegList.Count > 1)
+                {
+                    path.ParentNode?.InsertBefore(p.Key, path);
+                    addedPaths.Add(p.Key);
+                }
+            });
 
             //path.remove();
 
-            //return addedPaths;
+            return addedPaths;
         }
 
         // recursively run the given function on the given element
@@ -603,7 +609,7 @@ namespace SvgNest
 
                     double x = 0, y = 0, x0 = 0, y0 = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0, prevx = 0, prevy = 0, prevx1 = 0, prevy1 = 0, prevx2 = 0, prevy2 = 0;
 
-                    for (var i = 0; i < seglist.Length; i++)
+                    for (var i = 0; i < seglist.Count; i++)
                     {
                         var s = seglist[i];
                         var command = s.PathSegTypeAsLetter;
@@ -633,8 +639,8 @@ namespace SvgNest
                                 y1 = s1.Y1;
                             }
 
-                            x = s.X;
-                            y = s.Y;
+                            if (s.X.HasValue) x = s.X.Value;
+                            if (s.Y.HasValue) y = s.Y.Value;
                         }
                         else
                         {
@@ -651,8 +657,8 @@ namespace SvgNest
                                 x1 += s1.X1;
                                 y1 += s1.Y1;
                             }
-                            x += s.X;
-                            y += s.Y;
+                            if (s.X.HasValue) x += s.X.Value;
+                            if (s.Y.HasValue) y += s.Y.Value;
                         }
 
                         switch (command)

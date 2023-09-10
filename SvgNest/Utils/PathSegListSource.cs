@@ -173,18 +173,18 @@ namespace SvgNest.Utils
                 case SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_REL:
                     return new SVGPathSegCurvetoQuadratic(SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_REL, "q", owningPathSegList)
                     {
-                        X = ParseNumber().Value,
-                        Y = ParseNumber().Value,
                         X1 = ParseNumber().Value,
-                        Y1 = ParseNumber().Value
+                        Y1 = ParseNumber().Value,
+                        X = ParseNumber().Value,
+                        Y = ParseNumber().Value
                     };
                 case SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_ABS:
                     return new SVGPathSegCurvetoQuadratic(SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_ABS, "Q", owningPathSegList)
                     {
-                        X = ParseNumber().Value,
-                        Y = ParseNumber().Value,
                         X1 = ParseNumber().Value,
-                        Y1 = ParseNumber().Value
+                        Y1 = ParseNumber().Value,
+                        X = ParseNumber().Value,
+                        Y = ParseNumber().Value
                     };
                 //        case SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_SMOOTH_REL:
                 //    return new SVGPathSegCurvetoQuadraticSmoothRel(owningPathSegList, _parseNumber(), _parseNumber());

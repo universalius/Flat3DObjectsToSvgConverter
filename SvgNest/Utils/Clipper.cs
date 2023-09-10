@@ -87,6 +87,11 @@ namespace ClipperLib
         {
             this.X = ip.X; this.Y = ip.Y;
         }
+
+        public override string ToString()
+        {
+            return string.Format("{0} {1}", X, Y);
+        }
     };
 
 

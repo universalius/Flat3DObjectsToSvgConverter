@@ -1,4 +1,5 @@
 ﻿using SvgNest.Utils;
+using System.Globalization;
 
 namespace SvgNest.Models.SVGPathSeg
 {
@@ -26,7 +27,9 @@ namespace SvgNest.Models.SVGPathSeg
         public const int PATHSEG_CURVETO_QUADRATIC_SMOOTH_REL = 19;
 
         public int _pathSegType;
-        private SVGPathSegList _owningPathSegList;
+        public SVGPathSegList _owningPathSegList;
+
+        protected CultureInfo _culture = new CultureInfo("en-US", false);
 
         public SVGPathSeg(int type, string typeAsLetter, SVGPathSegList owningPathSegList)
         {
@@ -37,9 +40,30 @@ namespace SvgNest.Models.SVGPathSeg
 
         public string PathSegTypeAsLetter { get; set; }
 
-        public double X { get; set; }
+        public double? X { get; set; }
 
-        public double Y { get; set; }
+        public double? Y { get; set; }
+
+        public virtual SVGPathSeg Clone()
+        {
+            return new SVGPathSeg(_pathSegType, PathSegTypeAsLetter, null)
+            {
+                X = this.X,
+                Y = this.Y
+            };
+        }
+
+        public virtual string _asPathString()
+        {
+            var coords = "";
+            if (X.HasValue || Y.HasValue)
+            {
+                coords = X.HasValue && Y.HasValue ? $"{X?.ToString(_culture)} {Y?.ToString(_culture)}" : $"{X?.ToString(_culture)}{Y?.ToString(_culture)}";
+                coords = $" {coords}";
+            }
+
+            return $"{PathSegTypeAsLetter}{coords}";
+        }
     }
 
     public class SVGPathSegCurvetoQuadratic : SVGPathSeg
@@ -50,5 +74,21 @@ namespace SvgNest.Models.SVGPathSeg
         public double X1 { get; set; }
 
         public double Y1 { get; set; }
+
+        public override SVGPathSeg Clone()
+        {
+            return new SVGPathSegCurvetoQuadratic(_pathSegType, PathSegTypeAsLetter, null)
+            {
+                X = this.X,
+                Y = this.Y,
+                X1 = this.X1,
+                Y1 = this.Y1
+            };
+        }
+
+        public override string _asPathString()
+        {
+            return $"{PathSegTypeAsLetter} {X1.ToString(_culture)} {Y1.ToString(_culture)} {X?.ToString(_culture)} {Y?.ToString(_culture)}";
+        }
     }
 }

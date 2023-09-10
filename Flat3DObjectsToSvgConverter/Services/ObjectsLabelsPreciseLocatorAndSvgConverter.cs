@@ -148,10 +148,10 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             return pathes.Select(p =>
             {
-                var points = _svgParser.Polygonify(p.Element);
+                var subPathes = _svgParser.SplitPath(p.Element);
+                var points = _svgParser.Polygonify((subPathes?.Any() ?? false) ? subPathes.First() : p.Element);
 
-                var a = string.Join("\n", points.Select(p => $"{p.X.ToString(culture)} {p.Y.ToString(culture)}"));
-
+                var a = string.Join(" ", points.Select(p => $"{p.X.ToString(culture)} {p.Y.ToString(culture)}"));
 
                 var bounds = GeometryUtil.GetPolygonBounds(points);
                 return new SvgLetter
@@ -212,23 +212,29 @@ namespace Flat3DObjectsToSvgConverter.Services
         {
             var group = new SvgGroup(svgDocument);
             var shiftByX = 0.0;
+            var i = 0;
             label.ToList().ForEach(c =>
             {
                 var s = c.ToString();
                 if (s != " ")
                 {
                     var letter = _svgLetters.FirstOrDefault(p => p.Letter == s);
-                    shiftByX += letter.Width;
-
                     var path = group.AddPath();
                     path.D = letter.Path.D;
                     path.Fill = "#000000";
-                    path.Transform = $"translate({shiftByX.ToString(culture)})";
+
+                    if(i != 0)
+                    {
+                        path.Transform = $"translate({shiftByX.ToString(culture)})";
+                    }
+
+                    shiftByX += letter.Width;
+                    i++;
                 }
             });
 
-            var lastLetter = label.Last().ToString();
-            var labelWidth = shiftByX + _svgLetters.First(p => p.Letter == lastLetter).Width;
+            //var lastLetter = label.Last().ToString();
+            var labelWidth = shiftByX;// + _svgLetters.First(p => p.Letter == lastLetter).Width;
 
             return (group, labelWidth);
         }
@@ -321,7 +327,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                 var distanceBetweenPolygons = new List<RayDistance>();
                 var rayIndex = 0;
 
-                VisualiseRays(loops, sunRays, raysSectorFirstRay, l.LoopPath.Path.Id);
+                //VisualiseRays(loops, sunRays, raysSectorFirstRay, l.LoopPath.Path.Id);
 
                 var sclaledWidthBetweenPathes = spaceBetweenLoops * gain;
                 sunRays.Skip(raysSectorFirstRay).Take(90).ToList().ForEach(r =>
