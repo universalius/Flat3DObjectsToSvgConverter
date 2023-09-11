@@ -111,21 +111,8 @@ namespace SvgNest.Utils
 
         private string _pathSegArrayAsString(List<SVGPathSeg> pathSegArray)
         {
-            var @string = "";
-            var first = true;
-            pathSegArray.ForEach(pathSeg =>
-            {
-                if (first)
-                {
-                    first = false;
-                    @string += pathSeg._asPathString();
-                }
-                else
-                {
-                    @string += " " + pathSeg._asPathString();
-                }
-            });
-            return @string;
+            var segments = pathSegArray.Select(pathSeg => pathSeg._asPathString()).ToArray();
+            return string.Join(" ", segments);
         }
     }
 }
