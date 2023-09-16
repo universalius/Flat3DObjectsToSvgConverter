@@ -1,23 +1,14 @@
 ﻿using ClipperLib;
 using Flat3DObjectsToSvgConverter.Helpers;
-using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
 using GeometRi;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic;
-using ObjParser;
-using ObjParserExecutor.Models;
 using SvgLib;
 using SvgNest;
 using SvgNest.Models.GeometryUtil;
 using SvgNest.Utils;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
-using System.Text.RegularExpressions;
 using System.Xml;
-using System.Xml.Linq;
-using static SvgLib.SvgDefaults.Attributes;
 
 namespace Flat3DObjectsToSvgConverter.Services
 {
@@ -26,15 +17,11 @@ namespace Flat3DObjectsToSvgConverter.Services
         private CultureInfo culture = new CultureInfo("en-US", false);
         private readonly IEnumerable<SvgLetter> _svgLetters;
         private readonly SvgParser _svgParser;
-
-        //private readonly double _letterWidth;
-        //private readonly double _letterHeight;
         private readonly ILogger<ObjectsLabelsPreciseLocatorAndSvgConverter> _logger;
         private readonly IOFileService _file;
 
-
-        private int gain = 100000;
-
+        private readonly int _gain = 100000;
+        private readonly double _labelShiftGain = 1;
 
         public ObjectsLabelsPreciseLocatorAndSvgConverter(ILogger<ObjectsLabelsPreciseLocatorAndSvgConverter> logger, IOFileService file)
         {
@@ -53,8 +40,6 @@ namespace Flat3DObjectsToSvgConverter.Services
             var watch = Stopwatch.StartNew();
             Console.WriteLine("Start placing labels for svg curves!");
             Console.WriteLine();
-
-            //_logger.LogInformation("Test qwer asdf cvbbb");
 
             SvgDocument svgDocument = ParseSvgString(svg);
             var groupElements = svgDocument.Element.GetElementsByTagName("g").Cast<XmlElement>().ToArray();
@@ -78,10 +63,6 @@ namespace Flat3DObjectsToSvgConverter.Services
                 {
                     newPath.Transform = group.Transform;
                     _svgParser.ApplyTransform(newPath.Element);
-                    //var labelGroup = group.AddGroup();
-                    //labelGroup.Transform = GetLabelGroupTransform(path, group.GetTransformRotate());
-
-                    //await AddLabelToGroup(label, labelGroup);
                 }
 
                 var (lettersGroup, labelWidth) = GetLabelLetters(label, svgDocument);
@@ -109,25 +90,18 @@ namespace Flat3DObjectsToSvgConverter.Services
             {
                 var group = newSvgDocument.AddGroup();
                 var loopsGroupElement = groupElements[l.LoopPath.ParentGroupId];
+                group.Element.AppendChild(loopsGroupElement);
 
                 var coords = l.LabelLetters.GroupLocation;
-                l.LabelLetters.Group.Transform = $"translate({(coords.X - l.LabelLetters.Width).ToString(culture)} {(coords.Y - _svgLetters.First().Height).ToString(culture)})";
+                if (coords != null)
+                {
+                    var xShift = coords.X - l.LabelLetters.Width * _labelShiftGain;
+                    var yShift = coords.Y - _svgLetters.First().Height * _labelShiftGain;
+                    l.LabelLetters.Group.Transform = $"translate({xShift.ToString(culture)} {yShift.ToString(culture)})";
 
-                group.Element.AppendChild(loopsGroupElement);
-                group.Element.AppendChild(l.LabelLetters.Group.Element);
+                    group.Element.AppendChild(l.LabelLetters.Group.Element);
+                }
             });
-
-
-            //var svgTest = SvgDocument.Create();
-
-            //list.ForEach(e =>
-            //{
-            //    var path = svgTest.AddPath();
-            //    path.D = e.GetAttribute("d");
-            //    path.Id = e.GetAttribute("id");
-            //});
-
-            //_file.SaveSvg("test_transform", svgTest._document.OuterXml);
 
             watch.Stop();
             Console.WriteLine($"Finished placing labels for svg curves! Took - {watch.ElapsedMilliseconds / 1000.0} sec");
@@ -177,7 +151,6 @@ namespace Flat3DObjectsToSvgConverter.Services
                     secondNumber > 10 ? secondNumber.ToString() : string.Empty : string.Empty;
             }
 
-
             var label = $"{firstPart}{(string.IsNullOrEmpty(secondPart) ? string.Empty : $"_{secondPart}")}";
             return label;
         }
@@ -223,7 +196,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                     path.D = letter.Path.D;
                     path.Fill = "#000000";
 
-                    if(i != 0)
+                    if (i != 0)
                     {
                         path.Transform = $"translate({shiftByX.ToString(culture)})";
                     }
@@ -233,9 +206,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                 }
             });
 
-            //var lastLetter = label.Last().ToString();
-            var labelWidth = shiftByX;// + _svgLetters.First(p => p.Letter == lastLetter).Width;
-
+            var labelWidth = shiftByX;
             return (group, labelWidth);
         }
 
@@ -250,8 +221,8 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             var spaceBetweenPathes = loop.LabelLetters.Width * 1.2;
             var axis = new DoublePoint[2] {
-                new DoublePoint(bounds.X - spaceBetweenPathes / 2, initialCenter.Y).ToInt(gain),
-                new DoublePoint(bounds.X + bounds.Width + spaceBetweenPathes / 2, initialCenter.Y).ToInt(gain)
+                new DoublePoint(bounds.X - spaceBetweenPathes / 2, initialCenter.Y).ToInt(_gain),
+                new DoublePoint(bounds.X + bounds.Width + spaceBetweenPathes / 2, initialCenter.Y).ToInt(_gain)
             };
             var intersections = loop.Polygon.Lines
                 .Select(l => GeometryUtil.LineIntersect(axis[0], axis[1], l[0], l[1]))
@@ -262,7 +233,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                 throw new Exception("Found only one point for center axis intercection");
             }
 
-            var closestPoints = intersections.OrderBy(i => i.X).Take(2).Select(i => i.Scale(1.0 / gain)).ToArray();
+            var closestPoints = intersections.OrderBy(i => i.X).Take(2).Select(i => i.Scale(1.0 / _gain)).ToArray();
             var newCenter = new DoublePoint(closestPoints[0].X + (closestPoints[1].X - closestPoints[0].X) / 2, initialCenter.Y);
             return newCenter;
         }
@@ -281,9 +252,9 @@ namespace Flat3DObjectsToSvgConverter.Services
                     Lines = points.Select((p, i) =>
                     {
                         if (i == points.Length - 1)
-                            return new DoublePoint[2] { new DoublePoint(p.X, p.Y).ToInt(gain), new DoublePoint(points[0].X, points[0].Y).ToInt(gain) };
+                            return new DoublePoint[2] { new DoublePoint(p.X, p.Y).ToInt(_gain), new DoublePoint(points[0].X, points[0].Y).ToInt(_gain) };
 
-                        return new DoublePoint[2] { new DoublePoint(p.X, p.Y).ToInt(gain), new DoublePoint(points[i + 1].X, points[i + 1].Y).ToInt(gain) };
+                        return new DoublePoint[2] { new DoublePoint(p.X, p.Y).ToInt(_gain), new DoublePoint(points[i + 1].X, points[i + 1].Y).ToInt(_gain) };
 
                     }).ToArray(),
                 };
@@ -319,7 +290,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                     return new RayDistance
                     {
                         RayId = j,
-                        Line = new DoublePoint[] { polygonCenterPoint.ToInt(gain), new DoublePoint(x, y).ToInt(gain) }
+                        Line = new DoublePoint[] { polygonCenterPoint.ToInt(_gain), new DoublePoint(x, y).ToInt(_gain) }
                     };
                 }).ToArray();
 
@@ -329,7 +300,7 @@ namespace Flat3DObjectsToSvgConverter.Services
 
                 //VisualiseRays(loops, sunRays, raysSectorFirstRay, l.LoopPath.Path.Id);
 
-                var sclaledWidthBetweenPathes = spaceBetweenLoops * gain;
+                var sclaledWidthBetweenPathes = spaceBetweenLoops * _gain;
                 sunRays.Skip(raysSectorFirstRay).Take(90).ToList().ForEach(r =>
                 {
                     var mainWithRayIntersection = l.Polygon.Lines
@@ -403,77 +374,15 @@ namespace Flat3DObjectsToSvgConverter.Services
                         rayIntersection = targetRay.Main.Intersection;
                     }
 
-                    l.LabelLetters.GroupLocation = new DoublePoint(rayIntersection.X, rayIntersection.Y).Scale(1.0 / gain);
+                    if (rayIntersection != null)
+                    {
+                        l.LabelLetters.GroupLocation = new DoublePoint(rayIntersection.X, rayIntersection.Y).Scale(1.0 / _gain);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"    Could not find ray intersection for lable {l.LabelLetters.Label}, label placement will be skipped");
+                    }
                 }
-
-                //var groupedRaysBySequence = new List<Dictionary<int, RayDistance>>();
-                //distancesEnouphForLabel.ForEach(d =>
-                //{
-                //    var lastGroup = groupedRaysBySequence.LastOrDefault();
-
-                //    if (lastGroup == null)
-                //    {
-                //        groupedRaysBySequence.Add(new Dictionary<int, RayDistance> { { d.RayId, d } });
-                //    }
-                //    else
-                //    {
-                //        if (d.RayId - lastGroup.Last().Key == 1)
-                //        {
-                //            lastGroup.Add(d.RayId, d);
-                //        }
-                //        else
-                //        {
-                //            groupedRaysBySequence.Add(new Dictionary<int, RayDistance> { { d.RayId, d } });
-                //        }
-                //    }
-                //});
-
-                //if (groupedRaysBySequence.Any())
-                //{
-                //    var groupedRaysBySequenceHeights = groupedRaysBySequence.Select((g, i) =>
-                //    {
-                //        var rayDistances = g.Values.ToArray();
-                //        var betweenRayIntersectionsHeight = rayDistances.Select((rd, j) =>
-                //        {
-                //            if (j == g.Count - 1)
-                //                return (double?)null;
-
-                //            var height = GeometryUtil.GetLineYVectorLength(rd.Main.Intersection, rayDistances[j + 1].Main.Intersection);
-                //            return height;
-                //        }).Where(h => h != null).ToArray();
-
-                //        return new
-                //        {
-                //            Id = i,
-                //            Group = g,
-                //            TotaHeight = betweenRayIntersectionsHeight.Sum()
-                //        };
-                //    }).ToArray();
-
-                //    var groupedRaysBySequenceWithNeededHeight = groupedRaysBySequenceHeights.Where(g => g.TotaHeight >= HeightBetweenPathes).ToArray();
-
-                //    var targetRay = raysSectorFirstRay + 90 / 2;
-
-                //    var targetRayGroups = groupedRaysBySequenceWithNeededHeight.Where(gr => gr.Group.Values.Any(rd => rd.RayId >= targetRay))
-                //        .OrderBy(gr => gr.Id).ToArray();
-
-                //    if (!targetRayGroups.Any())
-                //    {
-                //        targetRayGroups = groupedRaysBySequenceWithNeededHeight.Where(gr => gr.Group.Values.Any(rd => rd.RayId <= targetRay))
-                //            .OrderByDescending(gr => gr.Id).ToArray();
-                //        var targetRayGroup = targetRayGroups.First();
-                //        var rayIntersection = targetRayGroup.Group.Values.Last().Main.Intersection;
-
-                //        return new DoublePoint(rayIntersection.X - WidthBetweenPathes, rayIntersection.Y - HeightBetweenPathes);
-                //    }
-
-                //    if (targetRayGroups.Any())
-                //    {
-                //        var targetRayGroup = targetRayGroups.First();
-                //        var rayIntersection = targetRayGroup.Group.Values.First().Main.Intersection;
-                //        return new DoublePoint(rayIntersection.X + WidthBetweenPathes, rayIntersection.Y + HeightBetweenPathes);
-                //    }
-                //}
             });
 
             return loops;
