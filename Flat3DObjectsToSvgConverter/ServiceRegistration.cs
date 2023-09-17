@@ -16,6 +16,7 @@ public static class ServiceRegistration
             .AddSingleton<ObjectsToLoopsConverter>()
             .AddSingleton<ObjectsToSvgConverter>()
             .AddSingleton<ObjectsLabelsPreciseLocatorAndSvgConverter>()
+            .AddSingleton<CutLoopsToMakeSupportSvgConverter>()
             .AddSingleton<IOFileService>();
 
         services.AddOptions()

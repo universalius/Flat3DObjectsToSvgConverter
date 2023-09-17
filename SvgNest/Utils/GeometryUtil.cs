@@ -1419,6 +1419,30 @@ namespace SvgNest.Utils
 
             return new BezierSegment[] { seg1, seg2 };
         }
+
+        public static double GetLineYVectorLength(DoublePoint A, DoublePoint B)
+        {
+            var lineLength = GetSegmentLineLength(A, B);
+            var normalYVector = new DoublePoint[] { A, new DoublePoint(A.X, 1) };
+            var normalYVectorLength = GetSegmentLineLength(normalYVector[0], normalYVector[1]);
+
+            var dotProduct = B.X * normalYVector[1].X + B.Y * normalYVector[1].Y;
+            var cosAngleBetween = dotProduct / (lineLength * normalYVectorLength);
+
+            return lineLength * cosAngleBetween;
+        }
+
+        public static double GetLineVectorXAngle(DoublePoint A, DoublePoint B)
+        {
+            var lineLength = GetSegmentLineLength(A, B);
+            var normalXVector = new DoublePoint[] { A, new DoublePoint(1, A.Y) };
+            var normalXVectorLength = GetSegmentLineLength(normalXVector[0], normalXVector[1]);
+
+            var dotProduct = B.X * normalXVector[1].X + B.Y * normalXVector[1].Y;
+            var cosAngleBetween = dotProduct / (lineLength * normalXVectorLength);
+
+            return Math.Acos(cosAngleBetween) ;
+        }
     }
 
     public class BezierSegment

@@ -1,6 +1,7 @@
 ﻿using ClipperLib;
 using Microsoft.Extensions.Logging;
 using ObjParser;
+using ObjParserExecutor.Helpers;
 using SvgLib;
 using System.Diagnostics;
 using System.Globalization;
@@ -119,11 +120,7 @@ namespace Flat3DObjectsToSvgConverter.Services
         private Extent GetLabelCoords(SvgPath path)
         {
             var pointsString = new Regex("[mz]").Replace(path.D.ToLowerInvariant(), string.Empty).Trim().Split("l");
-            var points = pointsString.Select((s, i) =>
-            {
-                var points = s.Trim().Split(" ");
-                return new DoublePoint(double.Parse(points[0], culture), double.Parse(points[1], culture));
-            }).ToList();
+            var points = pointsString.Select((s, i) => s.ToDoublePoint()).ToList();
 
             return new Extent
             {

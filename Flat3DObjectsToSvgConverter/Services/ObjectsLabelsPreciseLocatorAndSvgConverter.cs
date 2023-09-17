@@ -1,5 +1,6 @@
 ﻿using ClipperLib;
 using Flat3DObjectsToSvgConverter.Helpers;
+using Flat3DObjectsToSvgConverter.Models.ObjectsLabelsPreciseLocatorAndSvgConverter;
 using GeometRi;
 using Microsoft.Extensions.Logging;
 using SvgLib;
@@ -25,8 +26,6 @@ namespace Flat3DObjectsToSvgConverter.Services
 
         public ObjectsLabelsPreciseLocatorAndSvgConverter(ILogger<ObjectsLabelsPreciseLocatorAndSvgConverter> logger, IOFileService file)
         {
-            //_letterHeight = GetOrHeight();
-            //_letterWidth = GetUnderscoreWidth();
             _file = file;
             _svgParser = new SvgParser();
             _svgLetters = GetSvgLetters();
@@ -290,7 +289,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                     return new RayDistance
                     {
                         RayId = j,
-                        Line = new DoublePoint[] { polygonCenterPoint.ToInt(_gain), new DoublePoint(x, y).ToInt(_gain) }
+                        RayLine = new DoublePoint[] { polygonCenterPoint.ToInt(_gain), new DoublePoint(x, y).ToInt(_gain) }
                     };
                 }).ToArray();
 
@@ -304,20 +303,20 @@ namespace Flat3DObjectsToSvgConverter.Services
                 sunRays.Skip(raysSectorFirstRay).Take(90).ToList().ForEach(r =>
                 {
                     var mainWithRayIntersection = l.Polygon.Lines
-                        .Select(l => GeometryUtil.LineIntersect(r.Line[0], r.Line[1], l[0], l[1]))
+                        .Select(l => GeometryUtil.LineIntersect(r.RayLine[0], r.RayLine[1], l[0], l[1]))
                         .Where(intersection => intersection != null)
                         .MinBy(p => p.X);
 
                     var neighborsWithRayIntersections = l.Neighbors.Select(n =>
                     {
-                        var intersections = n.Polygon.Lines.Select(l => GeometryUtil.LineIntersect(r.Line[0], r.Line[1], l[0], l[1]))
+                        var intersections = n.Polygon.Lines.Select(l => GeometryUtil.LineIntersect(r.RayLine[0], r.RayLine[1], l[0], l[1]))
                             .Where(intersection => intersection != null).ToArray();
                         return new PathIntersection
                         {
                             LoopPolygon = n,
-                            Intersection = intersections.Any() ? intersections.MinBy(p => p.X) : null
+                            IntersectionPoint = intersections.Any() ? intersections.MinBy(p => p.X) : null
                         };
-                    }).Where(pi => pi.Intersection != null).ToArray();
+                    }).Where(pi => pi.IntersectionPoint != null).ToArray();
 
                     LoopPolygon neighborPathPolygon = null;
                     double distance = sclaledWidthBetweenPathes;
@@ -327,7 +326,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                             .Select(nri =>
                             new
                             {
-                                Distance = GeometryUtil.GetSegmentLineLength(mainWithRayIntersection, nri.Intersection),
+                                Distance = GeometryUtil.GetSegmentLineLength(mainWithRayIntersection, nri.IntersectionPoint),
                                 Neighbor = nri.LoopPolygon
                             })
                             .MinBy(nd => nd.Distance);
@@ -337,12 +336,12 @@ namespace Flat3DObjectsToSvgConverter.Services
 
                     distanceBetweenPolygons.Add(new RayDistance
                     {
-                        Line = r.Line,
+                        RayLine = r.RayLine,
                         RayId = r.RayId,
                         Main = new PathIntersection
                         {
                             LoopPolygon = l,
-                            Intersection = mainWithRayIntersection
+                            IntersectionPoint = mainWithRayIntersection
                         },
                         Neighbor = neighborPathPolygon,
                         Distance = distance
@@ -366,12 +365,12 @@ namespace Flat3DObjectsToSvgConverter.Services
                         targetRays = distancesEnouphForLabel.Where(rd => rd.RayId <= targetRayId)
                             .OrderBy(rd => rd.RayId).ToArray();
                         var targetRay = targetRays.Last();
-                        rayIntersection = targetRay.Main.Intersection;
+                        rayIntersection = targetRay.Main.IntersectionPoint;
                     }
                     else
                     {
                         var targetRay = targetRays.First();
-                        rayIntersection = targetRay.Main.Intersection;
+                        rayIntersection = targetRay.Main.IntersectionPoint;
                     }
 
                     if (rayIntersection != null)
@@ -429,7 +428,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             {
                 var path = svgTest.AddPath();
                 path.Id = r.RayId.ToString();
-                path.D = $"M {r.Line[0].X} {r.Line[0].Y} {r.Line[1].X} {r.Line[1].Y}";
+                path.D = $"M {r.RayLine[0].X} {r.RayLine[0].Y} {r.RayLine[1].X} {r.RayLine[1].Y}";
                 path.StrokeWidth = 0.3;
                 path.Stroke = "#000000";
                 path.Fill = "none";
@@ -440,64 +439,11 @@ namespace Flat3DObjectsToSvgConverter.Services
                 AddLabelPathToGroup(new LabelSvgGroup
                 {
                     Label = r.RayId.ToString(),
-                    GroupLocation = r.Line[1]
+                    GroupLocation = r.RayLine[1]
                 }, group);
             });
 
             _file.SaveSvg($"test_transform_{name}", svgTest._document.OuterXml);
         }
-    }
-
-    public class PathPolygon : PolygonWithBounds
-    {
-        public DoublePoint[][] Lines { get; set; }
-        public DoublePoint Center { get; set; }
-    }
-
-    public class LoopPath
-    {
-        public SvgPath Path { get; set; }
-        public int ParentGroupId { get; set; }
-        public string ScaledPath { get; set; }
-    }
-
-    public class LoopPolygon
-    {
-        public LoopPath LoopPath { get; set; }
-        public LabelSvgGroup LabelLetters { get; set; }
-        public PathPolygon Polygon { get; set; }
-        public IEnumerable<LoopPolygon> Neighbors { get; set; }
-    }
-
-    public class RayDistance
-    {
-        public DoublePoint[] Line { get; set; }
-        public int RayId { get; set; }
-        public PathIntersection Main { get; set; }
-        public LoopPolygon Neighbor { get; set; }
-        public double Distance { get; set; }
-    }
-
-    public class PathIntersection
-    {
-        public LoopPolygon LoopPolygon { get; set; }
-        public DoublePoint Intersection { get; set; }
-    }
-
-    public class LabelSvgGroup
-    {
-        public string Label { get; set; }
-        public SvgGroup Group { get; set; }
-        public DoublePoint GroupLocation { get; set; }
-        public int ParentGroupId { get; set; }
-        public double Width { get; set; }
-    }
-
-    public class SvgLetter
-    {
-        public string Letter { get; set; }
-        public SvgPath Path { get; set; }
-        public double Width { get; set; }
-        public double Height { get; set; }
     }
 }

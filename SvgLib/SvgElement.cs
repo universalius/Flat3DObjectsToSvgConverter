@@ -156,5 +156,10 @@ namespace SvgLib
             var value = string.Join(";", styles.Select(kvp => $"{kvp.Key}: {kvp.Value}"));
             Element.SetAttribute("style", value);
         }
+
+        public void CopyStyles(SvgElement svgElement)
+        {
+            Element.SetAttribute("style", svgElement.Element.GetAttribute("style"));
+        }
     }
 }
