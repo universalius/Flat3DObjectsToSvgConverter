@@ -78,7 +78,20 @@ namespace Flat3DObjectsToSvgConverter.Services
             var newSvgDocument = svgDocument.Clone(true);
             var pathElements = newSvgDocument.Element.GetElementsByTagName("path").Cast<XmlElement>().ToArray();
 
-            cuttingPoints.Take(1).ToList().ForEach(cps =>
+            MakeGaps(cuttingPoints, pathElements);
+
+            watch.Stop();
+            Console.WriteLine($"Finished cut loops to make support! Took - {watch.ElapsedMilliseconds / 1000.0} sec");
+            Console.WriteLine();
+
+            _file.SaveSvg("with_support_gaps", newSvgDocument.Element.OuterXml);
+
+            return null;
+        }
+
+        private void MakeGaps(List<CuttingPoint[]> cuttingPoints, XmlElement[] pathElements)
+        {
+            cuttingPoints.ToList().ForEach(cps =>
             {
                 var pathId = cps.First().PathId;
                 var path = new SvgPath(pathElements.First(e => e.GetAttribute("id") == pathId));
@@ -87,20 +100,16 @@ namespace Flat3DObjectsToSvgConverter.Services
                 var pathPoints = path.D.Replace("M ", "").Replace("z", "").Split("L ").ToList();
                 pathPoints.Add(pathPoints.First());
 
-                string startPoint;
-                var holes = cps.OrderBy(cp => cp.LineId).Select(cp =>
+                var cuts = cps.OrderBy(cp => cp.LineId).Select(cp =>
                 {
-                    DoublePoint[] holeLine;
-                    var holeLineLength = 0.5;
+                    DoublePoint[] gap;
+                    var gapLength = 0.5;
 
-                    var firstPointId = cp.LineId - 1;
+                    var firstPointId = cp.LineId;
                     var secondPointId = cp.LineId + 1;
 
                     var point1 = pathPoints[firstPointId];
                     var point2 = pathPoints[secondPointId];
-
-                    //var subPathTotalPoints = secondPointId+1;
-                    var nextSubPathFirstPointAlreadyIncluded = true;
 
                     var line = new DoublePoint[2]
                     {
@@ -111,45 +120,41 @@ namespace Flat3DObjectsToSvgConverter.Services
                     var lineLength = GeometryUtil.GetSegmentLineLength(line[0], line[1]);
                     var subLineLength = cp.RelativeIntersection * lineLength;
 
-                    var angleInRadians = GeometryUtil.GetLineVectorXAngle(line[0], line[1]);
-                    var holeXShift = holeLineLength * Math.Cos(angleInRadians);
-                    var holeYShift = holeLineLength * Math.Sin(angleInRadians);
+                    var angleInRadians = GeometryUtil.GetSegmentVectorXAngle(line[0], line[1]);
+                    var gapXShift = gapLength * Math.Cos(angleInRadians);
+                    var gapYShift = gapLength * Math.Sin(angleInRadians);
 
                     if (cp.RelativeIntersection < 0.1)
                     {
-                        //subPathTotalPoints -= 2;
-                        holeLine = new DoublePoint[]
+                        gap = new DoublePoint[]
                         {
                             null,
                             new DoublePoint(
-                                line[0].X + holeXShift,
-                                line[0].Y + holeYShift),
+                                line[0].X + gapXShift,
+                                line[0].Y + gapYShift),
                         };
                     }
 
                     if (cp.RelativeIntersection > 0.9)
                     {
-                        //subPathTotalPoints -= 1;
-                        //nextSubPathFirstPointAlreadyIncluded = false;
-                        holeLine = new DoublePoint[]
+                        gap = new DoublePoint[]
                         {
                             new DoublePoint(
-                                line[1].X - holeXShift,
-                                line[1].Y - holeYShift),
+                                line[1].X - gapXShift,
+                                line[1].Y - gapYShift),
                             null,
                         };
                     }
                     else
                     {
-                        //subPathTotalPoints -= 1;
                         var cutPoint = new DoublePoint(
                                 line[0].X + subLineLength * Math.Cos(angleInRadians),
                                 line[0].Y + subLineLength * Math.Sin(angleInRadians));
 
-                        var halfHoleXShift = holeXShift / 2;
-                        var halfHoleYShift = holeYShift / 2;
+                        var halfHoleXShift = gapXShift / 2;
+                        var halfHoleYShift = gapYShift / 2;
 
-                        holeLine = new DoublePoint[]
+                        gap = new DoublePoint[]
                         {
                             new DoublePoint(
                                 cutPoint.X - halfHoleXShift,
@@ -168,34 +173,45 @@ namespace Flat3DObjectsToSvgConverter.Services
                             FirstPointId = firstPointId,
                             SecondPointId = secondPointId
                         },
-                        HoleLine = holeLine,
-                        //NextSubPathFirstPointAlreadyIncluded = nextSubPathFirstPointAlreadyIncluded
+                        Gap = gap,
                     };
                 }).ToList();
 
                 var i = 0;
-                holes.ForEach(h =>
+                cuts.ForEach(c =>
                 {
-                    var skip = i == 0 ? 0 : holes[i - 1].CutLine.SecondPointId;
-                    var subPathPoints = pathPoints.Skip(skip).Take(h.CutLine.FirstPointId + 1).ToList();
-
+                    List<string> subPathPoints;
                     if (i != 0)
                     {
-                        var startPoint = holes[i - 1].HoleLine[1];
+                        var prevCut = cuts[i - 1];
+                        var skip = prevCut.CutLine.SecondPointId;
+                        subPathPoints = pathPoints.Skip(skip).Take(c.CutLine.FirstPointId - skip + 1).ToList();
+                        var startPoint = prevCut.Gap[1];
                         if (startPoint != null)
                         {
-                            subPathPoints.Prepend($"{startPoint.X} {startPoint.Y}");
+                            subPathPoints.Insert(0, $"{startPoint.X} {startPoint.Y}");
                         }
                     }
+                    else
+                    {
+                        var lastCut = cuts.Last();
+                        var gapPoint = lastCut.Gap[1];
+                        var startPoint = gapPoint != null ? $"{gapPoint.X} {gapPoint.Y}" : pathPoints[lastCut.CutLine.SecondPointId];
+                        var tailPoints = pathPoints.Skip(lastCut.CutLine.SecondPointId).ToList();
+                        tailPoints.Insert(0, startPoint);
+                        tailPoints.Pop();
+                        subPathPoints = pathPoints.Take(c.CutLine.FirstPointId + 1).ToList();
+                        subPathPoints.InsertRange(0, tailPoints);
+                    }
 
-                    var lastPoint = h.HoleLine[0];
+                    var lastPoint = c.Gap[0];
                     if (lastPoint != null)
                     {
                         subPathPoints.Add($"{lastPoint.X} {lastPoint.Y}");
                     }
 
                     var subPath = group.AddPath();
-                    subPath.Id = h.PathId;
+                    subPath.Id = c.PathId;
                     subPath.D = $"M {string.Join(" ", subPathPoints)}";
                     subPath.CopyStyles(path);
                     i++;
@@ -203,15 +219,8 @@ namespace Flat3DObjectsToSvgConverter.Services
 
                 group.Element.RemoveChild(path.Element);
             });
-
-            watch.Stop();
-            Console.WriteLine($"Finished cut loops to make support! Took - {watch.ElapsedMilliseconds / 1000.0} sec");
-            Console.WriteLine();
-
-            _file.SaveSvg("cut", newSvgDocument.Element.OuterXml);
-
-            return null;
         }
+
 
         //private void AddLabelPathToGroup(LabelSvgGroup labelPath, SvgGroup group)
         //{
@@ -288,7 +297,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                 };
                 l.Polygon.Center = GetPolygonCenter(l);
 
-                //l.LoopPath.ScaledPath = $"M {string.Join(" ", l.Polygon.Lines.Select(l => $"{l[0].X}.0 {l[0].Y}.0"))} z";
+                l.LoopPath.ScaledPath = $"M {string.Join(" ", l.Polygon.Lines.Select(l => $"{l[0].X}.0 {l[0].Y}.0"))} z";
             });
 
             return loops.Select(l =>
@@ -306,6 +315,11 @@ namespace Flat3DObjectsToSvgConverter.Services
                         Line = new DoublePoint[] { polygonCenterPoint.ToInt(_gain), new DoublePoint(x, y).ToInt(_gain) }
                     };
                 }).ToList();
+
+                //VisualiseRays(loops, sunRays.Select(sr=> new RayDistance
+                //{
+                //    RayLine = sr.Line
+                //}).ToArray(), 0, l.LoopPath.Path.Id);
 
                 return sunRays.Select(r =>
                 {
@@ -345,50 +359,50 @@ namespace Flat3DObjectsToSvgConverter.Services
             return new SvgDocument(xmlDocument, xmlDocument.DocumentElement);
         }
 
-        //private void VisualiseRays(List<LoopPolygon> loops, RayDistance[] sunRays, int raysSectorFirstRay, string name)
-        //{
-        //    var svgTest = SvgDocument.Create();
-        //    svgTest.Width = 700;
-        //    svgTest.Height = 700;
-        //    svgTest.ViewBox = new SvgViewBox
-        //    {
-        //        Height = 700,// gain,
-        //        Width = 700// gain,
-        //    };
+        private void VisualiseRays(List<LoopPolygon> loops, RayDistance[] sunRays, int raysSectorFirstRay, string name)
+        {
+            var svgTest = SvgDocument.Create();
+            svgTest.Width = 700;
+            svgTest.Height = 700;
+            svgTest.ViewBox = new SvgViewBox
+            {
+                Height = 700,// gain,
+                Width = 700// gain,
+            };
 
-        //    loops.ForEach(e =>
-        //    {
-        //        var path = svgTest.AddPath();
-        //        path.D = e.LoopPath.ScaledPath;
-        //        path.Id = e.LoopPath.Path.Id;
-        //        path.StrokeWidth = 0.3;
-        //        path.Stroke = "#000000";
-        //        path.Fill = "none";
-        //    });
+            loops.ForEach(e =>
+            {
+                var path = svgTest.AddPath();
+                path.D = e.LoopPath.ScaledPath;
+                path.Id = e.LoopPath.Path.Id;
+                path.StrokeWidth = 0.3 * _gain;
+                path.Stroke = "#000000";
+                path.Fill = "none";
+            });
 
-        //    sunRays.Skip(raysSectorFirstRay).Take(90)
-        //    //sunRays
-        //    .ToList().ForEach(r =>
-        //    {
-        //        var path = svgTest.AddPath();
-        //        path.Id = r.RayId.ToString();
-        //        path.D = $"M {r.RayLine[0].X} {r.RayLine[0].Y} {r.RayLine[1].X} {r.RayLine[1].Y}";
-        //        path.StrokeWidth = 0.3;
-        //        path.Stroke = "#000000";
-        //        path.Fill = "none";
+            //sunRays.Skip(raysSectorFirstRay).Take(90)
+            sunRays
+            .ToList().ForEach(r =>
+            {
+                var path = svgTest.AddPath();
+                path.Id = r.RayId.ToString();
+                path.D = $"M {r.RayLine[0].X} {r.RayLine[0].Y} {r.RayLine[1].X} {r.RayLine[1].Y}";
+                path.StrokeWidth = 0.3 * _gain;
+                path.Stroke = "#000000";
+                path.Fill = "none";
 
-        //        var group = svgTest.AddGroup();
+                var group = svgTest.AddGroup();
 
 
-        //        AddLabelPathToGroup(new LabelSvgGroup
-        //        {
-        //            Label = r.RayId.ToString(),
-        //            GroupLocation = r.RayLine[1]
-        //        }, group);
-        //    });
+                //AddLabelPathToGroup(new LabelSvgGroup
+                //{
+                //    Label = r.RayId.ToString(),
+                //    GroupLocation = r.RayLine[1]
+                //}, group);
+            });
 
-        //    _file.SaveSvg($"test_transform_{name}", svgTest._document.OuterXml);
-        //}
+            _file.SaveSvg($"test_transform_{name}", svgTest._document.OuterXml);
+        }
     }
 
     public class CuttingPoint

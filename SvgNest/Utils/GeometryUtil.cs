@@ -1360,7 +1360,7 @@ namespace SvgNest.Utils
                 var segment = todo[0];
 
                 if (IsQuadraticBezierFlat(segment.P1, segment.P2, segment.C1, tolerance))
-                { 
+                {
                     // reached subdivision limit
                     finished.Add(new DoublePoint(segment.P2.X, segment.P2.Y));
                     todo.RemoveAt(0);
@@ -1432,16 +1432,12 @@ namespace SvgNest.Utils
             return lineLength * cosAngleBetween;
         }
 
-        public static double GetLineVectorXAngle(DoublePoint A, DoublePoint B)
+        public static double GetSegmentVectorXAngle(DoublePoint A, DoublePoint B)
         {
-            var lineLength = GetSegmentLineLength(A, B);
-            var normalXVector = new DoublePoint[] { A, new DoublePoint(1, A.Y) };
-            var normalXVectorLength = GetSegmentLineLength(normalXVector[0], normalXVector[1]);
+            var deltaY = B.Y - A.Y;
+            var deltaX = B.X - A.X;
 
-            var dotProduct = B.X * normalXVector[1].X + B.Y * normalXVector[1].Y;
-            var cosAngleBetween = dotProduct / (lineLength * normalXVectorLength);
-
-            return Math.Acos(cosAngleBetween) ;
+            return Math.Atan2(deltaY, deltaX);
         }
     }
 
