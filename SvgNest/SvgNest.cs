@@ -560,8 +560,8 @@ namespace SvgNest
             {
                 var newsvg = _svg.Element.CloneNode(false) as XmlElement;
                 newsvg.SetAttribute("viewBox", "0 0 " + _binBounds.Width + " " + _binBounds.Height);
-                newsvg.SetAttribute("width", _binBounds.Width + "px");
-                newsvg.SetAttribute("height", _binBounds.Height + "px");
+                newsvg.SetAttribute("width", _binBounds.Width + "mm");
+                newsvg.SetAttribute("height", _binBounds.Height + "mm");
 
                 //var binclone = bin.CloneNode(false) as XmlElement;
                 //binclone.SetAttribute("class", "bin");

@@ -1,25 +1,21 @@
 ﻿using Flat3DObjectsToSvgConverter.Models;
-using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
+using Microsoft.Extensions.Options;
 using ObjParser;
-using System;
-using System.Collections.Generic;
+using SvgNest.Models;
 using System.Drawing;
 using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace Flat3DObjectsToSvgConverter.Services
 {
     public class ObjectsToSvgConverter
     {
         private readonly IOFileService _file;
+        private readonly SvgNestConfig _svgNestConfig;
 
-        public ObjectsToSvgConverter(IOFileService file)
+        public ObjectsToSvgConverter(IOFileService file, IOptions<SvgNestConfig> options)
         {
             _file = file;
+            _svgNestConfig = options.Value;
         }
 
         public string Convert(IEnumerable<MeshObjects> meshes)
@@ -81,8 +77,12 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             var svgGroupsString = string.Join("\r\n", svgGroups);
 
+            var docSize = _svgNestConfig.Document;
             var svg = @$"
-            <svg xmlns=""http://www.w3.org/2000/svg"" width=""300mm"" height=""400mm"" viewBox=""0 0 300 400"">
+            <svg xmlns=""http://www.w3.org/2000/svg"" 
+                width=""{docSize.Width}mm"" 
+                height=""{docSize.Height}mm"" 
+                viewBox=""0 0 {docSize.Width} {docSize.Height}"">
               {svgGroupsString}
             </svg>
             ";

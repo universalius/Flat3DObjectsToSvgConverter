@@ -7,6 +7,7 @@ using ClipperLib;
 using Flat3DObjectsToSvgConverter.Common.Extensions;
 using SvgNest.Models;
 using SvgNest.Models.SVGPathSeg;
+using System.Drawing;
 
 namespace SvgNest
 {
@@ -323,10 +324,10 @@ namespace SvgNest
                             switch (command)
                             {
                                 case "M":
-                                    commandStringTransformed += $"{command} {transPoints.X.ToString(culture)} {transPoints.Y.ToString(culture)}";
+                                    commandStringTransformed += GetCommandCoords(command, transPoints);
                                     break;
                                 case "L":
-                                    commandStringTransformed += $"{command} {transPoints.X.ToString(culture)} {transPoints.Y.ToString(culture)}";
+                                    commandStringTransformed += GetCommandCoords(command, transPoints);
                                     break;
                                 //case "C":
                                 //    commandStringTransformed += `${ command} ${ transPoints.x1} ${ transPoints.y1}  ${ transPoints.x2} ${ transPoints.y2} ${ transPoints.x} ${ transPoints.y}`;
@@ -758,6 +759,15 @@ namespace SvgNest
             }
 
             return poly.ToArray();
+        }
+
+        private string GetCommandCoords(string command, DoublePoint point)
+        {
+            var x = point.X.ToString(culture);
+            var y = point.Y.ToString(culture);
+            x = x.Contains("E-") ? ((decimal)point.X).ToString(culture) : x;
+            y = y.Contains("E-") ? ((decimal)point.Y).ToString(culture) : y;
+            return $"{command} {x} {y}";
         }
     }
 }
