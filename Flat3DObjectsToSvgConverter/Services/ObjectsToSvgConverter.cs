@@ -65,7 +65,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                         .ToList());
 
                     var @class = j == 0 ? "main" : string.Empty;
-                    return $@"<path id=""{meshName}-{i}-{j}"" d=""M {pathCoords} z"" style=""fill:none;stroke-width:0.264583;stroke:#000000;"" class=""{@class}"" />";
+                    return $@"<path id=""{meshName}-{i}-{j}"" d=""M {pathCoords} z"" style=""fill:none;stroke-width:0.264583;stroke:red;"" class=""{@class}"" />";
                 }).ToList();
 
                 var pathesString = string.Join("\r\n", pathes);

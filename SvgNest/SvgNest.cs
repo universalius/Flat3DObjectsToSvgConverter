@@ -575,7 +575,7 @@ namespace SvgNest
 
                     // the original path could have transforms and stuff on it, so apply our transforms on a group
                     var partgroup = _svg._document.CreateElement("g", newsvg.OwnerDocument.DocumentElement.NamespaceURI);
-                    partgroup.SetAttribute("transform", "translate(" + GetTranslateCoords(p) + ") rotate(" + p.Rotation + ")");
+                    partgroup.SetAttribute("transform", $"translate({p.ToSvgString()}) rotate({p.Rotation})");
                     partgroup.AppendChild(clone[part.Source]);
 
                     if (part.Children != null && part.Children.Any())
@@ -799,15 +799,6 @@ namespace SvgNest
             }
 
             return new List<DPath> { clipperNfp.ToList() };
-        }
-
-        private string GetTranslateCoords(DoublePoint point)
-        {
-            var x = point.X.ToString(culture);
-            var y = point.Y.ToString(culture);
-            x = x.Contains("E-") ? ((decimal)point.X).ToString(culture) : x;
-            y = y.Contains("E-") ? ((decimal)point.Y).ToString(culture) : y;
-            return $"{x} {y}";
         }
     }
 }

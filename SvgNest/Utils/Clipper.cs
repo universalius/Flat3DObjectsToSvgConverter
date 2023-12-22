@@ -51,7 +51,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
+using System.Text.RegularExpressions;
 //using System.Text;          //for Int128.AsString() & StringBuilder
 //using System.IO;            //debugging with streamReader & StreamWriter
 //using System.Windows.Forms; //debugging to clipboard
@@ -91,6 +93,15 @@ namespace ClipperLib
         public override string ToString()
         {
             return string.Format("{0} {1}", X, Y);
+        }
+
+        public string ToSvgString()
+        {
+            var x = X.ToString();
+            var y = Y.ToString();
+            x = x.Contains("E-") ? ((decimal)X).ToString() : x;
+            y = y.Contains("E-") ? ((decimal)Y).ToString() : y;
+            return $"{x} {y}";
         }
     };
 

@@ -1,4 +1,5 @@
 ﻿using Flat3DObjectsToSvgConverter.Models;
+using Microsoft.Extensions.Options;
 using ObjParser;
 using ObjParserExecutor.Models;
 using System.Diagnostics;
@@ -8,17 +9,19 @@ namespace Flat3DObjectsToSvgConverter.Services
     public class ObjectsToLoopsConverter
     {
         private readonly IOFileService _file;
+        private readonly string _fileName; 
 
-        public ObjectsToLoopsConverter(IOFileService file)
+        public ObjectsToLoopsConverter(IOFileService file, IOptions<IOSettings> options)
         {
             _file = file;
+            _fileName = options.Value.ObjFileName;
         }
 
         public async Task<List<MeshObjects>> Convert()
         {
             var watch = Stopwatch.StartNew();
 
-            Console.WriteLine("Start parsing!");
+            Console.WriteLine($"Start parsing {_fileName}!");
             Console.WriteLine();
 
             var content = await _file.ReadObjFile();

@@ -763,11 +763,7 @@ namespace SvgNest
 
         private string GetCommandCoords(string command, DoublePoint point)
         {
-            var x = point.X.ToString(culture);
-            var y = point.Y.ToString(culture);
-            x = x.Contains("E-") ? ((decimal)point.X).ToString(culture) : x;
-            y = y.Contains("E-") ? ((decimal)point.Y).ToString(culture) : y;
-            return $"{command} {x} {y}";
+            return $"{command} {point.ToSvgString()}";
         }
     }
 }

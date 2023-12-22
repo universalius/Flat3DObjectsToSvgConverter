@@ -97,7 +97,6 @@ namespace Flat3DObjectsToSvgConverter.Services
                     var xShift = coords.X - l.LabelLetters.Width * _labelShiftGain;
                     var yShift = coords.Y - _svgLetters.First().Height * _labelShiftGain;
                     l.LabelLetters.Group.Transform = $"translate({xShift.ToString(culture)} {yShift.ToString(culture)})";
-
                     group.Element.AppendChild(l.LabelLetters.Group.Element);
                 }
             });
@@ -193,7 +192,8 @@ namespace Flat3DObjectsToSvgConverter.Services
                     var letter = _svgLetters.FirstOrDefault(p => p.Letter == s);
                     var path = group.AddPath();
                     path.D = letter.Path.D;
-                    path.Fill = "#000000";
+                    path.Stroke = "blue";
+                    path.StrokeWidth = 0.264583;
 
                     if (i != 0)
                     {
