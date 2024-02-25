@@ -4,11 +4,9 @@ using Flat3DObjectsToSvgConverter.Helpers;
 using Flat3DObjectsToSvgConverter.Models.ObjectsLabelsPreciseLocatorAndSvgConverter;
 using GeometRi;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic;
 using ObjParserExecutor.Helpers;
 using SvgLib;
 using SvgNest;
-using SvgNest.Models.GeometryUtil;
 using SvgNest.Utils;
 using System.Diagnostics;
 using System.Globalization;
@@ -24,6 +22,7 @@ namespace Flat3DObjectsToSvgConverter.Services
         private readonly IOFileService _file;
 
         private readonly int _gain = 100000;
+        private readonly double _gapLength = 0.3;
 
         public CutLoopsToMakeSupportSvgConverter(ILogger<CutLoopsToMakeSupportSvgConverter> logger, IOFileService file)
         {
@@ -103,7 +102,6 @@ namespace Flat3DObjectsToSvgConverter.Services
                 var cuts = cps.OrderBy(cp => cp.LineId).Select(cp =>
                 {
                     DoublePoint[] gap;
-                    var gapLength = 0.5;
 
                     var firstPointId = cp.LineId;
                     var secondPointId = cp.LineId + 1;
@@ -121,8 +119,8 @@ namespace Flat3DObjectsToSvgConverter.Services
                     var subLineLength = cp.RelativeIntersection * lineLength;
 
                     var angleInRadians = GeometryUtil.GetSegmentVectorXAngle(line[0], line[1]);
-                    var gapXShift = gapLength * Math.Cos(angleInRadians);
-                    var gapYShift = gapLength * Math.Sin(angleInRadians);
+                    var gapXShift = _gapLength * Math.Cos(angleInRadians);
+                    var gapYShift = _gapLength * Math.Sin(angleInRadians);
 
                     if (cp.RelativeIntersection < 0.1)
                     {
