@@ -337,51 +337,10 @@ namespace SvgNest
 
             var watch = Stopwatch.StartNew();
 
-            //var generatedNfp = await Task.WhenAll(nfpPairs.Take(10).Select(GetNodesPairsPathes).ToList()).ConfigureAwait(false);
-
-            //var generatedNfp = new List<KeyValuePair<SvgNestPair, List<DPath>>?>();
             var generatedNfp = nfpPairs.AsParallel().Select(GetNodesPairsPathes).ToArray();
-            //var a = nfpPairs.Take(10).ToList();
-            //foreach (var item in a)
-            //{
-            //    var b = await GetNodesPairsPathes(item);
-            //    generatedNfp.Add(b);
-            //}
-
-            //var tasks = nfpPairs != null ? nfpPairs.Chunk(100).Select(async (items) =>
-            //{
-            //    Parallel.ForEach(nfpPairs, item =>
-            //    {
-            //        var b = GetNodesPairsPathes(item);
-            //        generatedNfp.Add(b);
-            //    });
-            //}).ToArray() : new Task[0];
-
-
-            //Task.WaitAll(tasks);
-
-            //var chunks = nfpPairs.Chunk(300).ToList();
-
-            //Parallel.ForEach(chunks, items =>
-            //{
-            //    Parallel.ForEach(items, item =>
-            //    {
-            //        var b = GetNodesPairsPathes(item);
-            //        generatedNfp.Add(b);
-            //    });
-            //});
-
-            //Parallel.ForEach(nfpPairs,
-            //item =>
-            //{
-            //    var b = GetNodesPairsPathes(item);
-            //    generatedNfp.Add(b);
-            //});
-
 
             Console.WriteLine($"Finished ALL nfps! Took - {watch.ElapsedMilliseconds / 1000.0} sec");
             Console.WriteLine();
-
 
             if (generatedNfp != null && generatedNfp.Any())
             {
@@ -676,7 +635,7 @@ namespace SvgNest
             return flat;
         }
 
-        private /*async Task<*/KeyValuePair<SvgNestPair, List<DPath>>?/*>*/ GetNodesPairsPathes(NodesPair pair)
+        private KeyValuePair<SvgNestPair, List<DPath>>? GetNodesPairsPathes(NodesPair pair)
         {
             var watch = Stopwatch.StartNew();
 
