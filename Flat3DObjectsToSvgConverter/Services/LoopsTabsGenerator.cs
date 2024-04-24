@@ -1,6 +1,7 @@
 ﻿using ClipperLib;
 using Flat3DObjectsToSvgConverter.Common.Extensions;
 using Flat3DObjectsToSvgConverter.Helpers;
+using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
 using Flat3DObjectsToSvgConverter.Models.ObjectsLabelsPreciseLocatorAndSvgConverter;
 using GeometRi;
 using Microsoft.Extensions.Logging;
@@ -14,32 +15,32 @@ using System.Xml;
 
 namespace Flat3DObjectsToSvgConverter.Services
 {
-    public class CutLoopsToMakeSupportSvgConverter
+    public class LoopsTabsGenerator
     {
-        private CultureInfo culture = new CultureInfo("en-US", false);
+        //private CultureInfo culture = new CultureInfo("en-US", false);
         private readonly SvgParser _svgParser;
-        private readonly ILogger<CutLoopsToMakeSupportSvgConverter> _logger;
+        private readonly ILogger<LoopsTabsGenerator> _logger;
         private readonly IOFileService _file;
 
         private readonly int _gain = 100000;
         private readonly double _gapLength = 0.3;
 
-        public CutLoopsToMakeSupportSvgConverter(ILogger<CutLoopsToMakeSupportSvgConverter> logger, IOFileService file)
+        public LoopsTabsGenerator(ILogger<LoopsTabsGenerator> logger, IOFileService file)
         {
             _file = file;
             _svgParser = new SvgParser();
             _logger = logger;
         }
 
-        public async Task<string> Convert(string svg)
+        public async Task<string> CutLoopsToMakeTabs(string svg)
         {
             var plane = new Plane3d(new Point3d(), new Point3d(), new Point3d());
 
             var watch = Stopwatch.StartNew();
-            Console.WriteLine("Start cut loops to make support!");
+            Console.WriteLine("Start cut loops to make tabs!");
             Console.WriteLine();
 
-            SvgDocument svgDocument = ParseSvgString(svg);
+            SvgDocument svgDocument = SvgFileHelpers.ParseSvgString(svg);
             var groupElements = svgDocument.Element.GetElementsByTagName("g").Cast<XmlElement>().ToArray();
 
             var loops = groupElements.Select((element, i) =>
@@ -77,18 +78,18 @@ namespace Flat3DObjectsToSvgConverter.Services
             var newSvgDocument = svgDocument.Clone(true);
             var pathElements = newSvgDocument.Element.GetElementsByTagName("path").Cast<XmlElement>().ToArray();
 
-            MakeGaps(cuttingPoints, pathElements);
+            MakeTabs(cuttingPoints, pathElements);
 
             watch.Stop();
-            Console.WriteLine($"Finished cut loops to make support! Took - {watch.ElapsedMilliseconds / 1000.0} sec");
+            Console.WriteLine($"Finished cut loops to make tabs! Took - {watch.ElapsedMilliseconds / 1000.0} sec");
             Console.WriteLine();
 
-            _file.SaveSvg("with_support_gaps", newSvgDocument.Element.OuterXml);
+            _file.SaveSvg("with_support_tabs", newSvgDocument.Element.OuterXml);
 
             return null;
         }
 
-        private void MakeGaps(List<CuttingPoint[]> cuttingPoints, XmlElement[] pathElements)
+        private void MakeTabs(List<CuttingPoint[]> cuttingPoints, XmlElement[] pathElements)
         {
             cuttingPoints.ToList().ForEach(cps =>
             {
@@ -187,14 +188,14 @@ namespace Flat3DObjectsToSvgConverter.Services
                         var startPoint = prevCut.Gap[1];
                         if (startPoint != null)
                         {
-                            subPathPoints.Insert(0, $"{startPoint.X} {startPoint.Y}");
+                            subPathPoints.Insert(0, startPoint.ToSvgString());
                         }
                     }
                     else
                     {
                         var lastCut = cuts.Last();
                         var gapPoint = lastCut.Gap[1];
-                        var startPoint = gapPoint != null ? $"{gapPoint.X} {gapPoint.Y}" : pathPoints[lastCut.CutLine.SecondPointId];
+                        var startPoint = gapPoint != null ? gapPoint.ToSvgString() : pathPoints[lastCut.CutLine.SecondPointId];
                         var tailPoints = pathPoints.Skip(lastCut.CutLine.SecondPointId).ToList();
                         tailPoints.Insert(0, startPoint);
                         tailPoints.Pop();
@@ -205,7 +206,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                     var lastPoint = c.Gap[0];
                     if (lastPoint != null)
                     {
-                        subPathPoints.Add($"{lastPoint.X} {lastPoint.Y}");
+                        subPathPoints.Add(lastPoint.ToSvgString());
                     }
 
                     var subPath = group.AddPath();
@@ -249,6 +250,7 @@ namespace Flat3DObjectsToSvgConverter.Services
         private DoublePoint GetPolygonCenter(LoopPolygon loop)
         {
             var bounds = loop.Polygon.Bounds;
+            var axisGain = 1.0;
             var initialCenter = new DoublePoint(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
             if (GeometryUtil.PointInPolygon(initialCenter, loop.Polygon.Points) ?? false)
             {
@@ -298,26 +300,26 @@ namespace Flat3DObjectsToSvgConverter.Services
                 l.LoopPath.ScaledPath = $"M {string.Join(" ", l.Polygon.Lines.Select(l => $"{l[0].X}.0 {l[0].Y}.0"))} z";
             });
 
-            return loops.Select(l =>
+            List<Ray> allSunRays = new List<Ray>();
+
+            var cuttingPoints = loops.Select(l =>
             {
-                var polygonCenterPoint = l.Polygon.Center;
-                var radius = new double[] { l.Polygon.Bounds.Width, l.Polygon.Bounds.Height }.Max() / 2;
+                //var polygonCenterPoint = l.Polygon.Center;
+                //var radius = new double[] { l.Polygon.Bounds.Width, l.Polygon.Bounds.Height }.Max() / 2;
 
-                var sunRays = new int[] { 0, 90, 180, 270 }.Select((angle, j) =>
-                {
-                    var x = polygonCenterPoint.X + radius * Math.Cos(angle * Math.PI / 180);
-                    var y = polygonCenterPoint.Y + radius * Math.Sin(angle * Math.PI / 180);
-                    return new
-                    {
-                        RayId = angle,
-                        Line = new DoublePoint[] { polygonCenterPoint.ToInt(_gain), new DoublePoint(x, y).ToInt(_gain) }
-                    };
-                }).ToList();
-
-                //VisualiseRays(loops, sunRays.Select(sr=> new RayDistance
+                //var sunRays = new int[] { 0, 90, 180, 270 }.Select((angle, j) =>
                 //{
-                //    RayLine = sr.Line
-                //}).ToArray(), 0, l.LoopPath.Path.Id);
+                //    var x = polygonCenterPoint.X + radius * Math.Cos(angle * Math.PI / 180);
+                //    var y = polygonCenterPoint.Y + radius * Math.Sin(angle * Math.PI / 180);
+                //    return new
+                //    {
+                //        RayId = angle,
+                //        Line = new DoublePoint[] { polygonCenterPoint.ToInt(_gain), new DoublePoint(x, y).ToInt(_gain) }
+                //    };
+                //}).ToList();
+
+                var sunRays = GetSunRaysBasedOnArea(l.Polygon);
+                allSunRays.AddRange(sunRays);
 
                 return sunRays.Select(r =>
                 {
@@ -341,56 +343,89 @@ namespace Flat3DObjectsToSvgConverter.Services
                     };
                 }).ToArray();
             }).ToList();
+
+            VisualiseRays(loops, allSunRays);
+
+            return cuttingPoints;
         }
 
-        public static SvgDocument ParseSvgFile(string filePath)
+        private List<Ray> GetSunRaysBasedOnArea(PathPolygon polygon)
         {
-            var content = File.ReadAllText(filePath);
-            return ParseSvgString(content);
+            var polygonCenterPoint = polygon.Center;
+            var radius = new double[] { polygon.Bounds.Width, polygon.Bounds.Height }.Max() / 1.1;
+            var area = polygon.Bounds.Width * polygon.Bounds.Height;
+
+            var tabsQuantityRaysMap = new Dictionary<int, int[]>
+            {
+                { 2, new int[]{ 0, 180 } },
+                { 3, new int[]{ 0, 135, 225 }},
+                { 4, new int[] { 30, 150, 210, 330 } },
+                { 6, new int[] { 0, 30, 150, 180, 210, 330 } }
+            };
+
+            var tabsQuantityAreaMap = new Dictionary<int, double[]>
+            {
+                { 2, new double[]{ 0, 225 }},
+                { 3, new double[]{ 255, 1500 }},
+                { 4, new double[]{ 1500, 4255}}
+            };
+
+
+            var tabsCount = tabsQuantityAreaMap.Select(i => new { TabsQuantity = i.Key, AreaRange = i.Value })
+                .FirstOrDefault(i => area > i.AreaRange[0] && area < i.AreaRange[1])?.TabsQuantity ?? 6;
+
+            var raysAngles = tabsQuantityRaysMap[tabsCount];
+            if (polygon.Bounds.Width > polygon.Bounds.Height)
+            {
+                raysAngles = raysAngles.Select(a => a + 90).ToArray();
+            }
+
+            var sunRays = raysAngles.Select((angle, j) =>
+            {
+                var x = polygonCenterPoint.X + radius * Math.Cos(angle * Math.PI / 180);
+                var y = polygonCenterPoint.Y + radius * Math.Sin(angle * Math.PI / 180);
+                return new Ray(
+                    RayId: angle,
+                    Line: new DoublePoint[] { polygonCenterPoint.ToInt(_gain), new DoublePoint(x, y).ToInt(_gain) }
+                );
+            }).ToList();
+
+            return sunRays;
         }
 
-        private static SvgDocument ParseSvgString(string svg)
-        {
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.LoadXml(svg);
-
-            return new SvgDocument(xmlDocument, xmlDocument.DocumentElement);
-        }
-
-        private void VisualiseRays(List<LoopPolygon> loops, RayDistance[] sunRays, int raysSectorFirstRay, string name)
+        private void VisualiseRays(IEnumerable<LoopPolygon> loops, IEnumerable<Ray> sunRays)
         {
             var svgTest = SvgDocument.Create();
             svgTest.Width = 700;
             svgTest.Height = 700;
             svgTest.ViewBox = new SvgViewBox
             {
-                Height = 700,// gain,
-                Width = 700// gain,
+                Height = 700,
+                Width = 700
             };
 
-            loops.ForEach(e =>
+            var group = svgTest.AddGroup();
+            group.StrokeWidth = 0.3 * _gain;
+            group.Transform = $"translate(0 0) scale({1.0 / _gain})";
+
+            loops.ToList().ForEach(e =>
             {
-                var path = svgTest.AddPath();
+                var path = group.AddPath();
                 path.D = e.LoopPath.ScaledPath;
                 path.Id = e.LoopPath.Path.Id;
-                path.StrokeWidth = 0.3 * _gain;
                 path.Stroke = "#000000";
                 path.Fill = "none";
             });
 
             //sunRays.Skip(raysSectorFirstRay).Take(90)
-            sunRays
-            .ToList().ForEach(r =>
+
+            sunRays.ToList().ForEach(r =>
             {
-                var path = svgTest.AddPath();
+                var path = group.AddPath();
                 path.Id = r.RayId.ToString();
-                path.D = $"M {r.RayLine[0].X} {r.RayLine[0].Y} {r.RayLine[1].X} {r.RayLine[1].Y}";
-                path.StrokeWidth = 0.3 * _gain;
-                path.Stroke = "#000000";
+                path.D = $"M {r.Line[0].X} {r.Line[0].Y} {r.Line[1].X} {r.Line[1].Y}";
+                path.Stroke = "green";
                 path.Fill = "none";
-
-                var group = svgTest.AddGroup();
-
 
                 //AddLabelPathToGroup(new LabelSvgGroup
                 //{
@@ -399,9 +434,12 @@ namespace Flat3DObjectsToSvgConverter.Services
                 //}, group);
             });
 
-            _file.SaveSvg($"test_transform_{name}", svgTest._document.OuterXml);
+            _file.SaveSvg($"rays", svgTest._document.OuterXml);
         }
     }
+
+
+    public record Ray(int RayId, DoublePoint[] Line);
 
     public class CuttingPoint
     {

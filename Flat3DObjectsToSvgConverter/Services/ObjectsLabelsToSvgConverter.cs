@@ -1,4 +1,5 @@
 ﻿using ClipperLib;
+using Flat3DObjectsToSvgConverter.Helpers;
 using Microsoft.Extensions.Logging;
 using ObjParser;
 using ObjParserExecutor.Helpers;
@@ -23,7 +24,7 @@ namespace Flat3DObjectsToSvgConverter.Services
         {
             var mainFolder = AppDomain.CurrentDomain.BaseDirectory;
 
-            SvgDocument svgDocument = ParseSvgFile(Path.Combine(mainFolder, "Asserts\\Letters.svg"));
+            SvgDocument svgDocument = SvgFileHelpers.ParseSvgFile(Path.Combine(mainFolder, "Asserts\\Letters.svg"));
             var pathElements = svgDocument.Element.GetElementsByTagName("path").Cast<XmlElement>().ToArray();
             _svgLetters = pathElements.Select(e => new SvgPath(e));
             _letterHeight = GetOrHeight();
@@ -41,7 +42,7 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             //_logger.LogInformation("Test qwer asdf cvbbb");
 
-            SvgDocument svgDocument = ParseSvgString(svg);
+            SvgDocument svgDocument = SvgFileHelpers.ParseSvgString(svg);
             var groupElements = svgDocument.Element.GetElementsByTagName("g").Cast<XmlElement>().ToArray();
 
             foreach (var element in groupElements)
@@ -159,20 +160,6 @@ namespace Flat3DObjectsToSvgConverter.Services
             }
 
             return $"translate({leftTopPoint.XMin.ToString(culture)} {leftTopPoint.YMin.ToString(culture)}) rotate({-rotate})";
-        }
-
-        public static SvgDocument ParseSvgFile(string filePath)
-        {
-            var content = File.ReadAllText(filePath);
-            return ParseSvgString(content);
-        }
-
-        private static SvgDocument ParseSvgString(string svg)
-        {
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.LoadXml(svg);
-
-            return new SvgDocument(xmlDocument, xmlDocument.DocumentElement);
         }
 
         private double GetUnderscoreWidth()

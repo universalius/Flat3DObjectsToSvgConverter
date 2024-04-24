@@ -12,5 +12,6 @@ namespace Flat3DObjectsToSvgConverter.Models.MeshObjectsParser
         public IEnumerable<Vertex> Verts { get; set; }
         public IEnumerable<Face> Faces { get; set; }
         public string Axis { get; set; }
+        public string Name { get; set; }
     }
 }

@@ -1,24 +1,25 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Flat3DObjectsToSvgConverter.Services;
 using SvgLib;
+using Flat3DObjectsToSvgConverter.Helpers;
 
 namespace Flat3DObjectsToSvgConverter;
 
 public class Flat3DObjectsToSvgHostedService : IHostedService
 {
     private readonly ObjectsLabelsToSvgConverter _objectsLabelsToSvgConverter;
-    private readonly ObjectsLabelsPreciseLocatorAndSvgConverter _objectsLabelsToSvgPreciseConverter;
+    private readonly ObjectsLabelsPreciseLocator _objectsLabelsToSvgPreciseConverter;
     private readonly SvgCompactingService _svgCompactingService;
     private readonly ObjectsToLoopsConverter _objectsToLoopsConverter;
     private readonly ObjectsToSvgConverter _objectsToSvgConverter;
-    private readonly CutLoopsToMakeSupportSvgConverter _cutLoopsToMakeSupportSvgConverter;
+    private readonly LoopsTabsGenerator _cutLoopsToMakeSupportSvgConverter;
 
     public Flat3DObjectsToSvgHostedService(ObjectsLabelsToSvgConverter objectsLabelsToSvgConverter,
-        ObjectsLabelsPreciseLocatorAndSvgConverter objectsLabelsToSvgPreciseConverter,
+        ObjectsLabelsPreciseLocator objectsLabelsToSvgPreciseConverter,
         SvgCompactingService svgCompactingService,
         ObjectsToLoopsConverter objectsToLoopsConverter,
         ObjectsToSvgConverter objectsToSvgConverter,
-        CutLoopsToMakeSupportSvgConverter cutLoopsToMakeSupportSvgConverter)
+        LoopsTabsGenerator cutLoopsToMakeSupportSvgConverter)
     {
         _objectsLabelsToSvgConverter = objectsLabelsToSvgConverter;
         _svgCompactingService = svgCompactingService;
@@ -36,14 +37,15 @@ public class Flat3DObjectsToSvgHostedService : IHostedService
 
         var compactedSvg = await _svgCompactingService.Compact(svg);
 
-        //SvgDocument svgDocument = ObjectsLabelsToSvgConverter.ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\test5 25.08.2023 8-45-36\test5_compacted.svg");
+        //SvgDocument svgDocument = SvgFileHelpers.ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\Test10 25.02.2024 15-37-51\test10_compacted.svg");
+        //SvgDocument svgDocument = SvgFileHelpers.ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\test_rays.svg");
         //var compactedSvg = svgDocument.Element.OuterXml;
 
-        await _objectsLabelsToSvgConverter.Convert(compactedSvg);
+        //await _objectsLabelsToSvgConverter.Convert(compactedSvg);
 
-        await _objectsLabelsToSvgPreciseConverter.Convert(compactedSvg);
+        await _objectsLabelsToSvgPreciseConverter.PlaceLabels(compactedSvg);
 
-        await _cutLoopsToMakeSupportSvgConverter.Convert(compactedSvg);
+        await _cutLoopsToMakeSupportSvgConverter.CutLoopsToMakeTabs(compactedSvg);
 
         Console.ReadKey();
     }

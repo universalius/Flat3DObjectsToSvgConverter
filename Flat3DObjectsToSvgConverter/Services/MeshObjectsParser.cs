@@ -80,6 +80,7 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             return new MeshObject
             {
+                Name = mesh.Name,
                 Verts = vertsOfFirstPlane,
                 Faces = obj.Faces,
                 Axis = targetAxis,

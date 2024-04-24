@@ -13,18 +13,18 @@ using System.Xml;
 
 namespace Flat3DObjectsToSvgConverter.Services
 {
-    public class ObjectsLabelsPreciseLocatorAndSvgConverter
+    public class ObjectsLabelsPreciseLocator
     {
         private CultureInfo culture = new CultureInfo("en-US", false);
         private readonly IEnumerable<SvgLetter> _svgLetters;
         private readonly SvgParser _svgParser;
-        private readonly ILogger<ObjectsLabelsPreciseLocatorAndSvgConverter> _logger;
+        private readonly ILogger<ObjectsLabelsPreciseLocator> _logger;
         private readonly IOFileService _file;
 
         private readonly int _gain = 100000;
         private readonly double _labelShiftGain = 1;
 
-        public ObjectsLabelsPreciseLocatorAndSvgConverter(ILogger<ObjectsLabelsPreciseLocatorAndSvgConverter> logger, IOFileService file)
+        public ObjectsLabelsPreciseLocator(ILogger<ObjectsLabelsPreciseLocator> logger, IOFileService file)
         {
             _file = file;
             _svgParser = new SvgParser();
@@ -32,7 +32,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             _logger = logger;
         }
 
-        public async Task<string> Convert(string svg)
+        public async Task<string> PlaceLabels(string svg)
         {
             var plane = new Plane3d(new Point3d(), new Point3d(), new Point3d());
 
@@ -40,7 +40,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             Console.WriteLine("Start placing labels for svg curves!");
             Console.WriteLine();
 
-            SvgDocument svgDocument = ParseSvgString(svg);
+            SvgDocument svgDocument = SvgFileHelpers.ParseSvgString(svg);
             var groupElements = svgDocument.Element.GetElementsByTagName("g").Cast<XmlElement>().ToArray();
 
             var loops = groupElements.Select((element, i) =>
@@ -114,7 +114,7 @@ namespace Flat3DObjectsToSvgConverter.Services
         private IEnumerable<SvgLetter> GetSvgLetters()
         {
             var mainFolder = AppDomain.CurrentDomain.BaseDirectory;
-            SvgDocument svgDocument = ParseSvgFile(Path.Combine(mainFolder, "Asserts\\Letters.svg"));
+            SvgDocument svgDocument = SvgFileHelpers.ParseSvgFile(Path.Combine(mainFolder, "Asserts\\Letters.svg"));
             var pathElements = svgDocument.Element.GetElementsByTagName("path").Cast<XmlElement>().ToArray();
             var pathes = pathElements.Select(e => new SvgPath(e));
 
@@ -385,20 +385,6 @@ namespace Flat3DObjectsToSvgConverter.Services
             });
 
             return loops;
-        }
-
-        public static SvgDocument ParseSvgFile(string filePath)
-        {
-            var content = File.ReadAllText(filePath);
-            return ParseSvgString(content);
-        }
-
-        private static SvgDocument ParseSvgString(string svg)
-        {
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.LoadXml(svg);
-
-            return new SvgDocument(xmlDocument, xmlDocument.DocumentElement);
         }
 
         private void VisualiseRays(List<LoopPolygon> loops, RayDistance[] sunRays, int raysSectorFirstRay, string name)
