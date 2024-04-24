@@ -1,7 +1,6 @@
 ﻿using ClipperLib;
 using Flat3DObjectsToSvgConverter.Common.Extensions;
 using Flat3DObjectsToSvgConverter.Helpers;
-using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
 using Flat3DObjectsToSvgConverter.Models.ObjectsLabelsPreciseLocatorAndSvgConverter;
 using GeometRi;
 using Microsoft.Extensions.Logging;
@@ -10,14 +9,12 @@ using SvgLib;
 using SvgNest;
 using SvgNest.Utils;
 using System.Diagnostics;
-using System.Globalization;
 using System.Xml;
 
 namespace Flat3DObjectsToSvgConverter.Services
 {
     public class LoopsTabsGenerator
     {
-        //private CultureInfo culture = new CultureInfo("en-US", false);
         private readonly SvgParser _svgParser;
         private readonly ILogger<LoopsTabsGenerator> _logger;
         private readonly IOFileService _file;
@@ -304,20 +301,6 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             var cuttingPoints = loops.Select(l =>
             {
-                //var polygonCenterPoint = l.Polygon.Center;
-                //var radius = new double[] { l.Polygon.Bounds.Width, l.Polygon.Bounds.Height }.Max() / 2;
-
-                //var sunRays = new int[] { 0, 90, 180, 270 }.Select((angle, j) =>
-                //{
-                //    var x = polygonCenterPoint.X + radius * Math.Cos(angle * Math.PI / 180);
-                //    var y = polygonCenterPoint.Y + radius * Math.Sin(angle * Math.PI / 180);
-                //    return new
-                //    {
-                //        RayId = angle,
-                //        Line = new DoublePoint[] { polygonCenterPoint.ToInt(_gain), new DoublePoint(x, y).ToInt(_gain) }
-                //    };
-                //}).ToList();
-
                 var sunRays = GetSunRaysBasedOnArea(l.Polygon);
                 allSunRays.AddRange(sunRays);
 
@@ -352,7 +335,7 @@ namespace Flat3DObjectsToSvgConverter.Services
         private List<Ray> GetSunRaysBasedOnArea(PathPolygon polygon)
         {
             var polygonCenterPoint = polygon.Center;
-            var radius = new double[] { polygon.Bounds.Width, polygon.Bounds.Height }.Max() / 1.1;
+            var radius = new double[] { polygon.Bounds.Width, polygon.Bounds.Height }.Max() / 1.9;
             var area = polygon.Bounds.Width * polygon.Bounds.Height;
 
             var tabsQuantityRaysMap = new Dictionary<int, int[]>
@@ -416,8 +399,6 @@ namespace Flat3DObjectsToSvgConverter.Services
                 path.Stroke = "#000000";
                 path.Fill = "none";
             });
-
-            //sunRays.Skip(raysSectorFirstRay).Take(90)
 
             sunRays.ToList().ForEach(r =>
             {

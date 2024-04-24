@@ -8,32 +8,39 @@ namespace Flat3DObjectsToSvgConverter;
 public class Flat3DObjectsToSvgHostedService : IHostedService
 {
     private readonly ObjectsLabelsToSvgConverter _objectsLabelsToSvgConverter;
-    private readonly ObjectsLabelsPreciseLocator _objectsLabelsToSvgPreciseConverter;
+    private readonly ObjectsLabelsPreciseLocator _objectsLabelsPreciseLocator;
     private readonly SvgCompactingService _svgCompactingService;
     private readonly ObjectsToLoopsConverter _objectsToLoopsConverter;
     private readonly ObjectsToSvgConverter _objectsToSvgConverter;
-    private readonly LoopsTabsGenerator _cutLoopsToMakeSupportSvgConverter;
+    private readonly LoopsTabsGenerator _loopsTabsGenerator;
+    private readonly ObjectLoopsAlligner _objectLoopsAlligner;
 
     public Flat3DObjectsToSvgHostedService(ObjectsLabelsToSvgConverter objectsLabelsToSvgConverter,
-        ObjectsLabelsPreciseLocator objectsLabelsToSvgPreciseConverter,
+        ObjectsLabelsPreciseLocator objectsLabelsPreciseLocator,
         SvgCompactingService svgCompactingService,
         ObjectsToLoopsConverter objectsToLoopsConverter,
         ObjectsToSvgConverter objectsToSvgConverter,
-        LoopsTabsGenerator cutLoopsToMakeSupportSvgConverter)
+        LoopsTabsGenerator loopsTabsGenerator,
+        ObjectLoopsAlligner objectLoopsAlligner)
     {
         _objectsLabelsToSvgConverter = objectsLabelsToSvgConverter;
         _svgCompactingService = svgCompactingService;
         _objectsToLoopsConverter = objectsToLoopsConverter;
         _objectsToSvgConverter = objectsToSvgConverter;
-        _objectsLabelsToSvgPreciseConverter = objectsLabelsToSvgPreciseConverter;
-        _cutLoopsToMakeSupportSvgConverter = cutLoopsToMakeSupportSvgConverter;
+        _objectsLabelsPreciseLocator = objectsLabelsPreciseLocator;
+        _loopsTabsGenerator = loopsTabsGenerator;
+        _objectLoopsAlligner = objectLoopsAlligner;
     }
 
     public async Task StartAsync(CancellationToken stoppingToken)
     {
         var meshesObjects = await _objectsToLoopsConverter.Convert();
 
+        _objectLoopsAlligner.MakeLoopsPerpendicularToAxis(meshesObjects);
+
         var svg = _objectsToSvgConverter.Convert(meshesObjects);
+
+        //Console.ReadKey();
 
         var compactedSvg = await _svgCompactingService.Compact(svg);
 
@@ -43,9 +50,9 @@ public class Flat3DObjectsToSvgHostedService : IHostedService
 
         //await _objectsLabelsToSvgConverter.Convert(compactedSvg);
 
-        await _objectsLabelsToSvgPreciseConverter.PlaceLabels(compactedSvg);
+        await _objectsLabelsPreciseLocator.PlaceLabels(compactedSvg);
 
-        await _cutLoopsToMakeSupportSvgConverter.CutLoopsToMakeTabs(compactedSvg);
+        await _loopsTabsGenerator.CutLoopsToMakeTabs(compactedSvg);
 
         Console.ReadKey();
     }

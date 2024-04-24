@@ -12,6 +12,7 @@ public static class ServiceRegistration
     {
         services.AddHostedService<Flat3DObjectsToSvgHostedService>()
             .AddSingleton<ObjectsLabelsToSvgConverter>()
+            .AddSingleton<ObjectLoopsAlligner>()
             .AddSingleton<SvgCompactingService>()
             .AddSingleton<ObjectsToLoopsConverter>()
             .AddSingleton<ObjectsToSvgConverter>()
