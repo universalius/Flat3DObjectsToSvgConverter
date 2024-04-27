@@ -14,6 +14,7 @@ public class Flat3DObjectsToSvgHostedService : IHostedService
     private readonly ObjectsToSvgConverter _objectsToSvgConverter;
     private readonly LoopsTabsGenerator _loopsTabsGenerator;
     private readonly ObjectLoopsAlligner _objectLoopsAlligner;
+    private readonly MergeLabelsWithTabsSvg _mergeLabelsWithTabsSvg;
 
     public Flat3DObjectsToSvgHostedService(ObjectsLabelsToSvgConverter objectsLabelsToSvgConverter,
         ObjectsLabelsPreciseLocator objectsLabelsPreciseLocator,
@@ -21,7 +22,8 @@ public class Flat3DObjectsToSvgHostedService : IHostedService
         ObjectsToLoopsConverter objectsToLoopsConverter,
         ObjectsToSvgConverter objectsToSvgConverter,
         LoopsTabsGenerator loopsTabsGenerator,
-        ObjectLoopsAlligner objectLoopsAlligner)
+        ObjectLoopsAlligner objectLoopsAlligner,
+        MergeLabelsWithTabsSvg mergeLabelsWithTabsSvg)
     {
         _objectsLabelsToSvgConverter = objectsLabelsToSvgConverter;
         _svgCompactingService = svgCompactingService;
@@ -30,6 +32,7 @@ public class Flat3DObjectsToSvgHostedService : IHostedService
         _objectsLabelsPreciseLocator = objectsLabelsPreciseLocator;
         _loopsTabsGenerator = loopsTabsGenerator;
         _objectLoopsAlligner = objectLoopsAlligner;
+        _mergeLabelsWithTabsSvg = mergeLabelsWithTabsSvg;
     }
 
     public async Task StartAsync(CancellationToken stoppingToken)
@@ -50,9 +53,11 @@ public class Flat3DObjectsToSvgHostedService : IHostedService
 
         //await _objectsLabelsToSvgConverter.Convert(compactedSvg);
 
-        await _objectsLabelsPreciseLocator.PlaceLabels(compactedSvg);
+        var labelsSvg = await _objectsLabelsPreciseLocator.PlaceLabels(compactedSvg);
 
-        await _loopsTabsGenerator.CutLoopsToMakeTabs(compactedSvg);
+        var tabsSvg = await _loopsTabsGenerator.CutLoopsToMakeTabs(compactedSvg);
+
+        _mergeLabelsWithTabsSvg.Merge(labelsSvg, tabsSvg);
 
         Console.ReadKey();
     }

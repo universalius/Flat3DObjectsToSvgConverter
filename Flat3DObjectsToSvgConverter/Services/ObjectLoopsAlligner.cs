@@ -9,7 +9,7 @@ namespace Flat3DObjectsToSvgConverter.Services
     {
         public ObjectLoopsAlligner() { }
 
-        public IEnumerable<MeshObjects> MakeLoopsPerpendicularToAxis(IEnumerable<MeshObjects> meshes)
+        public void MakeLoopsPerpendicularToAxis(IEnumerable<MeshObjects> meshes)
         {
             meshes.ToList().ForEach(mesh =>
             {
@@ -76,7 +76,7 @@ namespace Flat3DObjectsToSvgConverter.Services
 
                     if (holeRotationAngles.Any() && !holeRotationAngles.Any(ra => IsOrtogonal(ra.Angle)))
                     {
-                        Console.WriteLine($"        Starting rotate object {mesh.MeshName}");
+                        Console.WriteLine($"   Starting rotate object {mesh.MeshName}");
 
                         var rotationPoint = obj.Loops.First().Points.First();
                         var rotationVector = holeRotationAngles.First();
@@ -98,8 +98,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                 });
             });
 
-
-            return null;
+            Console.WriteLine();
         }
 
         private bool IsOrtogonal(double angle)

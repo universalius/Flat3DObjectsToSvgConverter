@@ -29,7 +29,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             _logger = logger;
         }
 
-        public async Task<string> CutLoopsToMakeTabs(string svg)
+        public async Task<SvgDocument> CutLoopsToMakeTabs(string svg)
         {
             var plane = new Plane3d(new Point3d(), new Point3d(), new Point3d());
 
@@ -83,7 +83,7 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             _file.SaveSvg("with_support_tabs", newSvgDocument.Element.OuterXml);
 
-            return null;
+            return newSvgDocument;
         }
 
         private void MakeTabs(List<CuttingPoint[]> cuttingPoints, XmlElement[] pathElements)
@@ -93,6 +93,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                 var pathId = cps.First().PathId;
                 var path = new SvgPath(pathElements.First(e => e.GetAttribute("id") == pathId));
                 var group = new SvgGroup(path.Element.ParentNode as XmlElement);
+                group.AddClass($"tabs {pathId}");
 
                 var pathPoints = path.D.Replace("M ", "").Replace("z", "").Split("L ").ToList();
                 pathPoints.Add(pathPoints.First());
@@ -306,24 +307,32 @@ namespace Flat3DObjectsToSvgConverter.Services
 
                 return sunRays.Select(r =>
                 {
-                    var rayIntersection = l.Polygon.Lines
-                        .Select(l => new { Line = l, Intersection = GeometryUtil.LineIntersect(r.Line[0], r.Line[1], l[0], l[1]) })
-                        .FirstOrDefault(ri => ri.Intersection != null);
-
-                    var line = rayIntersection.Line;
-                    var lineId = Array.IndexOf(l.Polygon.Lines, line);
-                    var lineLength = GeometryUtil.GetSegmentLineLength(line[0], line[1]);
-                    var subLineLength = GeometryUtil.GetSegmentLineLength(line[0], rayIntersection.Intersection);
-
-                    var relativeIntersection = subLineLength / lineLength;
-
-                    return new CuttingPoint
+                    try
                     {
-                        LineId = lineId,
-                        RelativeIntersection = relativeIntersection,
-                        PathId = l.LoopPath.Path.Id,
-                        RayId = r.RayId
-                    };
+                        var rayIntersection = l.Polygon.Lines
+                            .Select(l => new { Line = l, Intersection = GeometryUtil.LineIntersect(r.Line[0], r.Line[1], l[0], l[1]) })
+                            .FirstOrDefault(ri => ri.Intersection != null);
+
+                        var line = rayIntersection.Line;
+                        var lineId = Array.IndexOf(l.Polygon.Lines, line);
+                        var lineLength = GeometryUtil.GetSegmentLineLength(line[0], line[1]);
+                        var subLineLength = GeometryUtil.GetSegmentLineLength(line[0], rayIntersection.Intersection);
+
+                        var relativeIntersection = subLineLength / lineLength;
+
+                        return new CuttingPoint
+                        {
+                            LineId = lineId,
+                            RelativeIntersection = relativeIntersection,
+                            PathId = l.LoopPath.Path.Id,
+                            RayId = r.RayId
+                        };
+                    }
+                    catch (Exception)
+                    {
+                        VisualiseRays(loops, allSunRays);
+                        throw;
+                    }
                 }).ToArray();
             }).ToList();
 
@@ -335,8 +344,10 @@ namespace Flat3DObjectsToSvgConverter.Services
         private List<Ray> GetSunRaysBasedOnArea(PathPolygon polygon)
         {
             var polygonCenterPoint = polygon.Center;
-            var radius = new double[] { polygon.Bounds.Width, polygon.Bounds.Height }.Max() / 1.9;
-            var area = polygon.Bounds.Width * polygon.Bounds.Height;
+            var bounds = polygon.Bounds;
+            var radius = Math.Sqrt(Math.Pow(bounds.Width, 2) + Math.Pow(bounds.Height, 2));
+            //new double[] { polygon.Bounds.Width, polygon.Bounds.Height }.Max() / 1.9;
+            var area = bounds.Width * bounds.Height;
 
             var tabsQuantityRaysMap = new Dictionary<int, int[]>
             {
@@ -353,12 +364,11 @@ namespace Flat3DObjectsToSvgConverter.Services
                 { 4, new double[]{ 1500, 4255}}
             };
 
-
             var tabsCount = tabsQuantityAreaMap.Select(i => new { TabsQuantity = i.Key, AreaRange = i.Value })
                 .FirstOrDefault(i => area > i.AreaRange[0] && area < i.AreaRange[1])?.TabsQuantity ?? 6;
 
             var raysAngles = tabsQuantityRaysMap[tabsCount];
-            if (polygon.Bounds.Width > polygon.Bounds.Height)
+            if (bounds.Width > bounds.Height)
             {
                 raysAngles = raysAngles.Select(a => a + 90).ToArray();
             }

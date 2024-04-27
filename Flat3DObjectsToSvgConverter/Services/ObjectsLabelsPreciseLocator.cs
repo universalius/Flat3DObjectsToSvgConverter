@@ -32,7 +32,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             _logger = logger;
         }
 
-        public async Task<string> PlaceLabels(string svg)
+        public async Task<SvgDocument> PlaceLabels(string svg)
         {
             var plane = new Plane3d(new Point3d(), new Point3d(), new Point3d());
 
@@ -97,6 +97,8 @@ namespace Flat3DObjectsToSvgConverter.Services
                     var xShift = coords.X - l.LabelLetters.Width * _labelShiftGain;
                     var yShift = coords.Y - _svgLetters.First().Height * _labelShiftGain;
                     l.LabelLetters.Group.Transform = $"translate({xShift.ToString(culture)} {yShift.ToString(culture)})";
+                    l.LabelLetters.Group.AddClass($"labels {l.LoopPath.Path.Id}");
+
                     group.Element.AppendChild(l.LabelLetters.Group.Element);
                 }
             });
@@ -108,7 +110,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             var labelsSvg = newSvgDocument.Element.OuterXml;
             _file.SaveSvg("labels", labelsSvg);
 
-            return null;
+            return newSvgDocument;
         }
 
         private IEnumerable<SvgLetter> GetSvgLetters()

@@ -18,6 +18,7 @@ public static class ServiceRegistration
             .AddSingleton<ObjectsToSvgConverter>()
             .AddSingleton<ObjectsLabelsPreciseLocator>()
             .AddSingleton<LoopsTabsGenerator>()
+            .AddSingleton<MergeLabelsWithTabsSvg>()
             .AddSingleton<IOFileService>();
 
         services.AddOptions()
