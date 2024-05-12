@@ -1,9 +1,8 @@
-﻿using Flat3DObjectsToSvgConverter.Models;
+﻿using Flat3DObjectsToSvgConverter.Helpers;
+using Flat3DObjectsToSvgConverter.Models;
 using GeometRi;
-using System.Drawing;
-using System.Linq;
 
-namespace Flat3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services.CleanLoops
 {
     public class ObjectLoopsAlligner
     {
@@ -89,7 +88,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                                     new Rotation(axisZVector, rotationVector.RotationAngle),
                                     new Point3d(rotationPoint.X, rotationPoint.Y, 0));
 
-                                return new PointF((float)newPoint.X, (float)newPoint.Y);
+                                return newPoint.ToPointF();
                             });
 
                             l.Points = rotatedPoints;
@@ -103,7 +102,7 @@ namespace Flat3DObjectsToSvgConverter.Services
 
         private bool IsOrtogonal(double angle)
         {
-            return (angle > 89 && angle <= 90) || (angle >= 0 && angle <= 1);
+            return angle > 89 && angle <= 90 || angle >= 0 && angle <= 1;
         }
 
     }

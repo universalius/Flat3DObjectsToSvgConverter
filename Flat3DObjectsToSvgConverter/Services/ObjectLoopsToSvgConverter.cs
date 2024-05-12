@@ -7,12 +7,12 @@ using System.Globalization;
 
 namespace Flat3DObjectsToSvgConverter.Services
 {
-    public class ObjectsToSvgConverter
+    public class ObjectLoopsToSvgConverter
     {
         private readonly IOFileService _file;
         private readonly SvgNestConfig _svgNestConfig;
 
-        public ObjectsToSvgConverter(IOFileService file, IOptions<SvgNestConfig> options)
+        public ObjectLoopsToSvgConverter(IOFileService file, IOptions<SvgNestConfig> options)
         {
             _file = file;
             _svgNestConfig = options.Value;

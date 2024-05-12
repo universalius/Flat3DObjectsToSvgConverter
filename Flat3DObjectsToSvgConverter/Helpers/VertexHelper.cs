@@ -1,10 +1,7 @@
 ﻿using ClipperLib;
+using GeometRi;
 using ObjParser.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Drawing;
 
 namespace Flat3DObjectsToSvgConverter.Helpers
 {
@@ -26,6 +23,11 @@ namespace Flat3DObjectsToSvgConverter.Helpers
         public static DoublePoint Scale(this DoublePoint point, double scale)
         {
             return new DoublePoint(point.X * scale, point.Y * scale);
+        }
+
+        public static PointF ToPointF(this Point3d point)
+        {
+            return new PointF((float)point.X, (float)point.Y);
         }
 
         public static Vertex ToIntCoords(this Vertex vertex, int scale = ScaleGain, bool round = false)

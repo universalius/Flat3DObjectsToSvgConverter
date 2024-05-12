@@ -2,6 +2,7 @@
 using Flat3DObjectsToSvgConverter.Services;
 using SvgLib;
 using Flat3DObjectsToSvgConverter.Helpers;
+using Flat3DObjectsToSvgConverter.Services.CleanLoops;
 
 namespace Flat3DObjectsToSvgConverter;
 
@@ -11,18 +12,18 @@ public class Flat3DObjectsToSvgHostedService : IHostedService
     private readonly ObjectsLabelsPreciseLocator _objectsLabelsPreciseLocator;
     private readonly SvgCompactingService _svgCompactingService;
     private readonly ObjectsToLoopsConverter _objectsToLoopsConverter;
-    private readonly ObjectsToSvgConverter _objectsToSvgConverter;
+    private readonly ObjectLoopsToSvgConverter _objectsToSvgConverter;
     private readonly LoopsTabsGenerator _loopsTabsGenerator;
-    private readonly ObjectLoopsAlligner _objectLoopsAlligner;
+    private readonly ObjectLoopsCleaner _objectLoopsCleaner;
     private readonly MergeLabelsWithTabsSvg _mergeLabelsWithTabsSvg;
 
     public Flat3DObjectsToSvgHostedService(ObjectsLabelsToSvgConverter objectsLabelsToSvgConverter,
         ObjectsLabelsPreciseLocator objectsLabelsPreciseLocator,
         SvgCompactingService svgCompactingService,
         ObjectsToLoopsConverter objectsToLoopsConverter,
-        ObjectsToSvgConverter objectsToSvgConverter,
+        ObjectLoopsToSvgConverter objectsToSvgConverter,
         LoopsTabsGenerator loopsTabsGenerator,
-        ObjectLoopsAlligner objectLoopsAlligner,
+        ObjectLoopsCleaner objectLoopsCleaner,
         MergeLabelsWithTabsSvg mergeLabelsWithTabsSvg)
     {
         _objectsLabelsToSvgConverter = objectsLabelsToSvgConverter;
@@ -31,7 +32,7 @@ public class Flat3DObjectsToSvgHostedService : IHostedService
         _objectsToSvgConverter = objectsToSvgConverter;
         _objectsLabelsPreciseLocator = objectsLabelsPreciseLocator;
         _loopsTabsGenerator = loopsTabsGenerator;
-        _objectLoopsAlligner = objectLoopsAlligner;
+        _objectLoopsCleaner = objectLoopsCleaner;
         _mergeLabelsWithTabsSvg = mergeLabelsWithTabsSvg;
     }
 
@@ -39,7 +40,7 @@ public class Flat3DObjectsToSvgHostedService : IHostedService
     {
         var meshesObjects = await _objectsToLoopsConverter.Convert();
 
-        _objectLoopsAlligner.MakeLoopsPerpendicularToAxis(meshesObjects);
+        _objectLoopsCleaner.CleanLoops(meshesObjects);
 
         var svg = _objectsToSvgConverter.Convert(meshesObjects);
 
