@@ -82,11 +82,5 @@ namespace Flat3DObjectsToSvgConverter.Services
 
             Console.WriteLine();
         }
-
-        private bool IsOrtogonal(double angle)
-        {
-            return (angle > 89 && angle <= 90) || (angle >= 0 && angle <= 1);
-        }
-
     }
 }
