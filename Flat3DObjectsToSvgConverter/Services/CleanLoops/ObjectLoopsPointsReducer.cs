@@ -41,7 +41,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                             var segment = segments[k];
                             var nextSegment = segments[nextSegmentIndex];
 
-                            if (nextSegment.P2.BelongsTo(segment.ToLine))
+                            if (segment.ToLine.DistanceTo(nextSegment.P2) <= 0.01)
                             {
                                 segments.RemoveRange(k, 2);
                                 segments.Insert(k, new Segment3d(segment.P1, nextSegment.P2));

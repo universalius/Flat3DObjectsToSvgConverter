@@ -21,7 +21,7 @@ namespace Flat3DObjectsToSvgConverter.Services.CleanLoops
         {
             _objectLoopsPointsReducer.RemoveRedundantPoints(meshes);
             _objectLoopsAlligner.MakeLoopsPerpendicularToAxis(meshes);
-            //_objectLoopsTinyGapsRemover.ReplaceGapsWithLine(meshes);
+            _objectLoopsTinyGapsRemover.ReplaceGapsWithLine(meshes);
         }
     }
 }
