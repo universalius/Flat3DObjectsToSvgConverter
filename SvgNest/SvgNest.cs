@@ -31,7 +31,7 @@ namespace SvgNest
         private PolygonBounds _binBounds = null;
         private Dictionary<string, List<DPath>> _nfpCache = null;
 
-        private CultureInfo culture = new CultureInfo("en-US", false);
+        private List<SvgPath> _notPolygonPaths = new List<SvgPath>();
 
         private SvgNestConfig _config;
 
@@ -48,9 +48,6 @@ namespace SvgNest
 
         public SvgDocument ParseSvg(string svgstring)
         {
-            // reset if in progress
-            //stop();
-
             _bin = null;
             //binPolygon = null;
             _tree = null;
@@ -420,13 +417,18 @@ namespace SvgNest
             var numChildren = paths.Count();
             for (i = 0; i < numChildren; i++)
             {
-                var poly = _svgParser.Polygonify(paths[i]);
+                var path = paths[i];
+                var poly = _svgParser.Polygonify(path);
                 poly = CleanPolygon(poly)?.ToArray();
 
                 // todo: warn user if poly could not be processed and is excluded from the nest
                 if (poly != null && poly.Length > 2 && Math.Abs(GeometryUtil.PolygonArea(poly)) > _config.CurveTolerance * _config.CurveTolerance)
                 {
                     nodes.Add(new Node { Points = poly.ToList(), Source = i });
+                }
+                else
+                {
+                    _notPolygonPaths.Add(new SvgPath(path));
                 }
             }
 
@@ -443,7 +445,7 @@ namespace SvgNest
             {
                 var p = list[i];
 
-                var ischild = false;
+                var isChild = false;
                 for (var j = 0; j < list.Count; j++)
                 {
                     if (j == i)
@@ -460,12 +462,12 @@ namespace SvgNest
                         }
                         list[j].Children.Add(p);
                         p.Parent = list[j];
-                        ischild = true;
+                        isChild = true;
                         break;
                     }
                 }
 
-                if (!ischild)
+                if (!isChild)
                 {
                     parents.Add(p);
                 }
@@ -578,11 +580,12 @@ namespace SvgNest
                 {
                     var p = placement[i][j];
                     var part = _tree[p.Id];
+                    var mainPath = new SvgPath(clone[part.Source]);
 
                     // the original path could have transforms and stuff on it, so apply our transforms on a group
                     var partgroup = _svg._document.CreateElement("g", newsvg.OwnerDocument.DocumentElement.NamespaceURI);
                     partgroup.SetAttribute("transform", $"translate({p.ToSvgString()}) rotate({p.Rotation})");
-                    partgroup.AppendChild(clone[part.Source]);
+                    partgroup.AppendChild(mainPath.Element);
 
                     if (part.Children != null && part.Children.Any())
                     {
@@ -601,6 +604,15 @@ namespace SvgNest
                             }
                             partgroup.AppendChild(c);
                         }
+                    }
+
+                    var mainNotPolygonPaths = _notPolygonPaths.Where(p => p.GetClasses().Contains(mainPath.Id)).ToList();
+                    if (mainNotPolygonPaths.Any())
+                    {
+                        mainNotPolygonPaths.ForEach(path =>
+                        {
+                            partgroup.AppendChild(path.Element);
+                        });
                     }
 
                     newsvg.AppendChild(partgroup);

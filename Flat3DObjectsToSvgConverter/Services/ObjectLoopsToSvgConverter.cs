@@ -58,14 +58,26 @@ namespace Flat3DObjectsToSvgConverter.Services
                 var meshName = ot.Object.MeshName;
                 //var size = ot.Size;
 
+                string mainPathId = null;
                 var pathes = loops.Select((l, j) =>
                 {
                     var pathCoords = string.Join(" ",
                         l.Points.Select(p => $"{p.X.ToString(new CultureInfo("en-US", false))} {p.Y.ToString(new CultureInfo("en-US", false))}")
                         .ToList());
 
-                    var @class = j == 0 ? "main" : string.Empty;
-                    return $@"<path id=""{meshName}-{i}-{j}"" d=""M {pathCoords} z"" style=""fill:none;stroke-width:0.264583;stroke:red;"" class=""{@class}"" />";
+                    var pathId = $"{meshName}-{i}-{j}";
+                    var @class = pathId;
+                    if (j == 0)
+                    {
+                        mainPathId = $"{pathId}";
+                        @class = "main";
+                    }
+                    else
+                    {
+                        @class = mainPathId;
+                    }
+
+                    return $@"<path id=""{pathId}"" d=""M {pathCoords} z"" style=""fill:none;stroke-width:0.264583;stroke:red;"" class=""{@class}"" />";
                 }).ToList();
 
                 var pathesString = string.Join("\r\n", pathes);
