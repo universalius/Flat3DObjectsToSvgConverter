@@ -30,6 +30,16 @@ namespace Flat3DObjectsToSvgConverter.Helpers
             return new PointF((float)point.X, (float)point.Y);
         }
 
+        public static DoublePoint ToDoublePoint(this Point3d point)
+        {
+            return new DoublePoint(point.X, point.Y);
+        }
+
+        public static DoublePoint ToDoublePoint(this PointF point)
+        {
+            return new DoublePoint(point.X, point.Y);
+        }
+
         public static Vertex ToIntCoords(this Vertex vertex, int scale = ScaleGain, bool round = false)
         {
             return new Vertex

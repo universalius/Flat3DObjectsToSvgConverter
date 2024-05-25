@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="GeometRi" Version="1.4.0.5" />
+    <PackageReference Include="GeometRi" Version="1.4.1" />
     <PackageReference Include="Serilog.AspNetCore" Version="7.0.0" />
   </ItemGroup>
 
