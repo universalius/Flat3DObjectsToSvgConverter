@@ -5,15 +5,11 @@ using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
 using GeometRi;
 using SvgNest.Utils;
 using System.Drawing;
-using System.Linq;
 
 namespace Flat3DObjectsToSvgConverter.Services
 {
     public class ObjectLoopsSlotsReducer
     {
-        private Vector3d _axisZVector = new Vector3d(0.0, 0.0, 1.0);
-        private Vector3d _axisYVector = new Vector3d(0.0, 1.0, 0.0);
-
         public ObjectLoopsSlotsReducer() { }
 
         public void CloseSlots(IEnumerable<MeshObjects> meshes)
@@ -50,125 +46,14 @@ namespace Flat3DObjectsToSvgConverter.Services
                     if (!ortogonalSegments.Any())
                         return;
 
-                    var rectangularClosingSlotLoops = CloseRectangularSlots(doublePoints, ortogonalSegments, segments, mesh.MeshName);
+                    var rectangularClosingSlotLoops = CloseRectangularSlots(doublePoints, ortogonalSegments, new List<Segment3d>(segments), mesh.MeshName);
+                    var closing2mmSlotLoops = CloseSlots(ortogonalSegments, mesh.MeshName);
 
                     var allLoops = new List<LoopPoints>();
                     allLoops.AddRange(obj.Loops);
                     allLoops.AddRange(rectangularClosingSlotLoops);
+                    allLoops.AddRange(closing2mmSlotLoops);
                     obj.Loops = allLoops;
-
-                    //var slotCandidates = ortogonalSegments.SelectMany(s => s)
-                    //    .Distinct()
-                    //    .Select(s => new
-                    //    {
-                    //        Segment = s,
-                    //        Neighbors = ortogonalSegments.Where(pair => pair.Contains(s))
-                    //    })
-                    //    .Where(ol => ol.Neighbors.Count() >= 2)
-                    //    .Where(p =>
-                    //    {
-                    //        var segment = p.Segment;
-
-
-                    //        //var shiftVector = segment.Direction.Rotate(new Rotation(_axisZVector, rotationAngle));
-                    //        //var shiftedSector = segment.Translate(shiftVector.Normalized.Mult(0.1));
-
-                    //        var neighborSegments = p.Neighbors.Select(n => n.Except(new[] { segment }).First()).ToArray();
-                    //        var neighborVectors = neighborSegments.Select(n => n.ToVector).ToArray();
-
-                    //        var vectorsFacingOppositeDirection = neighborVectors.First().Dot(neighborVectors.Last()) < 0;
-
-                    //        var neighborPoints = new Point3d[] { neighborSegments[0].P1, neighborSegments[0].P2, neighborSegments[1].P1, neighborSegments[1].P2 }
-                    //            .Where(p => p != segment.P1 && p != segment.P2)
-                    //            .ToArray();
-
-                    //        var closingSegment = new Segment3d(neighborPoints[0], neighborPoints[1]).Scale(0.9);
-
-                    //        var a = GeometryUtil.PointInPolygon(closingSegment.P1.ToDoublePoint(), doublePoints) ?? false;
-                    //        var a1 = GeometryUtil.PointInPolygon(closingSegment.P2.ToDoublePoint(), doublePoints) ?? false;
-                    //        return segment.Length <= 10 && vectorsFacingOppositeDirection && !(a || a1);
-                    //    }).ToList();
-
-                    //int slotIndex = 1;
-                    ////var reducedSegments = new List<Segment3d>(segments);
-                    ////var prevSlotSegments = new List<Segment3d>();
-                    //Segment3d prevClosedSlotSegment = null;
-                    //List<Point3d> prevOriginalSlotPoints = null;
-
-                    //List<Segment3d> segmentsForDeletion = null;
-
-                    //slotCandidates.ForEach(sc =>
-                    //{
-                    //    var allLoops = new List<LoopPoints>();
-                    //    allLoops.AddRange(obj.Loops);
-
-                    //    try
-                    //    {
-                    //        var firstSegment = sc.Neighbors.First(pair => pair[1].Equals(sc.Segment))[0];
-                    //        var secondSegment = sc.Segment;
-                    //        var thirdSegment = sc.Neighbors.First(pair => pair[0].Equals(sc.Segment))[1];
-
-                    //        var firstSegmentIndex = segments.IndexOf(firstSegment);
-
-                    //        Segment3d closedSlotSegment = null;
-                    //        List<Point3d> originalSlotPoints = null;
-
-                    //        if (firstSegmentIndex != -1)
-                    //        {
-                    //            closedSlotSegment = new Segment3d(firstSegment.P1, thirdSegment.P2);
-                    //            segments.Insert(firstSegmentIndex, closedSlotSegment);
-
-                    //            segmentsForDeletion = new List<Segment3d> { firstSegment, secondSegment, thirdSegment };
-
-                    //            originalSlotPoints = new List<Point3d> { firstSegment.P1, firstSegment.P2, secondSegment.P2, thirdSegment.P2 };
-                    //        }
-                    //        else
-                    //        {
-                    //            var prevClosedSlotSegmentIndex = segments.IndexOf(prevClosedSlotSegment);
-
-                    //            closedSlotSegment = new Segment3d(prevClosedSlotSegment.P1, thirdSegment.P2);
-                    //            segments.Insert(prevClosedSlotSegmentIndex, closedSlotSegment);
-
-                    //            segmentsForDeletion = new List<Segment3d> { prevClosedSlotSegment, secondSegment, thirdSegment };
-
-                    //            originalSlotPoints = new List<Point3d>(prevOriginalSlotPoints) { thirdSegment.P2 };
-
-                    //            allLoops.Remove(allLoops.Last());
-                    //        }
-
-                    //        prevClosedSlotSegment = closedSlotSegment;
-                    //        prevOriginalSlotPoints = originalSlotPoints;
-
-                    //        segmentsForDeletion.ForEach(s =>
-                    //        {
-                    //            segments.Remove(s);
-                    //        });
-
-                    //        //mainLoop.Points = segments.Select((s, j) => s.P2.ToPointF());
-
-                    //        //allLoops.Add(new LoopPoints
-                    //        //{
-                    //        //    Points = originalSlotPoints.Select(p => p.ToPointF()).ToArray()
-                    //        //});
-
-
-                    //        allLoops.Add(new LoopPoints
-                    //        {
-                    //            Points = new PointF[] { closedSlotSegment.P1.ToPointF(), closedSlotSegment.P2.ToPointF() }
-                    //        });
-
-                    //        obj.Loops = allLoops;
-                    //    }
-                    //    catch (Exception ex)
-                    //    {
-                    //        Console.WriteLine($"    Failed to close slot {slotIndex} for mesh {mesh.MeshName} main loop");
-                    //        throw;
-                    //    }
-
-                    //    Console.WriteLine($"    Closed slot {slotIndex} for mesh {mesh.MeshName} main loop");
-
-                    //    slotIndex++;
-                    //});
                 });
             });
 
@@ -188,11 +73,6 @@ namespace Flat3DObjectsToSvgConverter.Services
                 .Where(p =>
                 {
                     var segment = p.Segment;
-
-
-                    //var shiftVector = segment.Direction.Rotate(new Rotation(_axisZVector, rotationAngle));
-                    //var shiftedSector = segment.Translate(shiftVector.Normalized.Mult(0.1));
-
                     var neighborSegments = p.Neighbors.Select(n => n.Except(new[] { segment }).First()).ToArray();
                     var neighborVectors = neighborSegments.Select(n => n.ToVector).ToArray();
 
@@ -210,8 +90,6 @@ namespace Flat3DObjectsToSvgConverter.Services
                 }).ToList();
 
             int slotIndex = 1;
-            //var reducedSegments = new List<Segment3d>(segments);
-            //var prevSlotSegments = new List<Segment3d>();
             Segment3d prevClosedSlotSegment = null;
             List<Point3d> prevOriginalSlotPoints = null;
 
@@ -263,13 +141,6 @@ namespace Flat3DObjectsToSvgConverter.Services
                         segments.Remove(s);
                     });
 
-                    //mainLoop.Points = segments.Select((s, j) => s.P2.ToPointF());
-
-                    //allLoops.Add(new LoopPoints
-                    //{
-                    //    Points = originalSlotPoints.Select(p => p.ToPointF()).ToArray()
-                    //});
-
                     Console.WriteLine($"    Closed rectangular slot {slotIndex} for mesh {meshName} main loop");
 
                     slotIndex++;
@@ -289,9 +160,62 @@ namespace Flat3DObjectsToSvgConverter.Services
             return closingLoops;
         }
 
+        private bool IsSlotSegments(Point3d point, Segment3d segment)
+        {
+            if (segment.P1 == point || segment.P2 == point)
+                return false;
+
+            var a = point.DistanceTo(segment.ToLine) <= 0.01; // point lying on line with precision 0.01
+            var b = point.DistanceTo(segment) < 2;
+            return a && b;
+        }
+
+        private List<LoopPoints> CloseSlots(List<Segment3d[]> ortogonalSegments, string meshName)
+        {
+            var slots = new List<Segment3d[]>();
+            for (int i = 0; i < ortogonalSegments.Count; i++)
+            {
+                var pair1 = ortogonalSegments[i];
+
+                for (int j = i + 1; j < ortogonalSegments.Count; j++)
+                {
+                    var pair2 = ortogonalSegments[j];
+
+                    var slot = pair1.Select(s1 =>
+                    {
+                        var slotSegment = pair2.FirstOrDefault(s2 => IsSlotSegments(s2.P1, s1));
+                        if (slotSegment != null)
+                        {
+                            var slotCandidates = new Segment3d[] { s1, slotSegment };
+                            return slotCandidates;
+                        }
+
+                        return null;
+                    }).FirstOrDefault(s => s != null);
+
+                    if (slot != null)
+                    {
+                        slots.Add(slot);
+                        break;
+                    }
+                }
+            }
+
+            var closingLoops = new List<LoopPoints>();
+            return slots.Select((slotSegments, i) =>
+            {
+                Console.WriteLine($"    Closed less then 2mm slot {i + 1} for mesh {meshName} main loop");
+
+                return new LoopPoints
+                {
+                    Points = new PointF[] { slotSegments[0].P2.ToPointF(), slotSegments[1].P1.ToPointF() }
+                };
+            }).ToList();
+        }
+
         private bool IsOrtogonal(double angle)
         {
-            return (angle > 89 && angle <= 90);
+            return angle > 89 && angle <= 90;
         }
     }
 }
