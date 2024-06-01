@@ -10,7 +10,7 @@ namespace Flat3DObjectsToSvgConverter.Models.ObjectsLabelsPreciseLocatorAndSvgCo
 {
     public class RayDistance
     {
-        public DoublePoint[] RayLine { get; set; }
+        public DoublePoint[] RaySegment { get; set; }
         public int RayId { get; set; }
         public PathIntersection Main { get; set; }
         public LoopPolygon Neighbor { get; set; }

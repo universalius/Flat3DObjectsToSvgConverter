@@ -12,5 +12,6 @@ namespace Flat3DObjectsToSvgConverter.Models.ObjectsLabelsPreciseLocatorAndSvgCo
         public SvgPath Path { get; set; }
         public int ParentGroupId { get; set; }
         public string ScaledPath { get; set; }
+        public IEnumerable<SvgPath> ClosedSlotPaths { get; set; }
     }
 }

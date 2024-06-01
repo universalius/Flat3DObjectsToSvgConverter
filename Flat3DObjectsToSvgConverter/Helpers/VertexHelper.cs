@@ -25,6 +25,11 @@ namespace Flat3DObjectsToSvgConverter.Helpers
             return new DoublePoint(point.X * scale, point.Y * scale);
         }
 
+        public static Point3d ToPoint3d(this DoublePoint point, double scale = 1)
+        {
+            return new Point3d((int)point.X * scale, (int)point.Y * scale, 0);
+        }
+
         public static PointF ToPointF(this Point3d point)
         {
             return new PointF((float)point.X, (float)point.Y);

@@ -2,6 +2,7 @@
 using Flat3DObjectsToSvgConverter.Helpers;
 using Flat3DObjectsToSvgConverter.Models.ObjectsLabelsPreciseLocatorAndSvgConverter;
 using GeometRi;
+using Microsoft.Extensions.Configuration.UserSecrets;
 using Microsoft.Extensions.Logging;
 using SvgLib;
 using SvgNest;
@@ -34,8 +35,6 @@ namespace Flat3DObjectsToSvgConverter.Services
 
         public async Task<SvgDocument> PlaceLabels(string svg)
         {
-            var plane = new Plane3d(new Point3d(), new Point3d(), new Point3d());
-
             var watch = Stopwatch.StartNew();
             Console.WriteLine("Start placing labels for svg curves!");
             Console.WriteLine();
@@ -47,21 +46,24 @@ namespace Flat3DObjectsToSvgConverter.Services
             {
                 var group = new SvgGroup(element);
                 var pathes = group.Element.GetElementsByTagName("path").Cast<XmlElement>()
-                .Select(pe => new SvgPath(pe));
+                .Select(pe => new SvgPath(pe).Clone());
 
-                var path = pathes.FirstOrDefault(p => p.GetClasses().Contains("main"));
-                if (path == null)
+                var mainPath = pathes.FirstOrDefault(p => p.GetClasses().Contains("main"));
+                if (mainPath == null)
                 {
                     throw new Exception("At least one path in a group should have main class");
                 }
 
-                var label = GetLabel(path.Id);
-                var newPath = path.Clone();
+                var closedSlotPaths = pathes.Where(p => p.Id != mainPath.Id && !p.GetClasses().Contains("hole")).ToList();
+                var label = GetLabel(mainPath.Id);
 
                 if (group.Transform != "translate(0 0)")
                 {
-                    newPath.Transform = group.Transform;
-                    _svgParser.ApplyTransform(newPath.Element);
+                    new List<SvgPath>(closedSlotPaths) { mainPath }.ForEach(p =>
+                    {
+                        p.Transform = group.Transform;
+                        _svgParser.ApplyTransform(p.Element);
+                    });
                 }
 
                 var (lettersGroup, labelWidth) = GetLabelLetters(label, svgDocument);
@@ -69,8 +71,9 @@ namespace Flat3DObjectsToSvgConverter.Services
                 {
                     LoopPath = new LoopPath
                     {
-                        Path = newPath,
-                        ParentGroupId = i
+                        Path = mainPath,
+                        ParentGroupId = i,
+                        ClosedSlotPaths = closedSlotPaths,
                     },
                     LabelLetters = new LabelSvgGroup
                     {
@@ -291,7 +294,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                     return new RayDistance
                     {
                         RayId = j,
-                        RayLine = new DoublePoint[] { polygonCenterPoint.ToInt(_gain), new DoublePoint(x, y).ToInt(_gain) }
+                        RaySegment = new DoublePoint[] { polygonCenterPoint.ToInt(_gain), new DoublePoint(x, y).ToInt(_gain) }
                     };
                 }).ToArray();
 
@@ -305,13 +308,13 @@ namespace Flat3DObjectsToSvgConverter.Services
                 sunRays.Skip(raysSectorFirstRay).Take(90).ToList().ForEach(r =>
                 {
                     var mainWithRayIntersection = l.Polygon.Lines
-                        .Select(l => GeometryUtil.LineIntersect(r.RayLine[0], r.RayLine[1], l[0], l[1]))
+                        .Select(l => GeometryUtil.LineIntersect(r.RaySegment[0], r.RaySegment[1], l[0], l[1]))
                         .Where(intersection => intersection != null)
                         .MinBy(p => p.X);
 
                     var neighborsWithRayIntersections = l.Neighbors.Select(n =>
                     {
-                        var intersections = n.Polygon.Lines.Select(l => GeometryUtil.LineIntersect(r.RayLine[0], r.RayLine[1], l[0], l[1]))
+                        var intersections = n.Polygon.Lines.Select(l => GeometryUtil.LineIntersect(r.RaySegment[0], r.RaySegment[1], l[0], l[1]))
                             .Where(intersection => intersection != null).ToArray();
                         return new PathIntersection
                         {
@@ -338,7 +341,7 @@ namespace Flat3DObjectsToSvgConverter.Services
 
                     distanceBetweenPolygons.Add(new RayDistance
                     {
-                        RayLine = r.RayLine,
+                        RaySegment = r.RaySegment,
                         RayId = r.RayId,
                         Main = new PathIntersection
                         {
@@ -357,8 +360,22 @@ namespace Flat3DObjectsToSvgConverter.Services
                 {
                     var targetRayId = raysSectorFirstRay + 90 / 2;
 
-                    var targetRays = distancesEnouphForLabel.Where(rd => rd.RayId >= targetRayId)
-                        .OrderBy(rd => rd.RayId).ToArray();
+                    var closedSlotSegments = l.LoopPath.ClosedSlotPaths.Select(p => _svgParser.Polygonify(p.Element))
+                        .Select(points => new Segment3d(points[0].ToPoint3d(_gain), points[1].ToPoint3d(_gain)));
+
+                    var targetRays = distancesEnouphForLabel.Where(rd => rd.RayId >= targetRayId);
+
+                    if (closedSlotSegments.Any())
+                    {
+                        targetRays = targetRays.Where(rd =>
+                        {
+                            var segment1 = new Segment3d(rd.RaySegment[0].ToPoint3d(), rd.RaySegment[1].ToPoint3d());
+                            var isRayHitsClosedSlotSegment = closedSlotSegments.Any(s => s.IntersectionWith(segment1) != null);
+                            return !isRayHitsClosedSlotSegment;
+                        });
+                    };
+
+                    targetRays = targetRays.OrderBy(rd => rd.RayId).ToArray();
 
                     DoublePoint rayIntersection;
 
@@ -416,7 +433,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             {
                 var path = svgTest.AddPath();
                 path.Id = r.RayId.ToString();
-                path.D = $"M {r.RayLine[0].X} {r.RayLine[0].Y} {r.RayLine[1].X} {r.RayLine[1].Y}";
+                path.D = $"M {r.RaySegment[0].X} {r.RaySegment[0].Y} {r.RaySegment[1].X} {r.RaySegment[1].Y}";
                 path.StrokeWidth = 0.3;
                 path.Stroke = "#000000";
                 path.Fill = "none";
@@ -427,7 +444,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                 AddLabelPathToGroup(new LabelSvgGroup
                 {
                     Label = r.RayId.ToString(),
-                    GroupLocation = r.RayLine[1]
+                    GroupLocation = r.RaySegment[1]
                 }, group);
             });
 
