@@ -606,7 +606,7 @@ namespace SvgNest
                         }
                     }
 
-                    var mainNotPolygonPaths = _notPolygonPaths.Where(p => p.GetClasses().Contains(mainPath.Id)).ToList();
+                    var mainNotPolygonPaths = _notPolygonPaths.Where(p => p.GetData("parentId").Contains(mainPath.Id)).ToList();
                     if (mainNotPolygonPaths.Any())
                     {
                         mainNotPolygonPaths.ForEach(path =>

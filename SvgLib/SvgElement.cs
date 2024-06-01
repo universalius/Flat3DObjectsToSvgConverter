@@ -86,6 +86,12 @@ namespace SvgLib
             set => SetStyle("display", value ? string.Empty : "none");
         }
 
+        public string GetData(string dataId)
+        {
+            return Element.GetAttribute($"data-{dataId}");
+        }
+
+
         public IEnumerable<string> GetClasses() => ParseClassAttribute();
 
         public bool HasClass(string name) => GetClasses().Contains(name);

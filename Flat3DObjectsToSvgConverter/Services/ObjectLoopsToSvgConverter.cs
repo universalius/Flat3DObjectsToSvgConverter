@@ -66,7 +66,8 @@ namespace Flat3DObjectsToSvgConverter.Services
                         .ToList());
 
                     var pathId = $"{meshName}-{i}-{j}";
-                    var @class = pathId;
+                    var @class = string.Empty;
+                    string dataParentId = string.Empty;
                     if (j == 0)
                     {
                         mainPathId = $"{pathId}";
@@ -74,10 +75,10 @@ namespace Flat3DObjectsToSvgConverter.Services
                     }
                     else
                     {
-                        @class = mainPathId;
+                        dataParentId = $"data-parentId=\"{mainPathId}\"";
                     }
 
-                    return $@"<path id=""{pathId}"" d=""M {pathCoords} z"" style=""fill:none;stroke-width:0.264583;stroke:red;"" class=""{@class}"" />";
+                    return $@"<path id=""{pathId}"" d=""M {pathCoords} z"" style=""fill:none;stroke-width:0.264583;stroke:red;"" class=""{@class}"" {dataParentId} />";
                 }).ToList();
 
                 var pathesString = string.Join("\r\n", pathes);
