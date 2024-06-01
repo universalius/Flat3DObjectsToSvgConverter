@@ -44,8 +44,8 @@ namespace Flat3DObjectsToSvgConverter.Services
                 var parentGroup = new SvgGroup(labelsGroup.ParentNode as XmlElement);
                 parentGroup.Element.RemoveChild(labelsGroup.PreviousSibling);
 
-                var pathId = g.GetClasses().First(c => c != labelsClass);
-                var tabsGroup = tabGroups.First(g => g.HasClass(pathId));
+                var pathId = g.GetData("mainId");
+                var tabsGroup = tabGroups.First(g => g.GetData("mainId") == pathId);
 
                 var newTabsGroup = parentGroup.AddGroup();
                 newTabsGroup.Transform = tabsGroup.Transform;

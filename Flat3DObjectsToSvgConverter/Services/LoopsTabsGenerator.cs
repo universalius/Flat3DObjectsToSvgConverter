@@ -93,7 +93,8 @@ namespace Flat3DObjectsToSvgConverter.Services
                 var pathId = cps.First().PathId;
                 var path = new SvgPath(pathElements.First(e => e.GetAttribute("id") == pathId));
                 var group = new SvgGroup(path.Element.ParentNode as XmlElement);
-                group.AddClass($"tabs {pathId}");
+                group.AddClass($"tabs");
+                group.AddData("mainId", pathId);
 
                 var pathPoints = path.D.Replace("M ", "").Replace("z", "").Split("L ").ToList();
                 pathPoints.Add(pathPoints.First());

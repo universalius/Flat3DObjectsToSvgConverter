@@ -91,6 +91,10 @@ namespace SvgLib
             return Element.GetAttribute($"data-{dataId}");
         }
 
+        public void AddData(string dataId, string value)
+        {
+            Element.SetAttribute($"data-{dataId}", value);
+        }
 
         public IEnumerable<string> GetClasses() => ParseClassAttribute();
 

@@ -2,7 +2,6 @@
 using Flat3DObjectsToSvgConverter.Helpers;
 using Flat3DObjectsToSvgConverter.Models.ObjectsLabelsPreciseLocatorAndSvgConverter;
 using GeometRi;
-using Microsoft.Extensions.Configuration.UserSecrets;
 using Microsoft.Extensions.Logging;
 using SvgLib;
 using SvgNest;
@@ -100,7 +99,8 @@ namespace Flat3DObjectsToSvgConverter.Services
                     var xShift = coords.X - l.LabelLetters.Width * _labelShiftGain;
                     var yShift = coords.Y - _svgLetters.First().Height * _labelShiftGain;
                     l.LabelLetters.Group.Transform = $"translate({xShift.ToString(culture)} {yShift.ToString(culture)})";
-                    l.LabelLetters.Group.AddClass($"labels {l.LoopPath.Path.Id}");
+                    l.LabelLetters.Group.AddClass("labels");
+                    l.LabelLetters.Group.AddData("mainId", l.LoopPath.Path.Id);
 
                     group.Element.AppendChild(l.LabelLetters.Group.Element);
                 }

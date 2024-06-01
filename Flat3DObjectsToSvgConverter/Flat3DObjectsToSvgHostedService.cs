@@ -38,27 +38,27 @@ public class Flat3DObjectsToSvgHostedService : IHostedService
 
     public async Task StartAsync(CancellationToken stoppingToken)
     {
-        //var meshesObjects = await _objectsToLoopsConverter.Convert();
+        var meshesObjects = await _objectsToLoopsConverter.Convert();
 
-        //_objectLoopsCleaner.CleanLoops(meshesObjects);
+        _objectLoopsCleaner.CleanLoops(meshesObjects);
 
-        //var svg = _objectsToSvgConverter.Convert(meshesObjects);
+        var svg = _objectsToSvgConverter.Convert(meshesObjects);
 
         //Console.ReadKey();
 
-        //var compactedSvg = await _svgCompactingService.Compact(svg);
+        var compactedSvg = await _svgCompactingService.Compact(svg);
 
-        SvgDocument svgDocument = SvgFileHelpers.ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\Test1 01.06.2024 14-23-28\Test1_compacted.svg");
-        //SvgDocument svgDocument = SvgFileHelpers.ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\test_rays.svg");
-        var compactedSvg = svgDocument.Element.OuterXml;
+        //SvgDocument svgDocument = SvgFileHelpers.ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\Test1 01.06.2024 14-23-28\Test1_compacted.svg");
+        //////SvgDocument svgDocument = SvgFileHelpers.ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\test_rays.svg");
+        //var compactedSvg = svgDocument.Element.OuterXml;
 
         //await _objectsLabelsToSvgConverter.Convert(compactedSvg);
 
         var labelsSvg = await _objectsLabelsPreciseLocator.PlaceLabels(compactedSvg);
 
-        //var tabsSvg = await _loopsTabsGenerator.CutLoopsToMakeTabs(compactedSvg);
+        var tabsSvg = await _loopsTabsGenerator.CutLoopsToMakeTabs(compactedSvg);
 
-        //_mergeLabelsWithTabsSvg.Merge(labelsSvg, tabsSvg);
+        _mergeLabelsWithTabsSvg.Merge(labelsSvg, tabsSvg);
 
         Console.ReadKey();
     }
