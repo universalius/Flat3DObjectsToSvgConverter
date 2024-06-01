@@ -24,7 +24,8 @@ public static class ServiceRegistration
 
         services.AddOptions()
             .Configure<SvgNestConfig>(configuration.GetSection("SvgNest"))
-            .Configure<IOSettings>(configuration.GetSection("IO"));
+            .Configure<IOSettings>(configuration.GetSection("IO"))
+            .Configure<SlotsSettings>(configuration.GetSection("Slots"));
 
         return services;
     }
