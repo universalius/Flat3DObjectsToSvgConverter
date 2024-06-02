@@ -6,7 +6,7 @@ using ObjParserExecutor.Helpers;
 using System.Diagnostics;
 using System.Drawing;
 
-namespace Flat3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
 {
     public class EdgeLoopParser
     {

@@ -126,7 +126,7 @@ namespace SvgLib
             return styles[name];
         }
 
-        protected void SetStyle(string name, string value)
+        public void SetStyle(string name, string value)
         {
             var styles = ParseStyleAttribute();
             styles[name] = value;

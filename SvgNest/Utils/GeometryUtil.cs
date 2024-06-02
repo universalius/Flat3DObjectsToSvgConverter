@@ -1322,9 +1322,14 @@ namespace SvgNest.Utils
             return true;
         }
 
-        public static double GetSegmentLineLength(DoublePoint A, DoublePoint B)
+        public static double GetSegmentLength(DoublePoint A, DoublePoint B)
         {
             return Math.Sqrt(Math.Pow(B.X - A.X, 2) + Math.Pow(B.Y - A.Y, 2));
+        }
+
+        public static double GetSegmentLength(DoublePoint[] segment)
+        {
+            return GetSegmentLength(segment[1], segment[0]);
         }
 
         private static DoublePoint[] GetRectangle(PolygonBounds bounds)
@@ -1422,9 +1427,9 @@ namespace SvgNest.Utils
 
         public static double GetLineYVectorLength(DoublePoint A, DoublePoint B)
         {
-            var lineLength = GetSegmentLineLength(A, B);
+            var lineLength = GetSegmentLength(A, B);
             var normalYVector = new DoublePoint[] { A, new DoublePoint(A.X, 1) };
-            var normalYVectorLength = GetSegmentLineLength(normalYVector[0], normalYVector[1]);
+            var normalYVectorLength = GetSegmentLength(normalYVector[0], normalYVector[1]);
 
             var dotProduct = B.X * normalYVector[1].X + B.Y * normalYVector[1].Y;
             var cosAngleBetween = dotProduct / (lineLength * normalYVectorLength);

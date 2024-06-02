@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace Flat3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
 {
     public class MergeLabelsWithTabsSvg
     {

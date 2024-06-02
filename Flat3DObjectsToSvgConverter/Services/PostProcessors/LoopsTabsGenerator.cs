@@ -11,7 +11,7 @@ using SvgNest.Utils;
 using System.Diagnostics;
 using System.Xml;
 
-namespace Flat3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
 {
     public class LoopsTabsGenerator
     {
@@ -115,7 +115,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                         point2.ToDoublePoint(),
                     };
 
-                    var lineLength = GeometryUtil.GetSegmentLineLength(line[0], line[1]);
+                    var lineLength = GeometryUtil.GetSegmentLength(line[0], line[1]);
                     var subLineLength = cp.RelativeIntersection * lineLength;
 
                     var angleInRadians = GeometryUtil.GetSegmentVectorXAngle(line[0], line[1]);
@@ -316,8 +316,8 @@ namespace Flat3DObjectsToSvgConverter.Services
 
                         var line = rayIntersection.Line;
                         var lineId = Array.IndexOf(l.Polygon.Lines, line);
-                        var lineLength = GeometryUtil.GetSegmentLineLength(line[0], line[1]);
-                        var subLineLength = GeometryUtil.GetSegmentLineLength(line[0], rayIntersection.Intersection);
+                        var lineLength = GeometryUtil.GetSegmentLength(line[0], line[1]);
+                        var subLineLength = GeometryUtil.GetSegmentLength(line[0], rayIntersection.Intersection);
 
                         var relativeIntersection = subLineLength / lineLength;
 
@@ -429,7 +429,6 @@ namespace Flat3DObjectsToSvgConverter.Services
             _file.SaveSvg($"rays", svgTest._document.OuterXml);
         }
     }
-
 
     public record Ray(int RayId, DoublePoint[] Line);
 

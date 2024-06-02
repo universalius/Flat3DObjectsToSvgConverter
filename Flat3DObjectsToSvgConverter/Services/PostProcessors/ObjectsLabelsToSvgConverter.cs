@@ -9,7 +9,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml;
 
-namespace Flat3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
 {
     public class ObjectsLabelsToSvgConverter
     {
@@ -54,7 +54,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                     .Select(pe => new SvgPath(pe));
 
                     var path = pathes.FirstOrDefault(p => p.GetClasses().Contains("main"));
-                    if(path == null)
+                    if (path == null)
                     {
                         throw new Exception("At least one path in a group should have main class");
                     }

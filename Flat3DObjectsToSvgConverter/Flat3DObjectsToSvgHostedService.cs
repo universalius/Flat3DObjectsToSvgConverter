@@ -1,64 +1,34 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Flat3DObjectsToSvgConverter.Services;
-using SvgLib;
-using Flat3DObjectsToSvgConverter.Helpers;
-using Flat3DObjectsToSvgConverter.Services.CleanLoops;
+using Flat3DObjectsToSvgConverter.Services.Parse3dObjects;
+using Flat3DObjectsToSvgConverter.Services.PostProcessors;
 
 namespace Flat3DObjectsToSvgConverter;
 
 public class Flat3DObjectsToSvgHostedService : IHostedService
 {
-    private readonly ObjectsLabelsToSvgConverter _objectsLabelsToSvgConverter;
-    private readonly ObjectsLabelsPreciseLocator _objectsLabelsPreciseLocator;
+    private readonly PostProccessors _postProccessors;
     private readonly SvgCompactingService _svgCompactingService;
-    private readonly ObjectsToLoopsConverter _objectsToLoopsConverter;
-    private readonly ObjectLoopsToSvgConverter _objectsToSvgConverter;
-    private readonly LoopsTabsGenerator _loopsTabsGenerator;
-    private readonly ObjectLoopsCleaner _objectLoopsCleaner;
-    private readonly MergeLabelsWithTabsSvg _mergeLabelsWithTabsSvg;
+    private readonly ThreeDObjectsParser _3DObjectsParser;
 
-    public Flat3DObjectsToSvgHostedService(ObjectsLabelsToSvgConverter objectsLabelsToSvgConverter,
-        ObjectsLabelsPreciseLocator objectsLabelsPreciseLocator,
+    public Flat3DObjectsToSvgHostedService(PostProccessors postProccessors,
         SvgCompactingService svgCompactingService,
-        ObjectsToLoopsConverter objectsToLoopsConverter,
-        ObjectLoopsToSvgConverter objectsToSvgConverter,
-        LoopsTabsGenerator loopsTabsGenerator,
-        ObjectLoopsCleaner objectLoopsCleaner,
-        MergeLabelsWithTabsSvg mergeLabelsWithTabsSvg)
+        ThreeDObjectsParser threeDObjectsParser)
     {
-        _objectsLabelsToSvgConverter = objectsLabelsToSvgConverter;
+        _postProccessors = postProccessors;
         _svgCompactingService = svgCompactingService;
-        _objectsToLoopsConverter = objectsToLoopsConverter;
-        _objectsToSvgConverter = objectsToSvgConverter;
-        _objectsLabelsPreciseLocator = objectsLabelsPreciseLocator;
-        _loopsTabsGenerator = loopsTabsGenerator;
-        _objectLoopsCleaner = objectLoopsCleaner;
-        _mergeLabelsWithTabsSvg = mergeLabelsWithTabsSvg;
+        _3DObjectsParser = threeDObjectsParser;
     }
 
     public async Task StartAsync(CancellationToken stoppingToken)
     {
-        var meshesObjects = await _objectsToLoopsConverter.Convert();
-
-        _objectLoopsCleaner.CleanLoops(meshesObjects);
-
-        var svg = _objectsToSvgConverter.Convert(meshesObjects);
+        var svg = await _3DObjectsParser.Transform3DObjectsTo2DSvgLoops();
 
         //Console.ReadKey();
 
         var compactedSvg = await _svgCompactingService.Compact(svg);
 
-        //SvgDocument svgDocument = SvgFileHelpers.ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\Test1 01.06.2024 14-23-28\Test1_compacted.svg");
-        //////SvgDocument svgDocument = SvgFileHelpers.ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\test_rays.svg");
-        //var compactedSvg = svgDocument.Element.OuterXml;
-
-        //await _objectsLabelsToSvgConverter.Convert(compactedSvg);
-
-        var labelsSvg = await _objectsLabelsPreciseLocator.PlaceLabels(compactedSvg);
-
-        var tabsSvg = await _loopsTabsGenerator.CutLoopsToMakeTabs(compactedSvg);
-
-        _mergeLabelsWithTabsSvg.Merge(labelsSvg, tabsSvg);
+        await _postProccessors.Run(compactedSvg);
 
         Console.ReadKey();
     }

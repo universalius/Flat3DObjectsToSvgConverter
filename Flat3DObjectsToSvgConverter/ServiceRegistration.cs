@@ -3,7 +3,8 @@ using Flat3DObjectsToSvgConverter.Services;
 using Microsoft.Extensions.Configuration;
 using SvgNest.Models;
 using Flat3DObjectsToSvgConverter.Models;
-using Flat3DObjectsToSvgConverter.Services.CleanLoops;
+using Flat3DObjectsToSvgConverter.Services.Parse3dObjects;
+using Flat3DObjectsToSvgConverter.Services.PostProcessors;
 
 namespace Flat3DObjectsToSvgConverter;
 
@@ -12,15 +13,10 @@ public static class ServiceRegistration
     public static IServiceCollection AddServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddHostedService<Flat3DObjectsToSvgHostedService>()
-            .AddSingleton<ObjectsLabelsToSvgConverter>()
             .AddSingleton<SvgCompactingService>()
-            .AddSingleton<ObjectsToLoopsConverter>()
-            .AddSingleton<ObjectLoopsToSvgConverter>()
-            .AddSingleton<ObjectsLabelsPreciseLocator>()
-            .AddSingleton<LoopsTabsGenerator>()
-            .AddSingleton<MergeLabelsWithTabsSvg>()
             .AddSingleton<IOFileService>()
-            .AddCleanupServices();
+            .AddParse3dObjectsServices()
+            .AddPostProcessorsServices();
 
         services.AddOptions()
             .Configure<SvgNestConfig>(configuration.GetSection("SvgNest"))

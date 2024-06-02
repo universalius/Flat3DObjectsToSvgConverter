@@ -11,7 +11,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Xml;
 
-namespace Flat3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
 {
     public class ObjectsLabelsPreciseLocator
     {
@@ -72,7 +72,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                     {
                         Path = mainPath,
                         ParentGroupId = i,
-                        ClosedSlotPaths = closedSlotPaths,
+                        SiblingPaths = closedSlotPaths,
                     },
                     LabelLetters = new LabelSvgGroup
                     {
@@ -126,7 +126,7 @@ namespace Flat3DObjectsToSvgConverter.Services
             return pathes.Select(p =>
             {
                 var subPathes = _svgParser.SplitPath(p.Element);
-                var points = _svgParser.Polygonify((subPathes?.Any() ?? false) ? subPathes.First() : p.Element);
+                var points = _svgParser.Polygonify(subPathes?.Any() ?? false ? subPathes.First() : p.Element);
 
                 var a = string.Join(" ", points.Select(p => $"{p.X.ToString(culture)} {p.Y.ToString(culture)}"));
 
@@ -331,7 +331,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                             .Select(nri =>
                             new
                             {
-                                Distance = GeometryUtil.GetSegmentLineLength(mainWithRayIntersection, nri.IntersectionPoint),
+                                Distance = GeometryUtil.GetSegmentLength(mainWithRayIntersection, nri.IntersectionPoint),
                                 Neighbor = nri.LoopPolygon
                             })
                             .MinBy(nd => nd.Distance);
@@ -360,7 +360,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                 {
                     var targetRayId = raysSectorFirstRay + 90 / 2;
 
-                    var closedSlotSegments = l.LoopPath.ClosedSlotPaths.Select(p => _svgParser.Polygonify(p.Element))
+                    var closedSlotSegments = l.LoopPath.SiblingPaths.Select(p => _svgParser.Polygonify(p.Element))
                         .Select(points => new Segment3d(points[0].ToPoint3d(_gain), points[1].ToPoint3d(_gain)));
 
                     var targetRays = distancesEnouphForLabel.Where(rd => rd.RayId >= targetRayId);

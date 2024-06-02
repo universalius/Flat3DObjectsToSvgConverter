@@ -4,12 +4,12 @@ using ObjParser;
 using ObjParserExecutor.Models;
 using System.Diagnostics;
 
-namespace Flat3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
 {
     public class ObjectsToLoopsConverter
     {
         private readonly IOFileService _file;
-        private readonly string _fileName; 
+        private readonly string _fileName;
 
         public ObjectsToLoopsConverter(IOFileService file, IOptions<IOSettings> options)
         {

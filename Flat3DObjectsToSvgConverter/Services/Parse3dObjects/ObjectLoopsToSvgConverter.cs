@@ -5,7 +5,7 @@ using SvgNest.Models;
 using System.Drawing;
 using System.Globalization;
 
-namespace Flat3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
 {
     public class ObjectLoopsToSvgConverter
     {
