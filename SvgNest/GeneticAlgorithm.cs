@@ -13,7 +13,7 @@ namespace SvgNest
 
         public GeneticAlgorithm(List<Node> adam, DoublePoint[] binPolygon, SvgNestConfig config)
         {
-            _config = config ?? new SvgNestConfig { PopulationSize = 10, MutationRate = 10, Rotations = 4 };
+            _config = config ?? new SvgNestConfig() { PopulationSize = 10, MutationRate = 10 };
             _binBounds = GeometryUtil.GetPolygonBounds(binPolygon);
             _random = new Random();
 
@@ -49,9 +49,14 @@ namespace SvgNest
         private double RandomAngle(List<DoublePoint> part)
         {
             var angleList = new List<double>();
-            for (var i = 0; i < Math.Max(_config.Rotations, 1); i++)
+            for (var i = 0; i < Math.Max(_config.Rotations.Count, 1); i++)
             {
-                angleList.Add(i * (360 / _config.Rotations));
+                angleList.Add(i * (360 / _config.Rotations.Count));
+            }
+
+            if (_config.Rotations.UseOnlyOddAngles)
+            {
+                angleList = angleList.Where(a => a % 2 != 0).ToList();
             }
 
             angleList = ShuffleArray(angleList);
@@ -155,7 +160,7 @@ namespace SvgNest
         public void Generation()
         {
             // Individuals with higher fitness are more likely to be selected for mating
-            Population = Population.OrderByDescending(i=>i.Fitness).ToList();
+            Population = Population.OrderByDescending(i => i.Fitness).ToList();
 
             // fittest individual is preserved in the new generation (elitism)
             var newpopulation = new List<Individual> { Population[0] };
