@@ -66,7 +66,7 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
 
             if (orderedPlanes.Count > 2)
             {
-                throw new Exception("Found more then 2 parallel planes for an object");
+                throw new Exception("Found more then 2 parallel planes for an object, pls remove line(s) or dot(s) in loop between parallel planes");
             }
 
             //if (mesh.Name.ToLower() == "172")
