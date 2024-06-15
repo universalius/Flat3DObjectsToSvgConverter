@@ -15,7 +15,7 @@
     public class SvgNestConfig
     {
         public double CurveTolerance { get; set; } = 0.3;
-        public int Spacing { get; set; } = 0;
+        public double Spacing { get; set; } = 0;
         public SvgNestRotations Rotations { get; set; } = new SvgNestRotations();
         public int PopulationSize { get; set; } = 10;
         public int MutationRate { get; set; } = 10;

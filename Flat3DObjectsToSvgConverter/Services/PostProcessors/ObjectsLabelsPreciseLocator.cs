@@ -294,13 +294,12 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
                     return new RayDistance
                     {
                         RayId = j,
-                        RaySegment = new DoublePoint[] { polygonCenterPoint.ToInt(_gain), new DoublePoint(x, y).ToInt(_gain) }
+                        RaySegment = new DoublePoint[] { polygonCenterPoint.ToInt(_gain), new DoublePoint(x, y).ToInt(_gain) },                      
                     };
                 }).ToArray();
 
                 var raysSectorFirstRay = raysCount - raysCount / 2;
                 var distanceBetweenPolygons = new List<RayDistance>();
-                var rayIndex = 0;
 
                 //VisualiseRays(loops, sunRays, raysSectorFirstRay, l.LoopPath.Path.Id);
 
@@ -325,7 +324,7 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
 
                     LoopPolygon neighborPathPolygon = null;
                     double distance = sclaledWidthBetweenPathes;
-                    if (neighborsWithRayIntersections.Any())
+                    if (mainWithRayIntersection != null && neighborsWithRayIntersections.Any())
                     {
                         var neighborIntersection = neighborsWithRayIntersections
                             .Select(nri =>
@@ -337,6 +336,10 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
                             .MinBy(nd => nd.Distance);
                         distance = neighborIntersection.Distance;
                         neighborPathPolygon = neighborIntersection.Neighbor;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Did not find any intersection between main and ray {r.RayId}");
                     }
 
                     distanceBetweenPolygons.Add(new RayDistance
@@ -351,7 +354,6 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
                         Neighbor = neighborPathPolygon,
                         Distance = distance
                     });
-                    rayIndex++;
                 });
 
                 var distancesEnouphForLabel = distanceBetweenPolygons.Where(p => p.Distance >= sclaledWidthBetweenPathes).OrderBy(p => p.RayId).ToList();

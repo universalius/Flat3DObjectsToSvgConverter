@@ -1,8 +1,5 @@
-﻿using Flat3DObjectsToSvgConverter.Helpers;
-using Flat3DObjectsToSvgConverter.Services;
-using Flat3DObjectsToSvgConverter.Services.CleanLoops;
-using Flat3DObjectsToSvgConverter.Services.Parse3dObjects;
-using SvgLib;
+﻿using Flat3DObjectsToSvgConverter.Models;
+using Microsoft.Extensions.Options;
 
 namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
 {
@@ -12,16 +9,19 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
         private readonly LoopsColorDivider _loopsColorDivider;
         private readonly LoopsTabsGenerator _loopsTabsGenerator;
         private readonly MergeLabelsWithTabsSvg _mergeLabelsWithTabsSvg;
+        private readonly FeaturesSettings _features;
 
         public PostProccessors(ObjectsLabelsPreciseLocator objectsLabelsPreciseLocator,
             LoopsColorDivider loopsColorDivider,
             LoopsTabsGenerator loopsTabsGenerator,
-            MergeLabelsWithTabsSvg mergeLabelsWithTabsSvg)
+            MergeLabelsWithTabsSvg mergeLabelsWithTabsSvg,
+            IOptions<FeaturesSettings> options)
         {
             _loopsColorDivider = loopsColorDivider;
             _objectsLabelsPreciseLocator = objectsLabelsPreciseLocator;
             _loopsTabsGenerator = loopsTabsGenerator;
             _mergeLabelsWithTabsSvg = mergeLabelsWithTabsSvg;
+            _features = options.Value;
         }
 
         public async Task Run(string compactedSvg)
@@ -34,9 +34,11 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
 
             var labelsSvg = await _objectsLabelsPreciseLocator.PlaceLabels(coloredSvg);
 
-            var tabsSvg = await _loopsTabsGenerator.CutLoopsToMakeTabs(coloredSvg);
-
-            _mergeLabelsWithTabsSvg.Merge(labelsSvg, tabsSvg);
+            if (_features.MakeTabs)
+            {
+                var tabsSvg = await _loopsTabsGenerator.CutLoopsToMakeTabs(coloredSvg);
+                _mergeLabelsWithTabsSvg.Merge(labelsSvg, tabsSvg);
+            }
         }
     }
 }

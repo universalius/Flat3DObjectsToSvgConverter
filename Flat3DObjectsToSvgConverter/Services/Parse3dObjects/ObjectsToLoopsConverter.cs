@@ -10,11 +10,13 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
     {
         private readonly IOFileService _file;
         private readonly string _fileName;
+        private readonly Statistics _statistics;
 
-        public ObjectsToLoopsConverter(IOFileService file, IOptions<IOSettings> options)
+        public ObjectsToLoopsConverter(IOFileService file, IOptions<IOSettings> options, Statistics statistics)
         {
             _file = file;
             _fileName = options.Value.ObjFileName;
+            _statistics = statistics;
         }
 
         public async Task<List<MeshObjects>> Convert()
@@ -71,9 +73,13 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
 
             watch.Stop();
 
-            var resultCurvesCount = meshesObjects.SelectMany(mo => mo.Objects.Select(o => o.Loops.Count())).Sum();
-            Console.WriteLine($"Finished parsing, processed {meshesObjects.Count()} meshes, generated {resultCurvesCount} curves, " +
-                $"took - {watch.ElapsedMilliseconds / 1000.0} sec");
+            var objects = meshesObjects.SelectMany(mo => mo.Objects).ToArray();
+            var resultCurvesCount = objects.Select(o => o.Loops.Count()).Sum();
+
+            _statistics.ObjectsCount = objects.Length;
+
+            Console.WriteLine($"Finished parsing, processed {meshesObjects.Count()} meshes, received {objects.Length} objects," +
+                $" generated {resultCurvesCount} curves. Took - {watch.ElapsedMilliseconds / 1000.0} sec");
             Console.WriteLine();
 
             return meshesObjects;
