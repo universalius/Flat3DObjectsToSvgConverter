@@ -9,18 +9,21 @@ namespace Flat3DObjectsToSvgConverter.Services.CleanLoops
         private readonly ObjectLoopsPointsReducer _objectLoopsPointsReducer;
         private readonly ObjectLoopsTinyGapsRemover _objectLoopsTinyGapsRemover;
         private readonly ObjectLoopsSlotsReducer _objectLoopsSlotsReducer;
+        private readonly ObjectLoopsGearsCutter _objectLoopsGearsCutter;
         private readonly SlotsSettings _slotsSettings;
 
         public ObjectLoopsCleaner(ObjectLoopsAlligner objectLoopsAlligner,
             ObjectLoopsPointsReducer objectLoopsPointsReducer,
             ObjectLoopsTinyGapsRemover objectLoopsTinyGapsRemover,
             ObjectLoopsSlotsReducer objectLoopsSlotsReducer,
+            ObjectLoopsGearsCutter objectLoopsGearsCutter,
             IOptions<SlotsSettings> options)
         {
             _objectLoopsAlligner = objectLoopsAlligner;
             _objectLoopsPointsReducer = objectLoopsPointsReducer;
             _objectLoopsTinyGapsRemover = objectLoopsTinyGapsRemover;
             _objectLoopsSlotsReducer = objectLoopsSlotsReducer;
+            _objectLoopsGearsCutter = objectLoopsGearsCutter;
             _slotsSettings = options.Value;
         }
 
@@ -33,6 +36,7 @@ namespace Flat3DObjectsToSvgConverter.Services.CleanLoops
             {
                 _objectLoopsSlotsReducer.CloseSlots(meshes);
             }
+            _objectLoopsGearsCutter.CutTeeth(meshes);
         }
     }
 }

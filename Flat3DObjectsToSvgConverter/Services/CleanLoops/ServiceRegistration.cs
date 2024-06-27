@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
 
 namespace Flat3DObjectsToSvgConverter.Services.CleanLoops;
 
@@ -12,6 +11,7 @@ public static class ServiceRegistration
             .AddSingleton<ObjectLoopsPointsReducer>()
             .AddSingleton<ObjectLoopsTinyGapsRemover>()
             .AddSingleton<ObjectLoopsSlotsReducer>()
+            .AddSingleton<ObjectLoopsGearsCutter>()
             .AddSingleton<ObjectLoopsCleaner>();
 
         return services;
