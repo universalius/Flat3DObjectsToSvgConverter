@@ -32,7 +32,9 @@ namespace SvgNest.Utils
             return 0.5 * area;
         }
 
-        // return true if point is in the polygon, false if outside, and null if exactly on a point or edge
+        /// <summary>
+        /// Return true if point is in the polygon, false if outside, and null if exactly on a point or edge
+        /// </summary>
         public static bool? PointInPolygon(DoublePoint point, DoublePoint[] polygon)
         {
             if (polygon == null || polygon.Length < 3)

@@ -84,8 +84,8 @@ namespace Flat3DObjectsToSvgConverter.Services
 
                     var closingSegment = new Segment3d(neighborPoints[0], neighborPoints[1]).Scale(0.9);
 
-                    var a = GeometryUtil.PointInPolygon(closingSegment.P1.ToDoublePoint(), doublePoints) ?? false;
-                    var a1 = GeometryUtil.PointInPolygon(closingSegment.P2.ToDoublePoint(), doublePoints) ?? false;
+                    var a = GeometryUtil.PointInPolygon(closingSegment.P1.ToDoublePoint(), doublePoints) ?? true;
+                    var a1 = GeometryUtil.PointInPolygon(closingSegment.P2.ToDoublePoint(), doublePoints) ?? true;
                     return segment.Length <= 10 && vectorsFacingOppositeDirection && !(a || a1);
                 }).ToList();
 

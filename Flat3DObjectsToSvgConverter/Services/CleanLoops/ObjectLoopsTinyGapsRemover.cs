@@ -28,10 +28,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                             null;
                     }).Where(l => l != null).ToList();
 
-                    //var nextSegmentIndex = 1;
-                    //var gapsSegments = new List<List<Segment3d>>();
                     var segmentsCount = segments.Count;
-
                     var gapsSegments = segments.Select(s =>
                     {
                         if (s.Length <= 0.5)
@@ -47,10 +44,12 @@ namespace Flat3DObjectsToSvgConverter.Services
                             var secondAngle = rightSegment.AngleToDeg(s);
                             if (IsOrtogonal(firstAngle) && IsOrtogonal(secondAngle))
                             {
-                                return new List<Segment3d>
+                                var vectorsFacingOppositeDirection = leftSegment.ToVector.Dot(rightSegment.ToVector) < 0;
+
+                                return vectorsFacingOppositeDirection ? new List<Segment3d>
                                 {
                                     leftSegment, s, rightSegment
-                                };
+                                } : null;
                             }
 
                             return null;
@@ -58,33 +57,6 @@ namespace Flat3DObjectsToSvgConverter.Services
 
                         return null;
                     }).Where(s => s != null).ToList();
-
-                    //                for (int k = 0; k < segments.Count(); k++)
-                    //                {
-                    //                    if (k + 3 > segmentsCount)
-                    //                    {
-                    //                        break;
-                    //                    }
-
-                    //                    var firstSegment = segments[k];
-                    //                    var secondSegment = segments[k + 1];
-                    //                    var thirdSegment = segments[k + 2];
-
-                    //                    var nextSegment = segments[nextSegmentIndex];
-
-                    //                    var firstAngle = firstSegment.AngleToDeg(secondSegment);
-                    //                    var secondAngle = secondSegment.AngleToDeg(thirdSegment);
-                    //                    if (IsOrtogonal(firstAngle) && IsOrtogonal(secondAngle) && secondSegment.Length <= 0.5)
-                    //                    {
-                    //                        gapsSegments.Add(
-                    //                            new List<Segment3d>
-                    //                            {
-                    //                                firstSegment, secondSegment, thirdSegment
-                    //});
-                    //                    }
-
-                    //                    k++;
-                    //                }
 
                     gapsSegments.ForEach(gs =>
                     {
@@ -131,6 +103,5 @@ namespace Flat3DObjectsToSvgConverter.Services
         {
             return (angle > 89 && angle <= 90) || (angle >= 0 && angle <= 1);
         }
-
     }
 }
