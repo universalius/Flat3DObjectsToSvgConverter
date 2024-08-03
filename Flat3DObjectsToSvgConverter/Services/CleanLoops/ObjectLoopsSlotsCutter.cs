@@ -8,9 +8,9 @@ using System.Drawing;
 
 namespace Flat3DObjectsToSvgConverter.Services
 {
-    public class ObjectLoopsSlotsReducer
+    public class ObjectLoopsSlotsCutter
     {
-        public ObjectLoopsSlotsReducer() { }
+        public ObjectLoopsSlotsCutter() { }
 
         public void CloseSlots(IEnumerable<MeshObjects> meshes)
         {

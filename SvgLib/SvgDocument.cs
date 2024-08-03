@@ -40,13 +40,13 @@ namespace SvgLib
         public double Width
         {
             get => double.Parse(ReplaceUnits("width"));
-            set => Element.SetAttribute("width", value);
+            set => Element.SetAttribute("width", $"{value}{Units}");
         }
 
         public double Height
         {
             get => double.Parse(ReplaceUnits("height"));
-            set => Element.SetAttribute("height", value);
+            set => Element.SetAttribute("height", $"{value}{Units}");
         }
 
         public SvgViewBox ViewBox
@@ -54,6 +54,8 @@ namespace SvgLib
             get => Element.GetAttribute("viewBox", new SvgViewBox());
             set => Element.SetAttribute("viewBox", value.ToString());
         }
+
+        public string Units { get; set; }
 
         private string ReplaceUnits(string attribute)
         {

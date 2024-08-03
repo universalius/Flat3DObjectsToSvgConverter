@@ -133,6 +133,14 @@ namespace SvgLib
             SetStyleAttribute(styles);
         }
 
+        public void SetStyle(IEnumerable<(string Name, string Value)> attributes)
+        {
+            attributes.ToList().ForEach(a =>
+            {
+                SetStyle(a.Name, a.Value);
+            });
+        }
+
         private HashSet<string> ParseClassAttribute()
             => new HashSet<string>(Element.GetAttribute("class").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
 

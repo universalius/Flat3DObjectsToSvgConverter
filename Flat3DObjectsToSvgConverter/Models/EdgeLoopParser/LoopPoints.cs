@@ -10,5 +10,7 @@ namespace Flat3DObjectsToSvgConverter.Models.EdgeLoopParser
     public class LoopPoints
     {
         public IEnumerable<PointF> Points { get; set; }
+
+        public bool IsResized { get; set; }
     }
 }

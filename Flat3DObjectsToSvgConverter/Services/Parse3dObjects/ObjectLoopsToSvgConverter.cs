@@ -1,6 +1,8 @@
-﻿using Flat3DObjectsToSvgConverter.Models;
+﻿using ClipperLib;
+using Flat3DObjectsToSvgConverter.Models;
 using Microsoft.Extensions.Options;
 using ObjParser;
+using SvgLib;
 using SvgNest.Models;
 using System.Drawing;
 using System.Globalization;
@@ -20,6 +22,19 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
 
         public string Convert(IEnumerable<MeshObjects> meshes)
         {
+            var docSize = _svgNestConfig.Document;
+            var document = SvgDocument.Create();
+            document.Units = "mm";
+            document.Width = docSize.Width;
+            document.Height = docSize.Height;
+            document.ViewBox = new SvgViewBox
+            {
+                Left = 0,
+                Top = 0,
+                Width = docSize.Width,
+                Height = docSize.Height
+            };
+
             var objectsSizes = meshes.SelectMany(m =>
             {
                 return m.Objects.Select(o =>
@@ -44,62 +59,88 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
             {
                 var distanceBetween = 10;
                 var shiftByX = i == 0 ? 0 : objectsSizes.Take(i).Select(os => os.Size.XSize + distanceBetween).Sum();
+                var point = new PointF((float)o.Size.XMin, (float)o.Size.YMax);
                 return new
                 {
                     Object = o,
                     //o.Size,
-                    Transform = GetTransformToXYZero(new PointF((float)o.Size.XMin, (float)o.Size.YMax), shiftByX)
+                    Transform = new DoublePoint(-o.Size.XMin + shiftByX, -o.Size.YMax) //GetTransformToXYZero(, shiftByX)
                 };
             }).ToList();
 
-            var svgGroups = objectsTransorms.Select((ot, i) =>
+            //var svgGroups = 
+            var i = 0;
+            objectsTransorms.ForEach(ot =>
+        {
+            var loops = ot.Object.Loops.ToList();
+            var meshName = ot.Object.MeshName;
+            //var size = ot.Size;
+
+            string mainPathId = null;
+            int j = 0;
+            //var pathes = 
+            loops.ForEach(l =>
             {
-                var loops = ot.Object.Loops;
-                var meshName = ot.Object.MeshName;
-                //var size = ot.Size;
+                var group = document.AddGroup();
+                group.Id = $"{meshName}-{i}";
+                group.Transform = $"translate({ot.Transform})";
 
-                string mainPathId = null;
-                var pathes = loops.Select((l, j) =>
+                var pathCoords = string.Join(" ",
+                    l.Points.Select(p => $"{p.X.ToString(new CultureInfo("en-US", false))} {p.Y.ToString(new CultureInfo("en-US", false))}")
+                    .ToList());
+
+                var pathId = $"{meshName}-{i}-{j}";
+                var @class = string.Empty;
+                string dataParentId = string.Empty;
+                if (j == 0)
                 {
-                    var pathCoords = string.Join(" ",
-                        l.Points.Select(p => $"{p.X.ToString(new CultureInfo("en-US", false))} {p.Y.ToString(new CultureInfo("en-US", false))}")
-                        .ToList());
+                    mainPathId = $"{pathId}";
+                    @class = "main";
+                }
+                else
+                {
+                    dataParentId = mainPathId; //$"data-parentId=\"{mainPathId}\"";
+                }
 
-                    var pathId = $"{meshName}-{i}-{j}";
-                    var @class = string.Empty;
-                    string dataParentId = string.Empty;
-                    if (j == 0)
-                    {
-                        mainPathId = $"{pathId}";
-                        @class = "main";
-                    }
-                    else
-                    {
-                        dataParentId = $"data-parentId=\"{mainPathId}\"";
-                    }
+                var path = group.AddPath();
+                path.Id = pathId;
+                path.D = $"M {pathCoords} z";
 
-                    return $@"<path id=""{pathId}"" d=""M {pathCoords} z"" style=""fill:none;stroke-width:0.264583;stroke:red;"" class=""{@class}"" {dataParentId} />";
-                }).ToList();
+                path.AddClass(@class);
+                path.SetStyle(new[]
+                {
+                        ("fill", "none"),
+                        ("stroke-width", "0.264583"),
+                        ("stroke", "red"),
+                });
 
-                var pathesString = string.Join("\r\n", pathes);
-                return @$"<g id=""{meshName}-{i}"" {ot.Transform}>
-                            {pathesString}
-                          </g>";
+                if (!string.IsNullOrEmpty(dataParentId))
+                    path.AddData("parentId", dataParentId);
 
-            }).ToList();
+                j++;
 
-            var svgGroupsString = string.Join("\r\n", svgGroups);
+                //return $@"<path id=""{pathId}"" d=""M {pathCoords} z"" style=""fill:none;stroke-width:0.264583;stroke:red;"" class=""{@class}"" {dataParentId} />";
+            });//.ToList();
 
-            var docSize = _svgNestConfig.Document;
-            var svg = @$"
-            <svg xmlns=""http://www.w3.org/2000/svg"" 
-                width=""{docSize.Width}mm"" 
-                height=""{docSize.Height}mm"" 
-                viewBox=""0 0 {docSize.Width} {docSize.Height}"">
-              {svgGroupsString}
-            </svg>
-            ";
+            //var pathesString = string.Join("\r\n", pathes);
+            //return @$"<g id=""{meshName}-{i}"" {ot.Transform}>
+            //            {pathesString}
+            //          </g>";
+            i++;
+        });//.ToList();
 
+            //var svgGroupsString = string.Join("\r\n", svgGroups);
+
+            //var svg = @$"
+            //<svg xmlns=""http://www.w3.org/2000/svg"" 
+            //    width=""{docSize.Width}mm"" 
+            //    height=""{docSize.Height}mm"" 
+            //    viewBox=""0 0 {docSize.Width} {docSize.Height}"">
+            //  {svgGroupsString}
+            //</svg>
+            //";
+
+            var svg = document._document.OuterXml;
             _file.SaveSvg("parsed", svg);
             _file.CopyObjFile();
 
