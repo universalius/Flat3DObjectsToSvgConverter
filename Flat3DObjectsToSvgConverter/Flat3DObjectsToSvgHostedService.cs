@@ -28,7 +28,7 @@ public class Flat3DObjectsToSvgHostedService : IHostedService
     {
         var svg = await _3DObjectsParser.Transform3DObjectsTo2DSvgLoops();
 
-        Console.ReadKey();
+        //Console.ReadKey();
 
         var compactedSvg = await _svgCompactingService.Compact(svg);
 

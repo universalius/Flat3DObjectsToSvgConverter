@@ -33,7 +33,7 @@ namespace Flat3DObjectsToSvgConverter.Services.CleanLoops
         public void CleanLoops(IEnumerable<MeshObjects> meshes)
         {
             _objectLoopsPointsReducer.RemoveRedundantPoints(meshes);
-            _objectLoopsSlotSizeReducer.ChangeSlotsSize(meshes);
+            //_objectLoopsSlotSizeReducer.ChangeSlotsSize(meshes);
             _objectLoopsAlligner.MakeLoopsPerpendicularToAxis(meshes);
             _objectLoopsTinyGapsRemover.ReplaceGapsWithLine(meshes);
             if (_slotsSettings.CloseSlots)
