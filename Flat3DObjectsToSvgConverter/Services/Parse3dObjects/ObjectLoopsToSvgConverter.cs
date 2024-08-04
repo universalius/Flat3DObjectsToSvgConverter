@@ -59,86 +59,66 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
             {
                 var distanceBetween = 10;
                 var shiftByX = i == 0 ? 0 : objectsSizes.Take(i).Select(os => os.Size.XSize + distanceBetween).Sum();
-                var point = new PointF((float)o.Size.XMin, (float)o.Size.YMax);
                 return new
                 {
                     Object = o,
-                    //o.Size,
-                    Transform = new DoublePoint(-o.Size.XMin + shiftByX, -o.Size.YMax) //GetTransformToXYZero(, shiftByX)
+                    Transform = new DoublePoint(-o.Size.XMin + shiftByX, -o.Size.YMax)
                 };
             }).ToList();
 
-            //var svgGroups = 
             var i = 0;
             objectsTransorms.ForEach(ot =>
-        {
-            var loops = ot.Object.Loops.ToList();
-            var meshName = ot.Object.MeshName;
-            //var size = ot.Size;
-
-            string mainPathId = null;
-            int j = 0;
-            //var pathes = 
-            loops.ForEach(l =>
             {
-                var group = document.AddGroup();
-                group.Id = $"{meshName}-{i}";
-                group.Transform = $"translate({ot.Transform})";
+                var loops = ot.Object.Loops.ToList();
+                var meshName = ot.Object.MeshName;
 
-                var pathCoords = string.Join(" ",
-                    l.Points.Select(p => $"{p.X.ToString(new CultureInfo("en-US", false))} {p.Y.ToString(new CultureInfo("en-US", false))}")
-                    .ToList());
-
-                var pathId = $"{meshName}-{i}-{j}";
-                var @class = string.Empty;
-                string dataParentId = string.Empty;
-                if (j == 0)
+                string mainPathId = null;
+                int j = 0;
+                loops.ForEach(l =>
                 {
-                    mainPathId = $"{pathId}";
-                    @class = "main";
-                }
-                else
-                {
-                    dataParentId = mainPathId; //$"data-parentId=\"{mainPathId}\"";
-                }
+                    var group = document.AddGroup();
+                    group.Id = $"{meshName}-{i}";
+                    group.Transform = $"translate({ot.Transform})";
 
-                var path = group.AddPath();
-                path.Id = pathId;
-                path.D = $"M {pathCoords} z";
+                    var pathCoords = string.Join(" ",
+                        l.Points.Select(p => $"{p.X.ToString(new CultureInfo("en-US", false))} {p.Y.ToString(new CultureInfo("en-US", false))}")
+                        .ToList());
 
-                path.AddClass(@class);
-                path.SetStyle(new[]
-                {
-                        ("fill", "none"),
-                        ("stroke-width", "0.264583"),
-                        ("stroke", "red"),
+                    var pathId = $"{meshName}-{i}-{j}";
+                    var @class = string.Empty;
+                    string dataParentId = string.Empty;
+                    if (j == 0)
+                    {
+                        mainPathId = $"{pathId}";
+                        @class = "main";
+                    }
+                    else
+                    {
+                        dataParentId = mainPathId;
+                    }
+
+                    var path = group.AddPath();
+                    path.Id = pathId;
+                    path.D = $"M {pathCoords} z";
+
+                    path.AddClass(@class);
+
+                    var strokeColor = l.IsResized ? "blue" : "red";
+                    path.SetStyle(new[]
+                    {
+                            ("fill", "none"),
+                            ("stroke-width", "0.264583"),
+                            ("stroke", strokeColor),
+                    });
+
+                    if (!string.IsNullOrEmpty(dataParentId))
+                        path.AddData("parentId", dataParentId);
+
+                    j++;
                 });
 
-                if (!string.IsNullOrEmpty(dataParentId))
-                    path.AddData("parentId", dataParentId);
-
-                j++;
-
-                //return $@"<path id=""{pathId}"" d=""M {pathCoords} z"" style=""fill:none;stroke-width:0.264583;stroke:red;"" class=""{@class}"" {dataParentId} />";
-            });//.ToList();
-
-            //var pathesString = string.Join("\r\n", pathes);
-            //return @$"<g id=""{meshName}-{i}"" {ot.Transform}>
-            //            {pathesString}
-            //          </g>";
-            i++;
-        });//.ToList();
-
-            //var svgGroupsString = string.Join("\r\n", svgGroups);
-
-            //var svg = @$"
-            //<svg xmlns=""http://www.w3.org/2000/svg"" 
-            //    width=""{docSize.Width}mm"" 
-            //    height=""{docSize.Height}mm"" 
-            //    viewBox=""0 0 {docSize.Width} {docSize.Height}"">
-            //  {svgGroupsString}
-            //</svg>
-            //";
+                i++;
+            });
 
             var svg = document._document.OuterXml;
             _file.SaveSvg("parsed", svg);
@@ -146,14 +126,5 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
 
             return svg;
         }
-
-        private string GetTransformToXYZero(PointF point, double shiftByX)
-        {
-            var x = (-point.X + shiftByX).ToString(new CultureInfo("en-US", false));
-            var y = (-point.Y).ToString(new CultureInfo("en-US", false));
-            var transform = $"transform=\"translate({x} {y})\"";
-            return transform;
-        }
-
     }
 }

@@ -65,41 +65,70 @@ namespace Flat3DObjectsToSvgConverter.Services.CleanLoops
 
                             if (lines.Count < 4) return;
 
-                            var segmentToResize = lines.FirstOrDefault(l => InRange(l.Length, oldSlotWidth, 0.1));
+                            var segmentsToResize = lines.Where(l => InRange(l.Length, oldSlotWidth, 0.1)).ToArray();
 
-                            if (segmentToResize == null) return;
+                            if (!segmentsToResize.Any()) return;
+
+                            var isLoopSquare = segmentsToResize.Length == lines.Count;
+                            var segmentToResize = segmentsToResize.First();
 
                             var segmentToResizeIndex = lines.IndexOf(segmentToResize);
                             var prevSegment = segmentToResizeIndex == 0 ? lines.Last() : lines[segmentToResizeIndex - 1];
                             var nextSegment = segmentToResizeIndex == lines.Count - 1 ? lines.First() : lines[segmentToResizeIndex + 1];
-
-                            var scaleToResizeSegment = newSlotWidth / oldSlotWidth;
-                            var resizedSegment = segmentToResize.Scale(scaleToResizeSegment);
-                            var shiftVector = segmentToResize.ToVector.Normalized.Mult((oldSlotWidth - newSlotWidth) / 2);
-
-                            lines[lines.IndexOf(prevSegment)] = prevSegment.Translate(shiftVector);
-                            lines[lines.IndexOf(segmentToResize)] = resizedSegment;
-                            lines[lines.IndexOf(nextSegment)] = nextSegment.Translate(shiftVector.Mult(-1));
-
+                            Segment3d lastSegment = null;
 
                             if (lines.Count == 4)
                             {
                                 var lastSegmentIndex = segmentToResizeIndex + 2;
-                                var lastSegment = lastSegmentIndex >= lines.Count ? lines.First() : lines[lastSegmentIndex];
-                                lines[lines.IndexOf(lastSegment)] = lastSegment.Scale(scaleToResizeSegment);
+                                lastSegment = lastSegmentIndex >= lines.Count ? lines.First() : lines[lastSegmentIndex];
+                            }
+
+                            var scaleToResizeSegment = newSlotWidth / oldSlotWidth;
+                            var shiftValue = (oldSlotWidth - newSlotWidth) / 2;
+
+                            var resizedSegment = segmentToResize.Scale(scaleToResizeSegment);
+                            var shiftSideVector = segmentToResize.ToVector.Normalized.Mult(shiftValue);
+
+                            if (isLoopSquare)
+                            {
+                                var prevResizedSegment = prevSegment.Scale(scaleToResizeSegment);
+                                var nextResizedSegment = nextSegment.Scale(scaleToResizeSegment);
+                                var lastResizedSegment = lastSegment.Scale(scaleToResizeSegment);
+
+                                var shiftOrtogonalSideVector = prevSegment.ToVector.Normalized.Mult(shiftValue);
+
+                                lines[lines.IndexOf(prevSegment)] = prevResizedSegment.Translate(shiftSideVector);
+                                lines[lines.IndexOf(segmentToResize)] = resizedSegment.Translate(shiftOrtogonalSideVector.Mult(-1));
+                                lines[lines.IndexOf(nextSegment)] = nextResizedSegment.Translate(shiftSideVector.Mult(-1));
+                                lines[lines.IndexOf(lastSegment)] = lastResizedSegment.Translate(shiftOrtogonalSideVector);
+                            }
+                            else
+                            {
+                                lines[lines.IndexOf(prevSegment)] = prevSegment.Translate(shiftSideVector);
+                                lines[lines.IndexOf(segmentToResize)] = resizedSegment;
+                                lines[lines.IndexOf(nextSegment)] = nextSegment.Translate(shiftSideVector.Mult(-1));
+
+                                if (lastSegment != null)
+                                {
+                                    lines[lines.IndexOf(lastSegment)] = lastSegment.Scale(scaleToResizeSegment);
+                                }
                             }
 
                             Console.WriteLine($"   Starting reduce slot for {mesh.MeshName} and hole {rectangular.Id}");
 
-                            var loop = holeLoops[rectangular.Id];
-                            var newPoints = new List<PointF>
+                            if (lines.Count == 4)
                             {
-                                lines[0].P1.ToPointF()
-                            };
+                                var loop = holeLoops[rectangular.Id];
+                                var newPoints = new List<PointF>
+                                {
+                                    lines[0].P1.ToPointF()
+                                };
 
-                            newPoints.AddRange(lines.Select((s, j) => s.P2.ToPointF()));
+                                newPoints.AddRange(lines.Select((s, j) => s.P2.ToPointF()));
 
-                            loop.Points = newPoints;
+                                loop.Points = newPoints;
+                                loop.IsResized = true;
+                            }
                         });
                     }
                 });
@@ -117,5 +146,12 @@ namespace Flat3DObjectsToSvgConverter.Services.CleanLoops
         {
             return value >= (comparedValue - tolerance) && value <= (comparedValue + tolerance);
         }
+
+        //private static Segment3d ScaleAndShiftSegment(this Segment3d segmentToResize, double scaleToResizeSegment, double shift)
+        //{
+        //    var resizedSegment = segmentToResize.Scale(scaleToResizeSegment);
+        //    var shiftVector = segmentToResize.ToVector.Normalized.Mult(shift);
+        //    return prevSegment.Translate(shiftVector)
+        //}
     }
 }

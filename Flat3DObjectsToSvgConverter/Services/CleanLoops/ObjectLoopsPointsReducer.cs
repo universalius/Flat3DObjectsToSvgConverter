@@ -75,7 +75,6 @@ namespace Flat3DObjectsToSvgConverter.Services
                                 $"for mesh {mesh.MeshName} loop {i}");
 
                             l.Points = newPoints;
-                            l.IsResized = true;
                         }
                     }
                 });
