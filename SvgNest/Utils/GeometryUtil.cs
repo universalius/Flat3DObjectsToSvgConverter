@@ -610,7 +610,7 @@ namespace SvgNest.Utils
 
         // todo: swap this for a more efficient sweep-line implementation
         // returnEdges: if set, return all edges on A that have intersections
-        private static bool Intersect(PointsWithOffset A, PointsWithOffset B)
+        public static bool Intersect(PointsWithOffset A, PointsWithOffset B)
         {
             var Aoffsetx = A.OffsetX;
             var Aoffsety = A.OffsetY;
@@ -1445,6 +1445,14 @@ namespace SvgNest.Utils
             var deltaX = B.X - A.X;
 
             return Math.Atan2(deltaY, deltaX);
+        }
+
+        public static DoublePoint GetPolygonCentroid(DoublePoint[] poly)
+        {
+            var x = poly.Sum(p => p.X) / poly.Length;
+            var y = poly.Sum(p => p.Y) / poly.Length;
+
+            return new DoublePoint(x, y);
         }
     }
 

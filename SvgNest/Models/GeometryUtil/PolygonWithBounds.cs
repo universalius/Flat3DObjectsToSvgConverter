@@ -11,6 +11,7 @@ namespace SvgNest.Models.GeometryUtil
     {
         public int Id { get; set; }
         public DoublePoint[] Points { get; set; }
+        //public DoublePoint[] Points1 { get; set; }
 
         public PolygonBounds Bounds { get; set; }
     }

@@ -12,6 +12,8 @@ namespace Flat3DObjectsToSvgConverter.Models.ObjectsLabelsPreciseLocatorAndSvgCo
         public LoopPolygon LoopPolygon { get; set; }
         public DoublePoint IntersectionPoint { get; set; }
         public DoublePoint[] IntersectionLine { get; set; }
+        public bool HasIntersection { get; set; }
+
     }
 
 }

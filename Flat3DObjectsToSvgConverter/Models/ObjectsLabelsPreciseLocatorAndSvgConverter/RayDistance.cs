@@ -15,5 +15,6 @@ namespace Flat3DObjectsToSvgConverter.Models.ObjectsLabelsPreciseLocatorAndSvgCo
         public PathIntersection Main { get; set; }
         public LoopPolygon Neighbor { get; set; }
         public double Distance { get; set; }
+        public bool HasIntersection { get; set; }
     }
 }

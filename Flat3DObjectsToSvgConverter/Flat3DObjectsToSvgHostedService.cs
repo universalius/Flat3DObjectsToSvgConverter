@@ -26,13 +26,13 @@ public class Flat3DObjectsToSvgHostedService : IHostedService
 
     public async Task StartAsync(CancellationToken stoppingToken)
     {
-        var svg = await _3DObjectsParser.Transform3DObjectsTo2DSvgLoops();
+        //var svg = await _3DObjectsParser.Transform3DObjectsTo2DSvgLoops();
 
-        //Console.ReadKey();
+        ////Console.ReadKey();
 
-        var compactedSvg = await _svgCompactingService.Compact(svg);
+        //var compactedSvg = await _svgCompactingService.Compact(svg);
 
-        await _postProccessors.Run(compactedSvg);
+        await _postProccessors.Run("");// compactedSvg);
 
         if (_statistics.ObjectsCount != _statistics.CompactedLoopsCount)
         {

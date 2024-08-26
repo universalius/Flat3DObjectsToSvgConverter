@@ -17,7 +17,7 @@ namespace Flat3DObjectsToSvgConverter.Helpers
 
         public static DoublePoint ToInt(this DoublePoint point, int scale)
         {
-            return new DoublePoint((int)point.X * scale, (int)point.Y * scale);
+            return new DoublePoint(Math.Floor(point.X * scale), Math.Floor(point.Y * scale));
         }
 
         public static DoublePoint Scale(this DoublePoint point, double scale)

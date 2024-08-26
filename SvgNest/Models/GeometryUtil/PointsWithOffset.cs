@@ -13,6 +13,13 @@ namespace SvgNest.Models.GeometryUtil
         public double OffsetX { get; set; }
         public double OffsetY { get; set; }
 
+        public PointsWithOffset() { }
+
+        public PointsWithOffset(DoublePoint[] points)
+        {
+            Points = points;
+        }
+
         public PointsWithOffset Clone()
         {
             return new PointsWithOffset

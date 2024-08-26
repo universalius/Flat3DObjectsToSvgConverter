@@ -15,5 +15,8 @@ namespace Flat3DObjectsToSvgConverter.Models.ObjectsLabelsPreciseLocatorAndSvgCo
         public DoublePoint GroupLocation { get; set; }
         public int ParentGroupId { get; set; }
         public double Width { get; set; }
+        public double ScaledWidth { get; set; }
+        public double Height { get; set; }
+        public double ScaledHeight { get; set; }
     }
 }

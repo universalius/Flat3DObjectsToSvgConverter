@@ -11,7 +11,7 @@ namespace SvgLib
 
         internal static SvgCircle Create(XmlElement parent)
         {
-            var element = parent.OwnerDocument.CreateElement("circle");
+            var element = parent.OwnerDocument.CreateElement("circle", parent.OwnerDocument.DocumentElement.NamespaceURI);
             parent.AppendChild(element);
             return new SvgCircle(element);
         }

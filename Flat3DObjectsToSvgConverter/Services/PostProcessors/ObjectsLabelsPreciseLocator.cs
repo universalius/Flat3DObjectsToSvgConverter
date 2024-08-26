@@ -9,6 +9,7 @@ using SvgNest.Models.GeometryUtil;
 using SvgNest.Utils;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Xml;
 
 namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
@@ -66,6 +67,8 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
                 }
 
                 var (lettersGroup, labelWidth) = GetLabelLetters(label, svgDocument);
+                var widthWithShift = labelWidth + 1;
+                var heightWithShift = _svgLetters.First().Height + 1;
                 return new LoopPolygon
                 {
                     LoopPath = new LoopPath
@@ -78,7 +81,10 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
                     {
                         Label = label,
                         Group = lettersGroup,
-                        Width = labelWidth,
+                        Height = heightWithShift,
+                        ScaledHeight = heightWithShift * _gain,
+                        Width = widthWithShift,
+                        ScaledWidth = widthWithShift * _gain,
                         ParentGroupId = i
                     },
                 };
@@ -97,13 +103,24 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
                 if (coords != null)
                 {
                     var xShift = coords.X - l.LabelLetters.Width * _labelShiftGain;
-                    var yShift = coords.Y - _svgLetters.First().Height * _labelShiftGain;
+                    var yShift = coords.Y - l.LabelLetters.Height * _labelShiftGain;
                     l.LabelLetters.Group.Transform = $"translate({xShift.ToString(culture)} {yShift.ToString(culture)})";
                     l.LabelLetters.Group.AddClass("labels");
                     l.LabelLetters.Group.AddData("mainId", l.LoopPath.Path.Id);
 
                     group.Element.AppendChild(l.LabelLetters.Group.Element);
                 }
+
+                //var circleGroup = group.AddGroup();
+                //l.Polygon.Points1.ToList().ForEach(p =>
+                //{
+                //    var circle = circleGroup.AddCircle();
+                //    circle.CX = p.X / 100000000.0;
+                //    circle.CY = p.Y / 100000000.0;
+                //    circle.R = 0.5;
+                //    circle.Stroke = "black";
+                //    circle.StrokeWidth = 0.1;
+                //});
             });
 
             watch.Stop();
@@ -202,7 +219,7 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
 
                     if (i != 0)
                     {
-                        path.Transform = $"translate({shiftByX.ToString(culture)})";
+                        path.Transform = $"translate({shiftByX})";
                     }
 
                     shiftByX += letter.Width;
@@ -214,62 +231,43 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
             return (group, labelWidth);
         }
 
-        private DoublePoint GetPolygonCenter(LoopPolygon loop)
-        {
-            var bounds = loop.Polygon.Bounds;
-            var initialCenter = new DoublePoint(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
-            if (GeometryUtil.PointInPolygon(initialCenter, loop.Polygon.Points) ?? false)
-            {
-                return initialCenter;
-            }
-
-            var spaceBetweenPathes = loop.LabelLetters.Width * 1.2;
-            var axis = new DoublePoint[2] {
-                new DoublePoint(bounds.X - spaceBetweenPathes / 2, initialCenter.Y).ToInt(_gain),
-                new DoublePoint(bounds.X + bounds.Width + spaceBetweenPathes / 2, initialCenter.Y).ToInt(_gain)
-            };
-            var intersections = loop.Polygon.Lines
-                .Select(l => GeometryUtil.LineIntersect(axis[0], axis[1], l[0], l[1]))
-                .Where(intersection => intersection != null).ToArray();
-
-            if (intersections.Count() == 1)
-            {
-                throw new Exception("Found only one point for center axis intercection");
-            }
-
-            var closestPoints = intersections.OrderBy(i => i.X).Take(2).Select(i => i.Scale(1.0 / _gain)).ToArray();
-            var newCenter = new DoublePoint(closestPoints[0].X + (closestPoints[1].X - closestPoints[0].X) / 2, initialCenter.Y);
-            return newCenter;
-        }
-
         private IEnumerable<LoopPolygon> CalculateLabelCoords(List<LoopPolygon> loops)
         {
             loops.ForEach(l =>
             {
-                var points = _svgParser.Polygonify(l.LoopPath.Path.Element);
+                var pol = _svgParser.Polygonify(l.LoopPath.Path.Element);
+                var points = pol.Select(p => new DoublePoint(p.X, p.Y).ToInt(_gain)).ToArray();
                 var bounds = GeometryUtil.GetPolygonBounds(points);
 
                 l.Polygon = new PathPolygon
                 {
                     Points = points,
+                    Points1 = pol.Select(p => new DoublePoint(p.X, p.Y).ToInt(100000000)).ToArray(),
                     Bounds = bounds,
                     Lines = points.Select((p, i) =>
                     {
-                        if (i == points.Length - 1)
-                            return new DoublePoint[2] { new DoublePoint(p.X, p.Y).ToInt(_gain), new DoublePoint(points[0].X, points[0].Y).ToInt(_gain) };
+                        //if (i == points.Length - 1)
+                        //    return new DoublePoint[2] { new DoublePoint(p.X, p.Y).ToInt(_gain), new DoublePoint(points[0].X, points[0].Y).ToInt(_gain) };
 
-                        return new DoublePoint[2] { new DoublePoint(p.X, p.Y).ToInt(_gain), new DoublePoint(points[i + 1].X, points[i + 1].Y).ToInt(_gain) };
+                        //return new DoublePoint[2] { new DoublePoint(p.X, p.Y).ToInt(_gain), new DoublePoint(points[i + 1].X, points[i + 1].Y).ToInt(_gain) };
+
+
+                        if (i == points.Length - 1)
+                            return new DoublePoint[2] { p, points[0] };
+
+                        return new DoublePoint[2] { p, points[i + 1] };
+
 
                     }).ToArray(),
                 };
-                l.Polygon.Center = GetPolygonCenter(l);
+                l.Polygon.Center = GeometryUtil.GetPolygonCentroid(l.Polygon.Points); //GetPolygonCenter(l);
 
                 l.LoopPath.ScaledPath = $"M {string.Join(" ", l.Polygon.Lines.Select(l => $"{l[0].X}.0 {l[0].Y}.0"))} z";
             });
 
             loops.ForEach(l =>
             {
-                var spaceBetweenLoops = l.LabelLetters.Width * 1.2;
+                var spaceBetweenLoops = l.LabelLetters.ScaledWidth * 1.2;
                 var extendedBounds = new PolygonBounds
                 {
                     X = l.Polygon.Bounds.X - spaceBetweenLoops,
@@ -294,16 +292,13 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
                     return new RayDistance
                     {
                         RayId = j,
-                        RaySegment = new DoublePoint[] { polygonCenterPoint.ToInt(_gain), new DoublePoint(x, y).ToInt(_gain) },                      
+                        RaySegment = new DoublePoint[] { polygonCenterPoint, new DoublePoint(x, y) },
                     };
                 }).ToArray();
 
                 var raysSectorFirstRay = raysCount - raysCount / 2;
                 var distanceBetweenPolygons = new List<RayDistance>();
 
-                //VisualiseRays(loops, sunRays, raysSectorFirstRay, l.LoopPath.Path.Id);
-
-                var sclaledWidthBetweenPathes = spaceBetweenLoops * _gain;
                 sunRays.Skip(raysSectorFirstRay).Take(90).ToList().ForEach(r =>
                 {
                     var mainWithRayIntersection = l.Polygon.Lines
@@ -311,36 +306,55 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
                         .Where(intersection => intersection != null)
                         .MinBy(p => p.X);
 
+                    if (mainWithRayIntersection == null)
+                    {
+                        return;
+                    }
+
                     var neighborsWithRayIntersections = l.Neighbors.Select(n =>
                     {
-                        var intersections = n.Polygon.Lines.Select(l => GeometryUtil.LineIntersect(r.RaySegment[0], r.RaySegment[1], l[0], l[1]))
-                            .Where(intersection => intersection != null).ToArray();
+                        var zeroPoint = mainWithRayIntersection;
+                        var x = zeroPoint.X - l.LabelLetters.ScaledWidth * _labelShiftGain;
+                        var y = zeroPoint.Y - l.LabelLetters.ScaledHeight * _labelShiftGain;
+                        var labelContainerPolygon = new PointsWithOffset(new DoublePoint[] {
+                                    zeroPoint,
+                                    new DoublePoint(x , zeroPoint.Y),
+                                    new DoublePoint(x, y),
+                                    new DoublePoint(zeroPoint.X, y)
+                                });
+                        var labelNotFitInGap = GeometryUtil.Intersect(labelContainerPolygon, new PointsWithOffset(n.Polygon.Points));
+
+                        //var intersections = n.Polygon.Lines.Select(l => GeometryUtil.LineIntersect(r.RaySegment[0], r.RaySegment[1], l[0], l[1]))
+                        //    .Where(intersection => intersection != null).ToArray();
                         return new PathIntersection
                         {
                             LoopPolygon = n,
-                            IntersectionPoint = intersections.Any() ? intersections.MinBy(p => p.X) : null
+                            HasIntersection = labelNotFitInGap
+                            //IntersectionPoint = intersections.Any() ? intersections.MinBy(p => p.X) : null
                         };
-                    }).Where(pi => pi.IntersectionPoint != null).ToArray();
+                    })
+                    //.Where(pi => pi.IntersectionPoint != null).ToArray();
+                    .Where(pi => pi.HasIntersection).ToArray();
 
-                    LoopPolygon neighborPathPolygon = null;
-                    double distance = sclaledWidthBetweenPathes;
-                    if (mainWithRayIntersection != null && neighborsWithRayIntersections.Any())
-                    {
-                        var neighborIntersection = neighborsWithRayIntersections
-                            .Select(nri =>
-                            new
-                            {
-                                Distance = GeometryUtil.GetSegmentLength(mainWithRayIntersection, nri.IntersectionPoint),
-                                Neighbor = nri.LoopPolygon
-                            })
-                            .MinBy(nd => nd.Distance);
-                        distance = neighborIntersection.Distance;
-                        neighborPathPolygon = neighborIntersection.Neighbor;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Did not find any intersection between main and ray {r.RayId}");
-                    }
+                    //LoopPolygon neighborPathPolygon = null;
+                    //double distance = spaceBetweenLoops;
+                    //if (mainWithRayIntersection != null && neighborsWithRayIntersections.Any())
+                    //{
+                    //    var neighborIntersection = neighborsWithRayIntersections
+                    //        .Select(nri =>
+                    //        new
+                    //        {
+                    //            Distance = GeometryUtil.GetSegmentLength(mainWithRayIntersection, nri.IntersectionPoint),
+                    //            Neighbor = nri.LoopPolygon
+                    //        })
+                    //        .MinBy(nd => nd.Distance);
+                    //    distance = neighborIntersection.Distance;
+                    //    neighborPathPolygon = neighborIntersection.Neighbor;
+                    //}
+                    ////else
+                    ////{
+                    ////    Console.WriteLine($"Did not find any intersection between main and ray {r.RayId}");
+                    ////}
 
                     distanceBetweenPolygons.Add(new RayDistance
                     {
@@ -351,21 +365,22 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
                             LoopPolygon = l,
                             IntersectionPoint = mainWithRayIntersection
                         },
-                        Neighbor = neighborPathPolygon,
-                        Distance = distance
+                        HasIntersection = neighborsWithRayIntersections.Any()
+                        //Neighbor = neighborPathPolygon,
+                        //Distance = distance
                     });
                 });
 
-                var distancesEnouphForLabel = distanceBetweenPolygons.Where(p => p.Distance >= sclaledWidthBetweenPathes).OrderBy(p => p.RayId).ToList();
+                //var distancesEnouphForLabel = distanceBetweenPolygons.Where(p => p.Distance >= spaceBetweenLoops).OrderBy(p => p.RayId).ToList();
+                var distancesEnouphForLabel = distanceBetweenPolygons.Where(p => !p.HasIntersection).OrderBy(p => p.RayId).ToList();
 
                 if (distancesEnouphForLabel.Any())
                 {
-                    var targetRayId = raysSectorFirstRay + 90 / 2;
-
                     var closedSlotSegments = l.LoopPath.SiblingPaths.Select(p => _svgParser.Polygonify(p.Element))
                         .Select(points => new Segment3d(points[0].ToPoint3d(_gain), points[1].ToPoint3d(_gain)));
 
-                    var targetRays = distancesEnouphForLabel.Where(rd => rd.RayId >= targetRayId);
+                    var targetRayId = raysSectorFirstRay + 90 / 2;
+                    var targetRays = distancesEnouphForLabel.Where(rd => rd.RayId >= targetRayId).ToArray();
 
                     if (closedSlotSegments.Any())
                     {
@@ -374,22 +389,52 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
                             var segment1 = new Segment3d(rd.RaySegment[0].ToPoint3d(), rd.RaySegment[1].ToPoint3d());
                             var isRayHitsClosedSlotSegment = closedSlotSegments.Any(s => s.IntersectionWith(segment1) != null);
                             return !isRayHitsClosedSlotSegment;
-                        });
+                        }).ToArray();
                     };
 
                     targetRays = targetRays.OrderBy(rd => rd.RayId).ToArray();
 
                     DoublePoint rayIntersection;
+                    var a = l.LoopPath.Path.Id == "74_bearing-34-0";
+
+
+                    VisualiseRays(loops, targetRays, l.LoopPath.Path.Id);
 
                     if (!targetRays.Any())
                     {
                         targetRays = distancesEnouphForLabel.Where(rd => rd.RayId <= targetRayId)
                             .OrderBy(rd => rd.RayId).ToArray();
+
                         var targetRay = targetRays.Last();
                         rayIntersection = targetRay.Main.IntersectionPoint;
                     }
                     else
                     {
+                        //var targetRay = targetRays.FirstOrDefault(rd =>
+                        //{
+                        //    if (rd.Neighbor != null)
+                        //    {
+                        //        var zeroPoint = rd.Main.IntersectionPoint;
+                        //        var x = zeroPoint.X - l.LabelLetters.ScaledWidth * _labelShiftGain;
+                        //        var y = zeroPoint.Y - l.LabelLetters.ScaledHeight * _labelShiftGain;
+                        //        var labelContainerPolygon = new PointsWithOffset(new DoublePoint[] {
+                        //            zeroPoint,
+                        //            new DoublePoint(x , zeroPoint.Y),
+                        //            new DoublePoint(x, y),
+                        //            new DoublePoint(zeroPoint.X, y)
+                        //        });
+                        //        var labelFitInGap = !GeometryUtil.Intersect(labelContainerPolygon, new PointsWithOffset(rd.Neighbor.Polygon.Points));
+                        //        return labelFitInGap;
+                        //    }
+
+                        //    return true;
+                        //});
+
+                        //if (targetRay == null)
+                        //{
+                        //    var c = 0;
+                        //}
+
                         var targetRay = targetRays.First();
                         rayIntersection = targetRay.Main.IntersectionPoint;
                     }
@@ -408,7 +453,7 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
             return loops;
         }
 
-        private void VisualiseRays(List<LoopPolygon> loops, RayDistance[] sunRays, int raysSectorFirstRay, string name)
+        private void VisualiseRays(List<LoopPolygon> loops, RayDistance[] sunRays, string name)
         {
             var svgTest = SvgDocument.Create();
             svgTest.Width = 700;
@@ -419,30 +464,56 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
                 Width = 700// gain,
             };
 
+            var scaledGroup = svgTest.AddGroup();
+            scaledGroup.StrokeWidth = 0.3 * _gain;
+            scaledGroup.Transform = $"translate(0 0) scale({1.0 / _gain})";
+
             loops.ForEach(e =>
             {
-                var path = svgTest.AddPath();
+                var path = scaledGroup.AddPath();
                 path.D = e.LoopPath.ScaledPath;
                 path.Id = e.LoopPath.Path.Id;
-                path.StrokeWidth = 0.3;
+                //path.StrokeWidth = 0.3;
                 path.Stroke = "#000000";
                 path.Fill = "none";
             });
 
-            sunRays.Skip(raysSectorFirstRay).Take(90)
+            sunRays//.Skip(raysSectorFirstRay).Take(90)
             //sunRays
             .ToList().ForEach(r =>
             {
-                var path = svgTest.AddPath();
+                var path = scaledGroup.AddPath();
                 path.Id = r.RayId.ToString();
                 path.D = $"M {r.RaySegment[0].X} {r.RaySegment[0].Y} {r.RaySegment[1].X} {r.RaySegment[1].Y}";
-                path.StrokeWidth = 0.3;
+                //path.StrokeWidth = 0.3;
                 path.Stroke = "#000000";
                 path.Fill = "none";
 
-                var group = svgTest.AddGroup();
+                var loop = loops.First(l => l.LoopPath.Path.Id == name);
+
+                if (r.Main.IntersectionPoint != null)
+                {
+                    var zeroPoint = r.Main.IntersectionPoint;
+                    var x = zeroPoint.X - loop.LabelLetters.ScaledWidth * _labelShiftGain;
+                    var y = zeroPoint.Y - loop.LabelLetters.ScaledHeight * _labelShiftGain;
+                    var labelContainerPolygon = new DoublePoint[] {
+                                    zeroPoint,
+                                    new DoublePoint(x , zeroPoint.Y),
+                                    new DoublePoint(x, y),
+                                    new DoublePoint(zeroPoint.X, y)
+                                };
+
+                    var rectPath = scaledGroup.AddPath();
+                    rectPath.Id = r.RayId + "_rect";
+                    rectPath.D = $"M {string.Join(" ", labelContainerPolygon.Select(p => $"{p.X} {p.Y}"))} z"; ;
+                    rectPath.Stroke = "blue";
+                    rectPath.Fill = "none";
+                }
 
 
+
+
+                var group = scaledGroup.AddGroup();
                 AddLabelPathToGroup(new LabelSvgGroup
                 {
                     Label = r.RayId.ToString(),
