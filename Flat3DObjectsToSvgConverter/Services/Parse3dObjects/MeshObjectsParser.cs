@@ -135,7 +135,7 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
             var objectRotationAngles = rotatedFacesWithMaxCount.AnglesGroup.First().RoundedAngles;
             var paralelFaces = rotatedFacesWithMaxCount.AnglesGroup.Select(g => g.Face).ToList();
 
-            var notRectangularFaces = facesVerts.Where(fv => fv.Verts.Count > 4).Select(fv => fv.Face).ToArray();
+            var notRectangularFaces = facesVerts.Where(fv => fv.Verts.Count != 4).Select(fv => fv.Face).ToArray();
             var notRectangularFacesIds = notRectangularFaces.Select(fv => fv.Id).ToArray();
             var missedParalelFacesIds = notRectangularFacesIds.Where(id => !paralelFaces.Any(f => f.Id == id)).ToArray();
             var missedParalelFaces = notRectangularFaces.Where(f => missedParalelFacesIds.Contains(f.Id));
