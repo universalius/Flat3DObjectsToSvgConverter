@@ -115,6 +115,12 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
                 firstVertexFaces.Faces.First() :
                 firstVertexFaces.Faces.FirstOrDefault(f => !f.VertexIndexList.Contains(prevVertIndex.Value));
 
+            var firstVertexFacesCount = firstVertexFaces.Faces.Count();
+            if (firstVertexFacesCount > 2)
+            {
+                throw new Exception($"Vertex belongs to {firstVertexFaces.Faces.Count()} loop faces, but should to only 2 (hidden polygons inside)");
+            }
+
             if (nextFace == null)
             {
                 //var d = vertexFaces.Where(vf => vf.Faces.Count() < 2).ToList();
