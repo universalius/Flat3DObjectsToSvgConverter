@@ -135,6 +135,16 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
             var objectRotationAngles = rotatedFacesWithMaxCount.AnglesGroup.First().RoundedAngles;
             var paralelFaces = rotatedFacesWithMaxCount.AnglesGroup.Select(g => g.Face).ToList();
 
+            var notRectangularFaces = facesVerts.Where(fv => fv.Verts.Count > 4).Select(fv => fv.Face).ToArray();
+            var notRectangularFacesIds = notRectangularFaces.Select(fv => fv.Id).ToArray();
+            var missedParalelFacesIds = notRectangularFacesIds.Where(id => !paralelFaces.Any(f => f.Id == id)).ToArray();
+            var missedParalelFaces = notRectangularFaces.Where(f => missedParalelFacesIds.Contains(f.Id));
+
+            if (missedParalelFaces.Any())
+            {
+                paralelFaces.AddRange(missedParalelFaces);
+            }
+
             var axisAngles = new[]
             {
                 new { Axis ="X", Angle = objectRotationAngles.X },
@@ -244,7 +254,7 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
             var loopVertsIndexes = loopFaces.SelectMany(f => f.VertexIndexList).Distinct();
             var loopVerts = meshObject.Verts.Where(v => loopVertsIndexes.Contains(v.Index)).ToList();
             meshObject.Verts = loopVerts;
-            meshObject.Faces = loopFaces;
+            meshObject.Faces = loopFaces.ToList();
         }
 
         private int GetRotationDirection(Point normalPoint, bool toHorizontalAxis)
@@ -411,9 +421,10 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
                 }
             });
 
-            return groupedAnglesIds.Select(ids => new KeyValuePair<string, List<RotatedFace>>(
-                ids.First(),
-                groupedByAngles.Where(g => ids.Contains(g.Key)).SelectMany(g => g).ToList())
+            return groupedAnglesIds.Where(ids => ids.Length != 0)
+                .Select(ids => new KeyValuePair<string, List<RotatedFace>>(
+                    ids.First(),
+                    groupedByAngles.Where(g => ids.Contains(g.Key)).SelectMany(g => g).ToList())
             ).ToList();
 
         }
