@@ -1,29 +1,22 @@
 ﻿using Flat3DObjectsToSvgConverter.Services.CleanLoops;
+using Flat3DObjectsToSvgConverter.Services.Kerf;
 
 namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
 {
-    public class ThreeDObjectsParser
+    public class ThreeDObjectsParser(ObjectsToLoopsConverter objectsToLoopsConverter,
+        ObjectLoopsToSvgConverter objectsToSvgConverter,
+        ObjectLoopsCleaner objectLoopsCleaner,
+        KerfApplier kerfApplier)
     {
-        private readonly ObjectsToLoopsConverter _objectsToLoopsConverter;
-        private readonly ObjectLoopsToSvgConverter _objectsToSvgConverter;
-        private readonly ObjectLoopsCleaner _objectLoopsCleaner;
-
-        public ThreeDObjectsParser(ObjectsToLoopsConverter objectsToLoopsConverter,
-            ObjectLoopsToSvgConverter objectsToSvgConverter,
-            ObjectLoopsCleaner objectLoopsCleaner)
-        {
-            _objectsToLoopsConverter = objectsToLoopsConverter;
-            _objectsToSvgConverter = objectsToSvgConverter;
-            _objectLoopsCleaner = objectLoopsCleaner;
-        }
-
         public async Task<string> Transform3DObjectsTo2DSvgLoops()
         {
-            var meshesObjects = await _objectsToLoopsConverter.Convert();
+            var meshesObjects = await objectsToLoopsConverter.Convert();
 
-            _objectLoopsCleaner.CleanLoops(meshesObjects);
+            objectLoopsCleaner.CleanLoops(meshesObjects);
 
-            return _objectsToSvgConverter.Convert(meshesObjects);
+            kerfApplier.ApplyKerf(meshesObjects);
+
+            return objectsToSvgConverter.Convert(meshesObjects);
         }
     }
 }

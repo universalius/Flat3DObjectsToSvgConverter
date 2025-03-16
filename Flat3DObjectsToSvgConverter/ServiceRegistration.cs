@@ -5,6 +5,7 @@ using SvgNest.Models;
 using Flat3DObjectsToSvgConverter.Models;
 using Flat3DObjectsToSvgConverter.Services.Parse3dObjects;
 using Flat3DObjectsToSvgConverter.Services.PostProcessors;
+using Flat3DObjectsToSvgConverter.Services.Kerf;
 
 namespace Flat3DObjectsToSvgConverter;
 
@@ -23,7 +24,8 @@ public static class ServiceRegistration
             .Configure<SvgNestConfig>(configuration.GetSection("SvgNest"))
             .Configure<IOSettings>(configuration.GetSection("IO"))
             .Configure<SlotsSettings>(configuration.GetSection("Slots"))
-            .Configure<FeaturesSettings>(configuration.GetSection("Features"));
+            .Configure<FeaturesSettings>(configuration.GetSection("Features"))
+            .Configure<KerfSettings>(configuration.GetSection("Kerf"));
 
         return services;
     }
