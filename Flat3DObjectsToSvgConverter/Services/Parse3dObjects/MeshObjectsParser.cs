@@ -52,7 +52,7 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
                 new { Planes= zOrientedPlanes, VertexCount = zOrientedPlanes.Select(g => g.Value.Count()).Max(), Axis = "z", PlanesCount = zOrientedPlanes.Keys.Count() },
             };
 
-            var axisesBoxPlanes = axisesPlanes.Where(p => p.PlanesCount % 2 == 0).ToList();
+            var axisesBoxPlanes = axisesPlanes.Where(p => p.PlanesCount == 2).ToList();
             if (!axisesBoxPlanes.Any())
             {
                 throw new Exception("Object box contains more then two paralel planes in one axis, can not distinguish box orientation");
