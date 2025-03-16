@@ -60,5 +60,14 @@ namespace Flat3DObjectsToSvgConverter.Helpers
                 Z = vertex.Z.ToInt(scale, round),
             };
         }
+
+        public static PointF[] ToPointFs(this Segment3d[] segments)
+        {
+            var newPoints = new List<PointF> { segments[0].P1.ToPointF() };
+
+            newPoints.AddRange(segments.Select((s, j) => s.P2.ToPointF()));
+
+            return newPoints.ToArray();
+        }
     }
 }

@@ -1,4 +1,6 @@
 ﻿using ClipperLib;
+using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
+using GeometRi;
 
 
 namespace Flat3DObjectsToSvgConverter.Helpers
@@ -22,6 +24,22 @@ namespace Flat3DObjectsToSvgConverter.Helpers
             }
 
             return edges;
+        }
+
+        public static Segment3d[] ToSegments(this LoopPoints loop)
+        {
+            var points = loop.Points.ToArray();
+            var doublePoints = points.Select(p => p.ToDoublePoint()).ToArray();
+            var pointsCount = points.Count();
+            var segments = points.Select((p, j) =>
+            {
+                var nextPointIndex = j + 1;
+                return nextPointIndex != pointsCount ?
+                    new Segment3d(new Point3d(p.X, p.Y, 0), new Point3d(points[nextPointIndex].X, points[nextPointIndex].Y, 0)) :
+                    null;
+            }).Where(l => l != null).ToArray();
+
+            return segments;
         }
     }
 }

@@ -5,7 +5,7 @@ using GeometRi;
 using SvgNest.Utils;
 using System.Drawing;
 
-namespace Flat3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services.CloseSlots
 {
     public class ObjectLoopsGearsCutter
     {
@@ -41,7 +41,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                             Console.WriteLine($"    Failed to cut teeth for mesh {mesh.MeshName}, circle3d throws exception");
                             return;
                         }
-                        
+
                         center = circle.Center;
                         radius = circle.R;
                     }

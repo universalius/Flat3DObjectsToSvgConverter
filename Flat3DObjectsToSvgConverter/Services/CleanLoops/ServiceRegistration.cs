@@ -10,10 +10,7 @@ public static class ServiceRegistration
             .AddSingleton<ObjectLoopsAlligner>()
             .AddSingleton<ObjectLoopsPointsReducer>()
             .AddSingleton<ObjectLoopsTinyGapsRemover>()
-            .AddSingleton<ObjectLoopsSlotsCutter>()
-            .AddSingleton<ObjectLoopsGearsCutter>()
-            .AddSingleton<ObjectLoopsCleaner>()
-            .AddSingleton<ObjectLoopsSlotSizeReducer>();
+            .AddSingleton<ObjectLoopsCleaner>();
 
         return services;
     }

@@ -6,7 +6,7 @@ using GeometRi;
 using SvgNest.Utils;
 using System.Drawing;
 
-namespace Flat3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services.CloseSlots
 {
     public class ObjectLoopsSlotsCutter
     {

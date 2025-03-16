@@ -3,7 +3,7 @@ using Flat3DObjectsToSvgConverter.Models;
 using GeometRi;
 using System.Drawing;
 
-namespace Flat3DObjectsToSvgConverter.Services.CleanLoops
+namespace Flat3DObjectsToSvgConverter.Services.CloseSlots
 {
     public class ObjectLoopsSlotSizeReducer
     {
@@ -144,7 +144,7 @@ namespace Flat3DObjectsToSvgConverter.Services.CleanLoops
 
         private bool InRange(double value, double comparedValue, double tolerance)
         {
-            return value >= (comparedValue - tolerance) && value <= (comparedValue + tolerance);
+            return value >= comparedValue - tolerance && value <= comparedValue + tolerance;
         }
 
         //private static Segment3d ScaleAndShiftSegment(this Segment3d segmentToResize, double scaleToResizeSegment, double shift)

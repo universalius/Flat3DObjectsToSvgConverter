@@ -1,7 +1,6 @@
 ﻿using Flat3DObjectsToSvgConverter.Helpers;
 using Flat3DObjectsToSvgConverter.Models;
 using GeometRi;
-using System.Drawing;
 
 namespace Flat3DObjectsToSvgConverter.Services
 {
@@ -17,19 +16,9 @@ namespace Flat3DObjectsToSvgConverter.Services
                 {
                     foreach (var (l, i) in obj.Loops.Select((v, i) => (v, i)))
                     {
-                        var points = l.Points.ToArray();
-                        var pointsCount = points.Count();
-                        var segments = points.Select((p, j) =>
-                        {
-                            var nextPointIndex = j + 1;
-                            return nextPointIndex != pointsCount ?
-                                new Segment3d(new Point3d(p.X, p.Y, 0), new Point3d(points[nextPointIndex].X, points[nextPointIndex].Y, 0)) :
-                                null;
-                        }).Where(l => l != null).ToList();
-
+                        var segments = l.ToSegments().ToList();
                         var nextSegmentIndex = 1;
                         var notReducedSegmentsCount = segments.Count;
-                        var reducedPoints = new List<PointF>();
 
                         for (int k = 0; k < segments.Count(); k++)
                         {
@@ -64,14 +53,9 @@ namespace Flat3DObjectsToSvgConverter.Services
 
                         if (notReducedSegmentsCount != segments.Count())
                         {
-                            var newPoints = new List<PointF>
-                            {
-                                segments[0].P1.ToPointF()
-                            };
+                            var newPoints = segments.ToArray().ToPointFs();
 
-                            newPoints.AddRange(segments.Select((s, j) => s.P2.ToPointF()));
-
-                            Console.WriteLine($"    Removed {l.Points.Count() - newPoints.Count} redundant point(s) " +
+                            Console.WriteLine($"    Removed {l.Points.Count() - newPoints.Length} redundant point(s) " +
                                 $"for mesh {mesh.MeshName} loop {i}");
 
                             l.Points = newPoints;
