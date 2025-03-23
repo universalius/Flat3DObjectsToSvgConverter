@@ -6,7 +6,6 @@ using Microsoft.Extensions.Options;
 using SvgLib;
 using SvgNest.Utils;
 using System.Xml;
-using System.Xml.Linq;
 
 namespace Flat3DObjectsToSvgConverter.Services.Kerf;
 
@@ -24,7 +23,6 @@ public class KerfApplier(IOptions<KerfSettings> options,
         var updatedMeshes = meshes.Select(m => new { Origin = m, Kerfed = m.Clone() }).ToArray();
         updatedMeshes.ToList().ForEach(mesh =>
         {
-            //foreach (var obj in mesh.Kerfed.Objects)
             mesh.Kerfed.Objects.ToList().ForEach(obj =>
             {
                 var mainLoop = obj.Loops.First();
@@ -73,29 +71,6 @@ public class KerfApplier(IOptions<KerfSettings> options,
 
                         var shiftVector = orthogonalVector.Normalized.Mult(shift);
                         kerfSegment.ShiftedSegment = s.Translate(shiftVector);
-
-                        //if (xSame)
-                        //{
-                        //    var shift = config.Y;//(float)(config.Y * vector.Y);
-                        //    kerfSegment.ShiftedSegment = new Segment3d(
-                        //        new Point3d(p1.X - shift, p1.Y, 0),
-                        //        new Point3d(p2.X - shift, p2.Y, 0));
-                        //}
-
-                        //if (ySame)
-                        //{
-                        //    var shift = config.X; // (float)(config.X * vector.X);
-                        //    kerfSegment.ShiftedSegment = new Segment3d(
-                        //        new Point3d(p1.X, p1.Y + shift, 0),
-                        //        new Point3d(p2.X, p2.Y + shift, 0));
-                        //}
-
-                        //if (!(xSame || ySame))
-                        //{
-                        //var direction = GetDirection(s, center);
-                        //    var shiftVector = vector.OrthogonalVector.Normalized.Mult(direction * config.XY);
-                        //    kerfSegment.ShiftedSegment = s.Translate(shiftVector);
-                        //}
 
                         return kerfSegment;
                     }).ToArray();
@@ -150,27 +125,7 @@ public class KerfApplier(IOptions<KerfSettings> options,
             });
         });
 
-        var svg = objectLoopsToSvgConverter.Convert(
-            updatedMeshes.Select(m => m.Origin).ToArray(), new PathStroke("red", "0.1"));
-        SvgDocument svgDocumentOriginal = SvgFileHelpers.ParseSvgString(svg).Clone(true);
-
-        svg = objectLoopsToSvgConverter.Convert(
-            updatedMeshes.Select(m => m.Kerfed).ToArray(), new PathStroke("green", "0.1"));
-        SvgDocument svgDocumentKerfed = SvgFileHelpers.ParseSvgString(svg).Clone(true);
-
-        var originalGroups = svgDocumentOriginal.Element.GetElementsByTagName("g").Cast<XmlElement>();
-        svgDocumentKerfed.Element.GetElementsByTagName("g").Cast<XmlElement>().ToList().ForEach(e =>
-        {
-            var newNode = svgDocumentOriginal._document.ImportNode(e, true) as XmlElement;
-            
-            var originalGroup = originalGroups.First(e => e.GetAttribute("id") == newNode.GetAttribute("id"));
-
-            newNode.SetAttribute("transform", originalGroup.GetAttribute("transform"));
-
-            svgDocumentOriginal._document.DocumentElement.AppendChild(newNode);
-        });
-
-        file.SaveSvg("kerfed", svgDocumentOriginal._document.OuterXml);
+        SaveToFile(updatedMeshes.Select(m => m.Origin).ToArray(), updatedMeshes.Select(m => m.Kerfed).ToArray());
 
         Console.WriteLine();
     }
@@ -196,6 +151,28 @@ public class KerfApplier(IOptions<KerfSettings> options,
         //return 1;
     }
 
+    private void SaveToFile(MeshObjects[] originMeshes, MeshObjects[] kefedMeshes)
+    {
+        var svg = objectLoopsToSvgConverter.Convert(originMeshes, new PathStroke("red", "0.1"));
+        SvgDocument svgDocumentOriginal = SvgFileHelpers.ParseSvgString(svg).Clone(true);
+
+        svg = objectLoopsToSvgConverter.Convert(kefedMeshes, new PathStroke("green", "0.1"));
+        SvgDocument svgDocumentKerfed = SvgFileHelpers.ParseSvgString(svg).Clone(true);
+
+        var originalGroups = svgDocumentOriginal.Element.GetElementsByTagName("g").Cast<XmlElement>();
+        svgDocumentKerfed.Element.GetElementsByTagName("g").Cast<XmlElement>().ToList().ForEach(e =>
+        {
+            var newNode = svgDocumentOriginal._document.ImportNode(e, true) as XmlElement;
+
+            var originalGroup = originalGroups.First(e => e.GetAttribute("id") == newNode.GetAttribute("id"));
+
+            newNode.SetAttribute("transform", originalGroup.GetAttribute("transform"));
+
+            svgDocumentOriginal._document.DocumentElement.AppendChild(newNode);
+        });
+
+        file.SaveSvg("kerfed", svgDocumentOriginal._document.OuterXml);
+    }
 
     public class KerfSegment
     {
