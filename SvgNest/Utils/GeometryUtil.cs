@@ -1,10 +1,6 @@
 ﻿using ClipperLib;
 using SvgNest.Models.GeometryUtil;
-using System.ComponentModel;
-using static SvgNest.Utils.GeometryUtil;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using Path = System.Collections.Generic.List<ClipperLib.DoublePoint>;
-
 
 namespace SvgNest.Utils
 {

@@ -16,7 +16,7 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
 
             kerfApplier.ApplyKerf(meshesObjects);
 
-            return objectsToSvgConverter.Convert(meshesObjects);
+            return objectsToSvgConverter.ConvertAndSave(meshesObjects);
         }
     }
 }

@@ -2,7 +2,6 @@
 using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
 using GeometRi;
 
-
 namespace Flat3DObjectsToSvgConverter.Helpers
 {
     public static class EdgeHelpers
@@ -28,8 +27,11 @@ namespace Flat3DObjectsToSvgConverter.Helpers
 
         public static Segment3d[] ToSegments(this LoopPoints loop)
         {
-            var points = loop.Points.ToArray();
-            var doublePoints = points.Select(p => p.ToDoublePoint()).ToArray();
+            return ToSegments(loop.Points.ToArray());
+        }
+
+        public static Segment3d[] ToSegments(this Point3d[] points)
+        {
             var pointsCount = points.Count();
             var segments = points.Select((p, j) =>
             {
@@ -40,6 +42,11 @@ namespace Flat3DObjectsToSvgConverter.Helpers
             }).Where(l => l != null).ToArray();
 
             return segments;
+        }
+
+        public static DoublePoint[] ToEdge(this Segment3d segment)
+        {
+            return [segment.P1.ToDoublePoint(), segment.P2.ToDoublePoint()];
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
 using Flat3DObjectsToSvgConverter.Models.MeshObjectsParser;
+using GeometRi;
 using ObjParser;
 using ObjParser.Types;
 using ObjParserExecutor.Helpers;
@@ -193,7 +194,7 @@ namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
             firstLoopBoundary.maxPoint.X < secondLoopBoundary.maxPoint.X && firstLoopBoundary.maxPoint.Y < secondLoopBoundary.maxPoint.Y;
         }
 
-        private IEnumerable<PointF> GetLoopPoints(string axis, IEnumerable<EdgeFace> loopEdgeFaces)
+        private IEnumerable<Point3d> GetLoopPoints(string axis, IEnumerable<EdgeFace> loopEdgeFaces)
         {
             var mmGain = 1000;
             var points = loopEdgeFaces.Select(ef => AxisSelectHelpers.GetPointByAxis(axis, ef.SecondVertex, mmGain)).ToList();

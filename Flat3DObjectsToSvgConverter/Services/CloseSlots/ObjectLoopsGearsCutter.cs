@@ -19,7 +19,7 @@ namespace Flat3DObjectsToSvgConverter.Services.CloseSlots
                 mesh.Objects.ToList().ForEach(obj =>
                 {
                     var mainLoop = obj.Loops.First();
-                    var points = mainLoop.Points.Select(p => p.ToPoint3d()).ToArray();
+                    var points = mainLoop.Points.ToArray();
                     var bounds = GeometryUtil.GetPolygonBounds(points.Select(p => p.ToDoublePoint()).ToArray());
                     var center = new Point3d(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2, 0);
                     var radius = 0.0;
@@ -106,9 +106,9 @@ namespace Flat3DObjectsToSvgConverter.Services.CloseSlots
                                 var nextToothPair = toothPointPairs[nextToothIndex];
                                 return new LoopPoints
                                 {
-                                    Points = new List<PointF> {
-                                        tpp.Length == 1 ? tpp[0].Point.ToPointF() : tpp[1].Point.ToPointF(),
-                                        nextToothPair[0].Point.ToPointF()
+                                    Points = new List<Point3d> {
+                                        tpp.Length == 1 ? tpp[0].Point : tpp[1].Point,
+                                        nextToothPair[0].Point
                                     }
                                 };
                             }).Where(l => l != null).ToList();

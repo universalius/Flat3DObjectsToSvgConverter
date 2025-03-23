@@ -2,6 +2,7 @@
 using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
 using Flat3DObjectsToSvgConverter.Services.Kerf;
 using FluentAssertions;
+using GeometRi;
 using Microsoft.Extensions.Options;
 using System.Drawing;
 
@@ -28,14 +29,14 @@ class KerfApplierTests
         // Arrange
         var meshObject = GetMeshObjects(
         [
-            new PointF (0,0),
-            new PointF (0,1),
-            new PointF (1,1),
-            new PointF (1,0),
-            new PointF (0,0),
+            new Point3d (0,0,0),
+            new Point3d (0,1,0),
+            new Point3d (1,1,0),
+            new Point3d (1,0,0),
+            new Point3d (0,0,0),
         ]);
 
-        var sut = new KerfApplier(Options.Create(_settings));
+        var sut = new KerfApplier(Options.Create(_settings), null, null);
 
         // Act
         sut.ApplyKerf([meshObject]);
@@ -44,11 +45,11 @@ class KerfApplierTests
         var y = (float)_settings.Y;
         meshObject.Objects.First().Loops.First().Points.Should().BeEquivalentTo(
         [
-            new PointF (0-y,0-x),
-            new PointF (0-y,1+x),
-            new PointF (1+y,1+x),
-            new PointF (1+y,0-x),
-            new PointF (0-y,0-x),
+            new Point3d (0-y,0-x,0),
+            new Point3d (0-y,1+x,0),
+            new Point3d (1+y,1+x,0),
+            new Point3d (1+y,0-x,0),
+            new Point3d (0-y,0-x,0),
         ]);
     }
 
@@ -58,14 +59,14 @@ class KerfApplierTests
         // Arrange
         var meshObject = GetMeshObjects(
         [
-            new PointF (0,0),
-            new PointF (1,1),
-            new PointF (2,0),
-            new PointF (1,-1),
-            new PointF (0,0),
+            new Point3d (0,0,0),
+            new Point3d (1,1,0),
+            new Point3d (2,0,0),
+            new Point3d (1,-1,0),
+            new Point3d (0,0,0),
         ]);
 
-        var sut = new KerfApplier(Options.Create(_settings));
+        var sut = new KerfApplier(Options.Create(_settings), null, null);
 
         // Act
         sut.ApplyKerf([meshObject]);
@@ -74,15 +75,15 @@ class KerfApplierTests
         var y = (float)_settings.Y;
         meshObject.Objects.First().Loops.First().Points.Should().BeEquivalentTo(
         [
-            new PointF (0-y,0-x),
-            new PointF (0-y,1+x),
-            new PointF (1+y,1+x),
-            new PointF (1+y,0-x),
-            new PointF (0-y,0-x),
+            new Point3d (0-y,0-x,0),
+            new Point3d (0-y,1+x,0),
+            new Point3d (1+y,1+x,0),
+            new Point3d (1+y,0-x,0),
+            new Point3d (0-y,0-x,0),
         ]);
     }
 
-    private MeshObjects GetMeshObjects(PointF[] points)
+    private MeshObjects GetMeshObjects(Point3d[] points)
     {
         return new MeshObjects
         {

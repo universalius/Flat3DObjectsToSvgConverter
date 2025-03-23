@@ -147,7 +147,7 @@ namespace Flat3DObjectsToSvgConverter.Services.CloseSlots
 
                     closingLoops.Add(new LoopPoints
                     {
-                        Points = new PointF[] { closedSlotSegment.P1.ToPointF(), closedSlotSegment.P2.ToPointF() }
+                        Points = new Point3d[] { closedSlotSegment.P1, closedSlotSegment.P2 }
                     });
                 }
                 catch (Exception ex)
@@ -208,7 +208,7 @@ namespace Flat3DObjectsToSvgConverter.Services.CloseSlots
 
                 return new LoopPoints
                 {
-                    Points = new PointF[] { slotSegments[0].P2.ToPointF(), slotSegments[1].P1.ToPointF() }
+                    Points = new Point3d[] { slotSegments[0].P2, slotSegments[1].P1 }
                 };
             }).ToList();
         }

@@ -61,11 +61,11 @@ namespace Flat3DObjectsToSvgConverter.Helpers
             };
         }
 
-        public static PointF[] ToPointFs(this Segment3d[] segments)
+        public static Point3d[] ToPoint3ds(this Segment3d[] segments)
         {
-            var newPoints = new List<PointF> { segments[0].P1.ToPointF() };
+            var newPoints = new List<Point3d> { segments[0].P1 };
 
-            newPoints.AddRange(segments.Select((s, j) => s.P2.ToPointF()));
+            newPoints.AddRange(segments.Select((s, j) => s.P2));
 
             return newPoints.ToArray();
         }

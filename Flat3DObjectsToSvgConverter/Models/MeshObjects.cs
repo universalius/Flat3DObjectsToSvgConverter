@@ -12,5 +12,16 @@ namespace Flat3DObjectsToSvgConverter.Models
         public string MeshName { get; set; }
 
         public IEnumerable<ObjectLoops> Objects { get; set; }
+
+        public MeshObjects Clone()
+        {
+            var clone = new MeshObjects
+            {
+                MeshName = MeshName,
+                Objects = Objects.ToList().Select(o => o.Clone()).ToArray()
+            };
+
+            return clone;
+        }
     }
 }

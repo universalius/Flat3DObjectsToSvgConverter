@@ -119,12 +119,12 @@ namespace Flat3DObjectsToSvgConverter.Services.CloseSlots
                             if (lines.Count == 4)
                             {
                                 var loop = holeLoops[rectangular.Id];
-                                var newPoints = new List<PointF>
+                                var newPoints = new List<Point3d>
                                 {
-                                    lines[0].P1.ToPointF()
+                                    lines[0].P1
                                 };
 
-                                newPoints.AddRange(lines.Select((s, j) => s.P2.ToPointF()));
+                                newPoints.AddRange(lines.Select((s, j) => s.P2));
 
                                 loop.Points = newPoints;
                                 loop.IsResized = true;

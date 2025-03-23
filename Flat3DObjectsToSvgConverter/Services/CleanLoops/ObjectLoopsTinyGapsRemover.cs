@@ -72,7 +72,7 @@ namespace Flat3DObjectsToSvgConverter.Services
                             segments.Remove(s);
                         });
 
-                        mainLoop.Points = segments.Select((s, j) => s.P2.ToPointF());
+                        mainLoop.Points = segments.Select((s, j) => s.P2);
 
                         var allLoops = new List<LoopPoints>();
                         allLoops.AddRange(obj.Loops);
@@ -82,10 +82,10 @@ namespace Flat3DObjectsToSvgConverter.Services
                         var gapSector = firstSegment.Translate(shiftVector);
                         allLoops.Add(new LoopPoints
                         {
-                            Points = new List<PointF>()
+                            Points = new List<Point3d>()
                             {
-                                gapSector.P1.ToPointF(),
-                                gapSector.P2.ToPointF()
+                                gapSector.P1,
+                                gapSector.P2
                             }
                         });
 

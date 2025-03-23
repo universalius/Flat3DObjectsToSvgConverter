@@ -88,7 +88,7 @@ namespace Flat3DObjectsToSvgConverter.Services.CleanLoops
                                     new Rotation(axisZVector, rotationVector.RotationAngle),
                                     new Point3d(rotationPoint.X, rotationPoint.Y, 0));
 
-                                return newPoint.ToPointF();
+                                return newPoint;
                             });
 
                             l.Points = rotatedPoints;

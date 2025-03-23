@@ -1,16 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using GeometRi;
 
-namespace Flat3DObjectsToSvgConverter.Models.EdgeLoopParser
+namespace Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
+
+public class LoopPoints
 {
-    public class LoopPoints
-    {
-        public IEnumerable<PointF> Points { get; set; }
+    public IEnumerable<Point3d> Points { get; set; }
 
-        public bool IsResized { get; set; }
+    public bool IsResized { get; set; }
+
+    public LoopPoints Clone()
+    {
+        var newPoints = new List<Point3d>(Points.Select(p => new Point3d(p.X, p.Y, p.Z)));
+        var clone = new LoopPoints
+        {
+            Points = newPoints,
+            IsResized = IsResized
+        };
+
+        return clone;
     }
 }
