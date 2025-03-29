@@ -1,10 +1,12 @@
-﻿using Flat3DObjectsToSvgConverter.Helpers;
+﻿using ClipperLib;
+using Flat3DObjectsToSvgConverter.Helpers;
 using Flat3DObjectsToSvgConverter.Models;
 using Flat3DObjectsToSvgConverter.Services.Parse3dObjects;
 using GeometRi;
 using Microsoft.Extensions.Options;
 using SvgLib;
 using SvgNest.Utils;
+using System.Linq;
 using System.Xml;
 
 namespace Flat3DObjectsToSvgConverter.Services.Kerf;
@@ -28,6 +30,8 @@ public class KerfApplier(IOptions<KerfSettings> options,
                 var mainLoop = obj.Loops.First();
                 var segments = mainLoop.ToSegments();
                 var points = mainLoop.Points.ToArray();
+                var doublePoints = points.Select(p => p.ToDoublePoint()).ToArray();
+
                 var center = GeometryUtil.GetPolygonCentroid(
                         points.Select(p => p.ToDoublePoint()).ToArray())
                     .ToPoint3d();
@@ -38,7 +42,6 @@ public class KerfApplier(IOptions<KerfSettings> options,
 
                         var p1 = s.P1;
                         var p2 = s.P2;
-                        var vector = new Vector3d(p1, p2);
 
                         var tolerance = 0.05;
                         var xSame = Math.Abs(p1.X - p2.X) <= tolerance;
@@ -60,17 +63,55 @@ public class KerfApplier(IOptions<KerfSettings> options,
                             shift = config.XY;
                         }
 
-                        var direction = GetDirection(s, center);
+                        var vector = new Vector3d(p1, p2);
+
+                        //double Scale(double center, double value)
+                        //{
+                        //    var gain = 1.1;
+                        //    return center + (value - center) * gain;
+                        //}
+
+                        //Point3d ScalePoint(Point3d center, Point3d p)
+                        //{
+                        //    return new Point3d(Scale(center.X, p.X), Scale(center.Y, p.Y), 0);
+                        //}
+
+                        //var gain = 1.1;
+                        //var x = center.X + (s.Center.X - center.X) * gain;
+                        //var y = center.Y + (s.Center.Y - center.Y) * gain;
+                        //var scaleDirection = new Vector3d(s.Center, new Point3d(x, y, 0));
+
+                        //kerfSegment.SegmentWithKerf = new Segment3d(ScalePoint(center, p1), ScalePoint(center, p2));
 
                         Vector3d[] orthogonalVectors = [
                             new Vector3d(vector.Y,-vector.X, 0.0, vector.Coord), // clockwise 
-                        new Vector3d(-vector.Y,vector.X, 0.0, vector.Coord) // counterclockwise 
+                            new Vector3d(-vector.Y,vector.X, 0.0, vector.Coord) // counterclockwise 
                         ];
 
-                        var orthogonalVector = direction > 0 ? orthogonalVectors[0] : orthogonalVectors[1];
+                        var orthogonalVector = orthogonalVectors.First(v =>
+                        {
+                            var shiftVector = v.Normalized.Mult(0.1);
+                            var shiftedSegment = s.Translate(shiftVector);
+                            var pointInPolygon = GeometryUtil.PointInPolygon(shiftedSegment.Center.ToDoublePoint(), doublePoints) ?? true;
+
+                            return !pointInPolygon;
+                        });
 
                         var shiftVector = orthogonalVector.Normalized.Mult(shift);
                         kerfSegment.ShiftedSegment = s.Translate(shiftVector);
+
+
+                        //var direction = GetDirection(s, center);
+
+                        //Vector3d[] orthogonalVectors = [
+                        //    new Vector3d(vector.Y,-vector.X, 0.0, vector.Coord), // clockwise 
+                        //    new Vector3d(-vector.Y,vector.X, 0.0, vector.Coord) // counterclockwise 
+                        //];
+
+                        //var orthogonalVector = direction > 0 ? orthogonalVectors[0] : orthogonalVectors[1];
+
+                        //var shiftVector = orthogonalVector.Normalized.Mult(shift);
+                        //kerfSegment.ShiftedSegment = s.Translate(shiftVector);
 
                         return kerfSegment;
                     }).ToArray();
@@ -135,13 +176,35 @@ public class KerfApplier(IOptions<KerfSettings> options,
         var p1 = segment.P1;
         var p2 = segment.P2;
         var vector = new Vector3d(p1, p2);
+        var xVector = new Vector3d(1, 0, 0);
 
         var centerVector = new Vector3d(center, p1);
 
-        var direction = centerVector.Cross(vector);
+        var directionVector = centerVector.Cross(vector);
 
-        return direction.Z > 0 ? 1 : -1;
+        var direction = directionVector.Z > 0 ? 1 : -1;
 
+        var angle = xVector.AngleToDeg(vector);
+        if ((vector.X <= 0 && vector.Y > 0) || (vector.X > 0 && vector.Y > 0))
+        {
+            angle = 360 - angle;
+        }
+
+        //if (angle >= 270 && 
+        //    //angle == 270 &&
+        //    center.X > p1.X)
+        //{
+        //    direction *= -1;
+        //}
+
+        //if (// angle > 0 && angle <= 90 && 
+        //    angle == 90 &&
+        //    center.X < p1.X)
+        //{
+        //    direction *= -1;
+        //}
+
+        return direction;
         //if (vector.X > 0 && vector.Y > 0)
         //    return -1;
 
