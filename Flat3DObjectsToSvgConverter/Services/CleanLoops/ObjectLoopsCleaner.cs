@@ -1,28 +1,22 @@
 ﻿using Flat3DObjectsToSvgConverter.Models;
+using Flat3DObjectsToSvgConverter.Services.Kerf;
 
-namespace Flat3DObjectsToSvgConverter.Services.CleanLoops
+namespace Flat3DObjectsToSvgConverter.Services.CleanLoops;
+
+public class ObjectLoopsCleaner(
+    ObjectLoopsAlligner objectLoopsAlligner,
+    ObjectLoopsPointsReducer objectLoopsPointsReducer,
+    ObjectLoopsTinyGapsRemover objectLoopsTinyGapsRemover,
+    KerfApplier kerfApplier)
 {
-    public class ObjectLoopsCleaner
+    public void CleanLoops(IEnumerable<MeshObjects> meshes)
     {
-        private readonly ObjectLoopsAlligner _objectLoopsAlligner;
-        private readonly ObjectLoopsPointsReducer _objectLoopsPointsReducer;
-        private readonly ObjectLoopsTinyGapsRemover _objectLoopsTinyGapsRemover;
-        private readonly SlotsSettings _slotsSettings;
+        objectLoopsPointsReducer.RemoveRedundantPoints(meshes);
+        objectLoopsAlligner.MakeLoopsPerpendicularToAxis(meshes);
 
-        public ObjectLoopsCleaner(ObjectLoopsAlligner objectLoopsAlligner,
-            ObjectLoopsPointsReducer objectLoopsPointsReducer,
-            ObjectLoopsTinyGapsRemover objectLoopsTinyGapsRemover)
-        {
-            _objectLoopsAlligner = objectLoopsAlligner;
-            _objectLoopsPointsReducer = objectLoopsPointsReducer;
-            _objectLoopsTinyGapsRemover = objectLoopsTinyGapsRemover;
-        }
+        kerfApplier.ApplyKerf(meshes);
 
-        public void CleanLoops(IEnumerable<MeshObjects> meshes)
-        {
-            _objectLoopsPointsReducer.RemoveRedundantPoints(meshes);
-            _objectLoopsAlligner.MakeLoopsPerpendicularToAxis(meshes);
-            _objectLoopsTinyGapsRemover.ReplaceGapsWithLine(meshes);
-        }
+        objectLoopsTinyGapsRemover.ReplaceGapsWithLine(meshes);
     }
 }
+
