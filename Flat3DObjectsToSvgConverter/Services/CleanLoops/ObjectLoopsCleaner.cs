@@ -5,18 +5,15 @@ namespace Flat3DObjectsToSvgConverter.Services.CleanLoops;
 
 public class ObjectLoopsCleaner(
     ObjectLoopsAlligner objectLoopsAlligner,
-    ObjectLoopsPointsReducer objectLoopsPointsReducer,
-    ObjectLoopsTinyGapsRemover objectLoopsTinyGapsRemover,
-    KerfApplier kerfApplier)
+    ObjectLoopsPointsReducer objectLoopsPointsReducer
+    //ObjectLoopsTinyGapsRemover objectLoopsTinyGapsRemover
+    )
 {
     public void CleanLoops(IEnumerable<MeshObjects> meshes)
     {
         objectLoopsPointsReducer.RemoveRedundantPoints(meshes);
         objectLoopsAlligner.MakeLoopsPerpendicularToAxis(meshes);
-
-        kerfApplier.ApplyKerf(meshes);
-
-        objectLoopsTinyGapsRemover.ReplaceGapsWithLine(meshes);
+        //objectLoopsTinyGapsRemover.ReplaceGapsWithLine(meshes);
     }
 }
 

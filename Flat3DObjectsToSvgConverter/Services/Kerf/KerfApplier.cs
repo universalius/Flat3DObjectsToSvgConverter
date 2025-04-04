@@ -1,10 +1,12 @@
-﻿using Flat3DObjectsToSvgConverter.Helpers;
+﻿using ClipperLib;
+using Flat3DObjectsToSvgConverter.Helpers;
 using Flat3DObjectsToSvgConverter.Models;
-using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
 using Flat3DObjectsToSvgConverter.Services.Parse3dObjects;
 using GeometRi;
 using Microsoft.Extensions.Options;
+using ObjParserExecutor.Helpers;
 using SvgLib;
+using SvgNest;
 using SvgNest.Utils;
 using System.Xml;
 
@@ -14,6 +16,80 @@ public class KerfApplier(IOptions<KerfSettings> options,
     ObjectLoopsToSvgConverter objectLoopsToSvgConverter,
     IOFileService file)
 {
+    public string ApplyKerf(string svg)
+    {
+        var config = options.Value;
+
+        if (!config.Enabled)
+            return svg;
+
+        SvgParser svgParser = new SvgParser();
+
+        SvgDocument svgDocument = SvgFileHelpers.ParseSvgString(svg);
+        var kerfedSvgDocument = CloneSvgDocumentRoot(svgDocument);
+        var debugSvgDocument = CloneSvgDocumentRoot(svgDocument);
+
+        var groupElements = svgDocument.Element.GetElementsByTagName("g").Cast<XmlElement>().ToList();
+
+        groupElements.ForEach(element =>
+        {
+            var group = new SvgGroup(element);
+            var pathes = group.Element.GetElementsByTagName("path").Cast<XmlElement>().ToList();
+            var kerfedPathes = pathes
+                .Select(pe => new
+                {
+                    Path = new SvgPath(pe),
+                    KerfedPath = new SvgPath(pe).Clone(true)
+                }).ToList();
+
+            if (group.Transform != "translate(0 0)")
+            {
+                var kerfedGroup = kerfedSvgDocument.AddGroup();
+                var debugGroup = debugSvgDocument.AddGroup();
+
+                kerfedPathes.ForEach(p =>
+                {
+                    var kerfedPath = p.KerfedPath;
+                    var path = p.Path;
+                    List<XmlElement> elements = [path.Element, kerfedPath.Element];
+
+                    elements.ForEach(e =>
+                    {
+                        e.SetAttribute("transform", group.Transform);
+                        svgParser.ApplyTransform(e);
+                    });
+
+                    var pol = svgParser.Polygonify(kerfedPath.Element).ToList();
+                    pol.Add(pol.First());
+
+                    var kerfSegments = GetKerfedLoop(pol.ToArray(), kerfedPath.HasClass("main"));
+                    var kerfedPoints = kerfSegments.Select(ks => ks.SegmentWithKerf).ToArray().ToPoint3ds();
+
+                    kerfedPath.D = kerfedPoints.ToPathString();
+
+                    var newNode = kerfedSvgDocument._document.ImportNode(kerfedPath.Element, true) as XmlElement;
+                    kerfedGroup.Element.AppendChild(newNode);
+
+                    path.SetStyle("stroke-width", "0.1");
+                    path.SetStyle("stroke", "red");
+
+                    kerfedPath.SetStyle("stroke-width", "0.1");
+                    kerfedPath.SetStyle("stroke", "green");
+
+                    elements.ForEach(e =>
+                    {
+                        newNode = debugSvgDocument._document.ImportNode(e, true) as XmlElement;
+                        debugGroup.Element.AppendChild(newNode);
+                    });
+                });
+            }
+        });
+
+        file.SaveSvg("kerfed", debugSvgDocument.Element.OuterXml);
+
+        return kerfedSvgDocument.Element.OuterXml;
+    }
+
     public void ApplyKerf(IEnumerable<MeshObjects> meshes)
     {
         var config = options.Value;
@@ -30,7 +106,7 @@ public class KerfApplier(IOptions<KerfSettings> options,
                 for (var i = 0; i < loops.Length; i++)
                 {
                     var loop = loops[i];
-                    var kerfSegments = GetKerfedLoop(loop, i == 0);
+                    var kerfSegments = GetKerfedLoop(loop.Points.Select(p => p.ToDoublePoint()).ToArray(), i == 0);
                     loop.Points = kerfSegments.Select(ks => ks.SegmentWithKerf).ToArray().ToPoint3ds();
                 }
             });
@@ -46,13 +122,12 @@ public class KerfApplier(IOptions<KerfSettings> options,
         Console.WriteLine();
     }
 
-    private KerfSegment[] GetKerfedLoop(LoopPoints loop, bool mainLoop)
+    private KerfSegment[] GetKerfedLoop(DoublePoint[] doublePoints, bool mainLoop)
     {
         var config = options.Value;
 
-        var segments = loop.ToSegments();
-        var points = loop.Points.ToArray();
-        var doublePoints = points.Select(p => p.ToDoublePoint()).ToArray();
+        var points = doublePoints.Select(p => p.ToPoint3d()).ToArray();
+        var segments = points.ToSegments();
 
         var kerfSegments = segments.Select((s, i) =>
         {
@@ -172,6 +247,17 @@ public class KerfApplier(IOptions<KerfSettings> options,
         });
 
         file.SaveSvg("kerfed", svgDocumentOriginal._document.OuterXml);
+    }
+
+    private SvgDocument CloneSvgDocumentRoot(SvgDocument svgDocument)
+    {
+        var newSvgDocument = SvgDocument.Create();
+        newSvgDocument.Units = svgDocument.Units;
+        newSvgDocument.Width = svgDocument.Width;
+        newSvgDocument.Height = svgDocument.Height;
+        newSvgDocument.ViewBox = svgDocument.ViewBox;
+
+        return newSvgDocument;
     }
 
     public class KerfSegment

@@ -342,7 +342,7 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
                 if (distancesEnouphForLabel.Any())
                 {
                     var closedSlotSegments = l.LoopPath.SiblingPaths.Select(p => _svgParser.Polygonify(p.Element))
-                        .Select(points => new Segment3d(points[0].ToPoint3d(_gain), points[1].ToPoint3d(_gain)));
+                        .Select(points => new Segment3d(points[0].ToPoint3dClipper(_gain), points[1].ToPoint3dClipper(_gain)));
 
                     var targetRayId = raysSectorFirstRay + 90 / 2;
                     var targetRays = distancesEnouphForLabel.Where(rd => rd.RayId >= targetRayId).ToArray();
@@ -351,7 +351,7 @@ namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
                     {
                         targetRays = targetRays.Where(rd =>
                         {
-                            var segment1 = new Segment3d(rd.RaySegment[0].ToPoint3d(), rd.RaySegment[1].ToPoint3d());
+                            var segment1 = new Segment3d(rd.RaySegment[0].ToPoint3dClipper(), rd.RaySegment[1].ToPoint3dClipper());
                             var isRayHitsClosedSlotSegment = closedSlotSegments.Any(s => s.IntersectionWith(segment1) != null);
                             return !isRayHitsClosedSlotSegment;
                         }).ToArray();

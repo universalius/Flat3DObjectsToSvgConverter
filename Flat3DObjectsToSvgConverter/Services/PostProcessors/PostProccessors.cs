@@ -1,45 +1,34 @@
-﻿using Flat3DObjectsToSvgConverter.Helpers;
-using Flat3DObjectsToSvgConverter.Models;
+﻿using Flat3DObjectsToSvgConverter.Models;
 using Microsoft.Extensions.Options;
-using SvgLib;
+using ObjParserExecutor.Models;
 
 namespace Flat3DObjectsToSvgConverter.Services.PostProcessors
 {
-    public class PostProccessors
-    {
-        private readonly ObjectsLabelsPreciseLocator _objectsLabelsPreciseLocator;
-        private readonly LoopsColorDivider _loopsColorDivider;
-        private readonly LoopsTabsGenerator _loopsTabsGenerator;
-        private readonly MergeLabelsWithTabsSvg _mergeLabelsWithTabsSvg;
-        private readonly FeaturesSettings _features;
-
-        public PostProccessors(ObjectsLabelsPreciseLocator objectsLabelsPreciseLocator,
+    public class PostProccessors(
+            ObjectLoopsTinyGapsRemover objectLoopsTinyGapsRemover,
+            ObjectsLabelsPreciseLocator objectsLabelsPreciseLocator,
             LoopsColorDivider loopsColorDivider,
             LoopsTabsGenerator loopsTabsGenerator,
             MergeLabelsWithTabsSvg mergeLabelsWithTabsSvg,
             IOptions<FeaturesSettings> options)
-        {
-            _loopsColorDivider = loopsColorDivider;
-            _objectsLabelsPreciseLocator = objectsLabelsPreciseLocator;
-            _loopsTabsGenerator = loopsTabsGenerator;
-            _mergeLabelsWithTabsSvg = mergeLabelsWithTabsSvg;
-            _features = options.Value;
-        }
-
-        public async Task Run(string compactedSvg)
+    {
+        public async Task Run(string kerfedSvg)
         {
             //SvgDocument svgDocument = SvgFileHelpers.ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\Test1 01.06.2024 14-23-28\Test1_compacted.svg");
             //SvgDocument svgDocument = SvgFileHelpers.ParseSvgFile(@"D:\Виталик\Cat_Hack\Svg\Test15 21.07.2024 12-09-34\Test15_compacted.svg");
             //var compactedSvg = svgDocument.Element.OuterXml;
 
-            var coloredSvg = _loopsColorDivider.SetLoopsColorBasedOnLength(compactedSvg);
+            //var withoutGapsSvg = objectLoopsTinyGapsRemover.ReplaceGapsWithLine(kerfedSvg);
+            var withoutGapsSvg = kerfedSvg;
 
-            var labelsSvg = await _objectsLabelsPreciseLocator.PlaceLabels(coloredSvg);
+            var coloredSvg = loopsColorDivider.SetLoopsColorBasedOnLength(withoutGapsSvg);
 
-            if (_features.MakeTabs)
+            var labelsSvg = await objectsLabelsPreciseLocator.PlaceLabels(coloredSvg);
+
+            if (options.Value.MakeTabs)
             {
-                var tabsSvg = await _loopsTabsGenerator.CutLoopsToMakeTabs(coloredSvg);
-                _mergeLabelsWithTabsSvg.Merge(labelsSvg, tabsSvg);
+                var tabsSvg = await loopsTabsGenerator.CutLoopsToMakeTabs(coloredSvg);
+                mergeLabelsWithTabsSvg.Merge(labelsSvg, tabsSvg);
             }
         }
     }
