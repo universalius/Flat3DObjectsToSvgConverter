@@ -1,8 +1,8 @@
-﻿using Flat3DObjectsToSvgConverter.Models;
-using Flat3DObjectsToSvgConverter.Services;
-using Flat3DObjectsToSvgConverter.Services.Kerf;
-using Flat3DObjectsToSvgConverter.Services.Parse3dObjects;
-using Flat3DObjectsToSvgConverter.Services.PostProcessors;
+﻿using Flat3DObjectsToSvgConverter.Features;
+using Flat3DObjectsToSvgConverter.Features.Kerf;
+using Flat3DObjectsToSvgConverter.Features.Parse3dObjects;
+using Flat3DObjectsToSvgConverter.Features.PostProcessors;
+using Flat3DObjectsToSvgConverter.Models;
 using Microsoft.Extensions.Hosting;
 
 namespace Flat3DObjectsToSvgConverter;

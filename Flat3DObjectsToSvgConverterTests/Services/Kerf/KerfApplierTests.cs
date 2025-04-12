@@ -1,6 +1,6 @@
-﻿using Flat3DObjectsToSvgConverter.Models;
+﻿using Flat3DObjectsToSvgConverter.Features.Kerf;
+using Flat3DObjectsToSvgConverter.Models;
 using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
-using Flat3DObjectsToSvgConverter.Services.Kerf;
 using FluentAssertions;
 using GeometRi;
 using Microsoft.Extensions.Options;

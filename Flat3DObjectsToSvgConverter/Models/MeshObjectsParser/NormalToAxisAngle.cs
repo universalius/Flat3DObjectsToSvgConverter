@@ -1,11 +1,5 @@
-﻿using Flat3DObjectsToSvgConverter.Services;
-using GeometRi;
-using System;
-using System.Collections.Generic;
+﻿using GeometRi;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Flat3DObjectsToSvgConverter.Models.MeshObjectsParser
 {

@@ -1,6 +1,5 @@
 using Flat3DObjectsToSvgConverter.Models.MeshObjectsParser;
-using Flat3DObjectsToSvgConverter.Services.Parse3dObjects;
-using EdgeLoopParser = Flat3DObjectsToSvgConverter.Services.Parse3dObjects.EdgeLoopParser;
+using EdgeLoopParser = Flat3DObjectsToSvgConverter.Features.Parse3dObjects.EdgeLoopParser;
 
 namespace Flat3DObjectsToSvgConverterTests.Services.Parse3dObjects.EdgeLoopParser
 {
