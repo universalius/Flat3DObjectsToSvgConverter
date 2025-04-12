@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Xml;
 
@@ -51,9 +52,31 @@ namespace SvgLib
 
         public SvgViewBox ViewBox
         {
-            get => Element.GetAttribute("viewBox", new SvgViewBox());
-            set => Element.SetAttribute("viewBox", value.ToString());
+            get
+            {
+                if (!Element.HasAttribute("viewBox"))
+                    return new SvgViewBox();
+
+                var value = Element.GetAttribute("viewBox");
+                var parts = value.Split(' ');
+
+                if (parts.Length != 4)
+                    return new SvgViewBox();
+
+                return new SvgViewBox
+                {
+                    Left = Double.Parse(parts[0]),
+                    Top = Double.Parse(parts[1]),
+                    Width = Double.Parse(parts[2]),
+                    Height = Double.Parse(parts[3]),
+                };
+            }
+            set
+            {
+                Element.SetAttribute("viewBox", value.ToString());
+            }
         }
+
 
         public string Units { get; set; }
 

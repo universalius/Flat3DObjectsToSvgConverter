@@ -252,7 +252,7 @@ public class KerfApplier(IOptions<KerfSettings> options,
     private SvgDocument CloneSvgDocumentRoot(SvgDocument svgDocument)
     {
         var newSvgDocument = SvgDocument.Create();
-        newSvgDocument.Units = svgDocument.Units;
+        newSvgDocument.Units = "mm";
         newSvgDocument.Width = svgDocument.Width;
         newSvgDocument.Height = svgDocument.Height;
         newSvgDocument.ViewBox = svgDocument.ViewBox;
