@@ -4,7 +4,6 @@ using Flat3DObjectsToSvgConverter.Models;
 using Flat3DObjectsToSvgConverter.Services.Parse3dObjects;
 using GeometRi;
 using Microsoft.Extensions.Options;
-using ObjParserExecutor.Helpers;
 using SvgLib;
 using SvgNest;
 using SvgNest.Utils;

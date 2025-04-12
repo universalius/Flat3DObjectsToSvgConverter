@@ -3,7 +3,6 @@ using Flat3DObjectsToSvgConverter.Helpers;
 using Flat3DObjectsToSvgConverter.Models;
 using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
 using GeometRi;
-using ObjParserExecutor.Helpers;
 using SvgLib;
 using SvgNest;
 using System.Xml;

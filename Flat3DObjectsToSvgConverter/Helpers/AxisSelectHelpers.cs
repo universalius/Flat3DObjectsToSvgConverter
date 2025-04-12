@@ -2,7 +2,7 @@
 using ObjParser;
 using ObjParser.Types;
 
-namespace ObjParserExecutor.Helpers;
+namespace Flat3DObjectsToSvgConverter.Helpers;
 
 public static class AxisSelectHelpers
 {

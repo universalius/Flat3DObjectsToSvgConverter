@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ObjParserExecutor.Models
+namespace Flat3DObjectsToSvgConverter.Models
 {
     public class Polygon
     {

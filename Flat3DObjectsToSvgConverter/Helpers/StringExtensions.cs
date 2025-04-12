@@ -2,7 +2,7 @@
 using GeometRi;
 using System.Globalization;
 
-namespace ObjParserExecutor.Helpers
+namespace Flat3DObjectsToSvgConverter.Helpers
 {
     public static class StringExtensions
     {

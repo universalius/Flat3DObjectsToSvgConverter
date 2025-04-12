@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using ObjParser;
 
-namespace ObjParserExecutor.Models
+namespace Flat3DObjectsToSvgConverter.Models
 {
     public class Mesh
     {

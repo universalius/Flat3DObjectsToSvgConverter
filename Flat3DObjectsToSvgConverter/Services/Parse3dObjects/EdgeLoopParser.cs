@@ -3,7 +3,7 @@ using Flat3DObjectsToSvgConverter.Models.MeshObjectsParser;
 using GeometRi;
 using ObjParser;
 using ObjParser.Types;
-using ObjParserExecutor.Helpers;
+using Flat3DObjectsToSvgConverter.Helpers;
 using System.Diagnostics;
 using System.Drawing;
 

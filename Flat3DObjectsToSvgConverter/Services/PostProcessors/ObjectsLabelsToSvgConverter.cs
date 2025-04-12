@@ -1,8 +1,6 @@
-﻿using ClipperLib;
-using Flat3DObjectsToSvgConverter.Helpers;
+﻿using Flat3DObjectsToSvgConverter.Helpers;
 using Microsoft.Extensions.Logging;
 using ObjParser;
-using ObjParserExecutor.Helpers;
 using SvgLib;
 using System.Diagnostics;
 using System.Globalization;

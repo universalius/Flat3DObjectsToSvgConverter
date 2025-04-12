@@ -4,7 +4,6 @@ using Flat3DObjectsToSvgConverter.Helpers;
 using Flat3DObjectsToSvgConverter.Models.ObjectsLabelsPreciseLocatorAndSvgConverter;
 using GeometRi;
 using Microsoft.Extensions.Logging;
-using ObjParserExecutor.Helpers;
 using SvgLib;
 using SvgNest;
 using SvgNest.Utils;

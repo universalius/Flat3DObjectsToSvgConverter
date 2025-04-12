@@ -1,7 +1,7 @@
 ﻿using Flat3DObjectsToSvgConverter.Models;
 using Microsoft.Extensions.Options;
 using ObjParser;
-using ObjParserExecutor.Models;
+using Flat3DObjectsToSvgConverter.Models;
 using System.Diagnostics;
 
 namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects

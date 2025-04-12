@@ -1,13 +1,11 @@
-﻿using ObjParser.Types;
-using ObjParserExecutor.Helpers;
-using ObjParserExecutor.Models;
-using System.Diagnostics;
+﻿using Flat3DObjectsToSvgConverter.Helpers;
+using Flat3DObjectsToSvgConverter.Models;
+using Flat3DObjectsToSvgConverter.Models.MeshObjectsParser;
 using GeometRi;
 using ObjParser;
-using Flat3DObjectsToSvgConverter.Helpers;
+using ObjParser.Types;
+using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
-using Flat3DObjectsToSvgConverter.Models.MeshObjectsParser;
 
 namespace Flat3DObjectsToSvgConverter.Services.Parse3dObjects
 {
