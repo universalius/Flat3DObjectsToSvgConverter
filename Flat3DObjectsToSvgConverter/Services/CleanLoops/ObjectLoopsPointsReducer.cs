@@ -4,7 +4,7 @@ using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
 using GeometRi;
 using System.Drawing;
 
-namespace Flat3DObjectsToSvgConverter.Services
+namespace Flat3DObjectsToSvgConverter.Services.CleanLoops
 {
     public class ObjectLoopsPointsReducer
     {
