@@ -2,14 +2,11 @@
 using Flat3DObjectsToSvgConverter.Models;
 using Flat3DObjectsToSvgConverter.Models.EdgeLoopParser;
 using GeometRi;
-using System.Drawing;
 
 namespace Flat3DObjectsToSvgConverter.Features.CleanLoops
 {
-    public class ObjectLoopsPointsReducer
+    public class ObjectLoopsPointsReducer()
     {
-        public ObjectLoopsPointsReducer() { }
-
         public void RemoveRedundantPoints(IEnumerable<MeshObjects> meshes)
         {
             meshes.ToList().ForEach(mesh =>

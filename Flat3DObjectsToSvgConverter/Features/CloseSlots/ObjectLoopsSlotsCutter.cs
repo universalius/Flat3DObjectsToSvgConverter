@@ -52,54 +52,6 @@ public class ObjectLoopsSlotsCutter()
         return svgDocument.Element.OuterXml;
     }
 
-    public void CloseSlots(IEnumerable<MeshObjects> meshes)
-    {
-        meshes.ToList().ForEach(mesh =>
-        {
-            mesh.Objects.ToList().ForEach(obj =>
-            {
-                var mainLoop = obj.Loops.First();
-
-                var points = mainLoop.Points.ToArray();
-                var doublePoints = points.Select(p => p.ToDoublePoint()).ToArray();
-                var pointsCount = points.Count();
-                var segments = points.Select((p, j) =>
-                {
-                    var nextPointIndex = j + 1;
-                    return nextPointIndex != pointsCount ?
-                        new Segment3d(new Point3d(p.X, p.Y, 0), new Point3d(points[nextPointIndex].X, points[nextPointIndex].Y, 0)) :
-                        null;
-                }).Where(l => l != null).ToList();
-
-                var ortogonalSegments = new List<Segment3d[]>();
-                for (int k = 0; k < segments.Count(); k++)
-                {
-                    var firstSegment = segments[k];
-                    var secondSegment = k + 1 < segments.Count() ? segments[k + 1] : segments[0];
-                    var angle = firstSegment.AngleToDeg(secondSegment);
-                    if (IsOrtogonal(angle))
-                    {
-                        ortogonalSegments.Add(new[] { firstSegment, secondSegment });
-                    }
-                }
-
-                if (!ortogonalSegments.Any())
-                    return;
-
-                var rectangularClosingSlotLoops = CloseRectangularSlots(doublePoints, ortogonalSegments, new List<Segment3d>(segments), mesh.MeshName);
-                var closing2mmSlotLoops = CloseSlots(ortogonalSegments, mesh.MeshName);
-
-                //var allLoops = new List<LoopPoints>();
-                //allLoops.AddRange(obj.Loops);
-                //allLoops.AddRange(rectangularClosingSlotLoops);
-                //allLoops.AddRange(closing2mmSlotLoops);
-                //obj.Loops = allLoops;
-            });
-        });
-
-        Console.WriteLine();
-    }
-
     private List<Point3d[]> GetClosingSlotsSegments(DoublePoint[] mainLoopPoints, string meshName)
     {
         var points = mainLoopPoints.Select(p => p.ToPoint3d()).ToArray();

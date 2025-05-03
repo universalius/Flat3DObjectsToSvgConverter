@@ -2,8 +2,10 @@
 using Flat3DObjectsToSvgConverter.Features.Kerf;
 using Flat3DObjectsToSvgConverter.Features.Parse3dObjects;
 using Flat3DObjectsToSvgConverter.Features.PostProcessors;
+using Flat3DObjectsToSvgConverter.Helpers;
 using Flat3DObjectsToSvgConverter.Models;
 using Microsoft.Extensions.Hosting;
+using SvgLib;
 
 namespace Flat3DObjectsToSvgConverter;
 
@@ -22,6 +24,9 @@ public class Flat3DObjectsToSvgHostedService(PostProccessors postProccessors,
         //var compactedSvg = svgDocument.Element.OuterXml;
 
         var kerfedSvg = kerfApplier.ApplyKerf(compactedSvg);
+
+        //SvgDocument svgDocument = SvgFileHelpers.ParseSvgFile(@"D:\Виталик\Hexapod\Modo\Svg\BodyAndLegs 03.05.2025 12-35-02\BodyAndLegs_compacted_kerfed_with_line_gaps.svg");
+        //var kerfedSvg = svgDocument.Element.OuterXml;
 
         await postProccessors.Run(kerfedSvg);
 

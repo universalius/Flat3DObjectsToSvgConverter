@@ -32,7 +32,7 @@ namespace Flat3DObjectsToSvgConverter.Helpers
 
         public static Point3d ToPoint3d(this DoublePoint point)
         {
-            return new Point3d(point.X, point.Y , 0);
+            return new Point3d(point.X, point.Y, 0);
         }
 
         public static Point3d ToPoint3d(this PointF point)
@@ -73,6 +73,11 @@ namespace Flat3DObjectsToSvgConverter.Helpers
             newPoints.AddRange(segments.Select((s, j) => s.P2));
 
             return newPoints.ToArray();
+        }
+
+        public static Point3d[] ToPoint3ds(this Segment3d segment)
+        {
+            return [segment.P1, segment.P2];
         }
     }
 }

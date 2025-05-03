@@ -9,16 +9,6 @@ public class ObjectLoopsSlotsCloser(
     ObjectLoopsSlotSizeReducer objectLoopsSlotSizeReducer,
     IOptions<FeaturesSettings> featuresOptions)
 {
-    public void CloseSlots(IEnumerable<MeshObjects> meshes)
-    {
-        //_objectLoopsSlotSizeReducer.ChangeSlotsSize(meshes);
-        if (featuresOptions.Value.Slots.CloseSlots)
-        {
-            objectLoopsSlotsReducer.CloseSlots(meshes);
-        }
-        objectLoopsGearsCutter.CutTeeth(meshes);
-    }
-
     public string CloseSlots(string svg)
     {
         var newSvg = svg;
