@@ -1,34 +1,32 @@
 ﻿using Flat3DObjectsToSvgConverter.Models;
 using Microsoft.Extensions.Options;
 
-namespace Flat3DObjectsToSvgConverter.Features.CloseSlots
+namespace Flat3DObjectsToSvgConverter.Features.CloseSlots;
+
+public class ObjectLoopsSlotsCloser(
+    ObjectLoopsSlotsCutter objectLoopsSlotsReducer,
+    ObjectLoopsGearsCutter objectLoopsGearsCutter,
+    ObjectLoopsSlotSizeReducer objectLoopsSlotSizeReducer,
+    IOptions<FeaturesSettings> featuresOptions)
 {
-    public class ObjectLoopsSlotsCloser
+    public void CloseSlots(IEnumerable<MeshObjects> meshes)
     {
-        private readonly ObjectLoopsSlotsCutter _objectLoopsSlotsReducer;
-        private readonly ObjectLoopsGearsCutter _objectLoopsGearsCutter;
-        private readonly ObjectLoopsSlotSizeReducer _objectLoopsSlotSizeReducer;
-        private readonly SlotsSettings _slotsSettings;
-
-        public ObjectLoopsSlotsCloser(ObjectLoopsSlotsCutter objectLoopsSlotsReducer,
-            ObjectLoopsGearsCutter objectLoopsGearsCutter,
-            ObjectLoopsSlotSizeReducer objectLoopsSlotSizeReducer,
-            IOptions<SlotsSettings> options)
+        //_objectLoopsSlotSizeReducer.ChangeSlotsSize(meshes);
+        if (featuresOptions.Value.Slots.CloseSlots)
         {
-            _objectLoopsSlotsReducer = objectLoopsSlotsReducer;
-            _objectLoopsGearsCutter = objectLoopsGearsCutter;
-            _objectLoopsSlotSizeReducer = objectLoopsSlotSizeReducer;
-            _slotsSettings = options.Value;
+            objectLoopsSlotsReducer.CloseSlots(meshes);
         }
+        objectLoopsGearsCutter.CutTeeth(meshes);
+    }
 
-        public void CloseSlots(IEnumerable<MeshObjects> meshes)
+    public string CloseSlots(string svg)
+    {
+        var newSvg = svg;
+        //_objectLoopsSlotSizeReducer.ChangeSlotsSize(meshes);
+        if (featuresOptions.Value.Slots.CloseSlots)
         {
-            //_objectLoopsSlotSizeReducer.ChangeSlotsSize(meshes);
-            if (_slotsSettings.CloseSlots)
-            {
-                _objectLoopsSlotsReducer.CloseSlots(meshes);
-            }
-            _objectLoopsGearsCutter.CutTeeth(meshes);
+            newSvg = objectLoopsSlotsReducer.CloseSlots(svg);
         }
+        return objectLoopsGearsCutter.CutTeeth(newSvg);
     }
 }

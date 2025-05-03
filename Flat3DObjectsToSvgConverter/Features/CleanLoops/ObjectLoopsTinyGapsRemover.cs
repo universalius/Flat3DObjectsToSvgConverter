@@ -41,7 +41,7 @@ public class ObjectLoopsTinyGapsRemover(IOFileService file)
                 gapLinePath.Id = id;
                 gapLinePath.D = line.ToPathString();
                 gapLinePath.CopyStyles(mainPath);
-                gapLinePath.AddData("data-parentId", mainPath.Id);
+                gapLinePath.AddData("parentId", mainPath.Id);
             }
         });
 
@@ -139,9 +139,9 @@ public class ObjectLoopsTinyGapsRemover(IOFileService file)
         Console.WriteLine();
     }
 
-    public (Point3d[] mainLoop, List<Point3d[]> gapLines) GetReplacedGapsWithLines(DoublePoint[] doublePoints)
+    public (Point3d[] mainLoop, List<Point3d[]> gapLines) GetReplacedGapsWithLines(DoublePoint[] mainLoopPoints)
     {
-        var points = doublePoints.Select(p => p.ToPoint3d()).ToArray();
+        var points = mainLoopPoints.Select(p => p.ToPoint3d()).ToArray();
         var pointsCount = points.Count();
         var segments = points.Select((p, j) =>
         {

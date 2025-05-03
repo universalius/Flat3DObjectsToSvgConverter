@@ -23,7 +23,6 @@ public static class ServiceRegistration
         services.AddOptions()
             .Configure<SvgNestConfig>(configuration.GetSection("SvgNest"))
             .Configure<IOSettings>(configuration.GetSection("IO"))
-            .Configure<SlotsSettings>(configuration.GetSection("Slots"))
             .Configure<FeaturesSettings>(configuration.GetSection("Features"))
             .Configure<KerfSettings>(configuration.GetSection("Kerf"));
 

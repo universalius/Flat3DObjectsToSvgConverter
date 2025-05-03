@@ -1,5 +1,4 @@
 ﻿using ClipperLib;
-using Flat3DObjectsToSvgConverter.Features;
 using Flat3DObjectsToSvgConverter.Features.Parse3dObjects;
 using Flat3DObjectsToSvgConverter.Helpers;
 using Flat3DObjectsToSvgConverter.Models;
@@ -70,10 +69,10 @@ public class KerfApplier(IOptions<KerfSettings> options,
                     var newNode = kerfedSvgDocument._document.ImportNode(kerfedPath.Element, true) as XmlElement;
                     kerfedGroup.Element.AppendChild(newNode);
 
-                    path.SetStyle("stroke-width", "0.1");
+                    path.SetStyle("stroke-width", "0.05");
                     path.SetStyle("stroke", "red");
 
-                    kerfedPath.SetStyle("stroke-width", "0.1");
+                    kerfedPath.SetStyle("stroke-width", "0.05");
                     kerfedPath.SetStyle("stroke", "green");
 
                     elements.ForEach(e =>
@@ -81,6 +80,10 @@ public class KerfApplier(IOptions<KerfSettings> options,
                         newNode = debugSvgDocument._document.ImportNode(e, true) as XmlElement;
                         debugGroup.Element.AppendChild(newNode);
                     });
+
+                    var debug = true;
+                    if (debug)
+                        DebugKerf(kerfSegments, debugGroup);
                 });
             }
         });
@@ -136,7 +139,7 @@ public class KerfApplier(IOptions<KerfSettings> options,
             var p1 = s.P1;
             var p2 = s.P2;
 
-            var tolerance = 0.05;
+            var tolerance = 0.005;
             var xSame = Math.Abs(p1.X - p2.X) <= tolerance;
             var ySame = Math.Abs(p1.Y - p2.Y) <= tolerance;
             var shift = 0.0;
@@ -176,6 +179,7 @@ public class KerfApplier(IOptions<KerfSettings> options,
 
             return kerfSegment;
         }).ToArray();
+
 
         var length = kerfSegments.Length;
         for (var i = 0; i < length; i++)
@@ -224,6 +228,19 @@ public class KerfApplier(IOptions<KerfSettings> options,
         }
 
         return kerfSegments;
+    }
+
+    private void DebugKerf(KerfSegment[] kerfSegments, SvgGroup debugGroup)
+    {
+        var shiftedSegments = kerfSegments.Select(ks => ks.ShiftedSegment).ToArray();
+        for (var i = 0; i < shiftedSegments.Length; i++)
+        {
+            var shiftedPath = debugGroup.AddPath();
+            var shiftedPoints = new Point3d[] { shiftedSegments[i].P1, shiftedSegments[i].P2 };
+            shiftedPath.D = shiftedPoints.ToPathString();
+            shiftedPath.SetStyle("stroke-width", "0.05");
+            shiftedPath.SetStyle("stroke", "black");
+        }
     }
 
     private void SaveToFile(MeshObjects[] originMeshes, MeshObjects[] kefedMeshes)

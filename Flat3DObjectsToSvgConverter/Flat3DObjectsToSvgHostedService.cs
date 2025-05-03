@@ -16,14 +16,14 @@ public class Flat3DObjectsToSvgHostedService(PostProccessors postProccessors,
     public async Task StartAsync(CancellationToken stoppingToken)
     {
         var svg = await threeDObjectsParser.Transform3DObjectsTo2DSvgLoops();
-
-        ////Console.ReadKey();
-
         var compactedSvg = await svgCompactingService.Compact(svg);
+
+        //SvgDocument svgDocument = SvgFileHelpers.ParseSvgFile(@"D:\Виталик\Hexapod\Modo\Svg\BodyAndLegs 26.04.2025 12-16-36\BodyAndLegs_compacted.svg");
+        //var compactedSvg = svgDocument.Element.OuterXml;
 
         var kerfedSvg = kerfApplier.ApplyKerf(compactedSvg);
 
-        await postProccessors.Run(/*"");*/ kerfedSvg);
+        await postProccessors.Run(kerfedSvg);
 
         if (statistics.ObjectsCount != statistics.CompactedLoopsCount)
         {

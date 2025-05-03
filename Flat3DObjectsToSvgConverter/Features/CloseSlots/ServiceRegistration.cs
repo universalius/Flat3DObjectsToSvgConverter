@@ -8,6 +8,7 @@ public static class ServiceRegistration
     {
         services
             .AddSingleton<ObjectLoopsSlotsCutter>()
+            .AddSingleton<ObjectLoopsSlotsCloser>()
             .AddSingleton<ObjectLoopsGearsCutter>()
             .AddSingleton<ObjectLoopsSlotSizeReducer>();
 
