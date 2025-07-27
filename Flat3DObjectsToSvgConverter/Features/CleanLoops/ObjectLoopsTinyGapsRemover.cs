@@ -45,7 +45,7 @@ public class ObjectLoopsTinyGapsRemover(IOFileService file)
             }
         });
 
-        file.SaveSvg("compacted_kerfed_with_line_gaps", svgDocument.Element.OuterXml);
+        file.SaveSvg("compacted_kerfed_with_tiny_gaps", svgDocument.Element.OuterXml);
 
         return svgDocument.Element.OuterXml;
     }

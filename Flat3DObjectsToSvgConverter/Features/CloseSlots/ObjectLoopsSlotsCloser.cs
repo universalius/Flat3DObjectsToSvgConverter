@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 namespace Flat3DObjectsToSvgConverter.Features.CloseSlots;
 
 public class ObjectLoopsSlotsCloser(
-    ObjectLoopsSlotsCutter objectLoopsSlotsReducer,
+    ObjectLoopsSlotsCutter objectLoopsSlotsCutter,
     ObjectLoopsGearsCutter objectLoopsGearsCutter,
     ObjectLoopsSlotSizeReducer objectLoopsSlotSizeReducer,
     IOptions<FeaturesSettings> featuresOptions)
@@ -15,7 +15,7 @@ public class ObjectLoopsSlotsCloser(
         //_objectLoopsSlotSizeReducer.ChangeSlotsSize(meshes);
         if (featuresOptions.Value.Slots.CloseSlots)
         {
-            newSvg = objectLoopsSlotsReducer.CloseSlots(svg);
+            newSvg = objectLoopsSlotsCutter.CloseSlots(svg);
         }
         return objectLoopsGearsCutter.CutTeeth(newSvg);
     }
