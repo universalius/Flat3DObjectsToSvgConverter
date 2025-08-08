@@ -139,27 +139,34 @@ public class KerfApplier(IOptions<KerfSettings> options,
             var p1 = s.P1;
             var p2 = s.P2;
 
+            var vector = new Vector3d(p1, p2);
+
             var tolerance = 0.005;
             var xSame = Math.Abs(p1.X - p2.X) <= tolerance;
             var ySame = Math.Abs(p1.Y - p2.Y) <= tolerance;
             var shift = 0.0;
+            var halfBeamX = config.BeamSize.X / 2;
+            var halfBeamY = config.BeamSize.Y / 2;
+
 
             if (xSame)
             {
-                shift = config.Y;
+                shift = halfBeamY;
             }
 
             if (ySame)
             {
-                shift = config.X;
+                shift = halfBeamX;
             }
 
             if (!(xSame || ySame))
             {
-                shift = config.XY;
+                var axisXVector = new Vector3d(1.0, 0.0, 0.0);
+                var alfa = vector.AngleTo(new Line3d(vector.ToPoint, axisXVector));
+                var d = halfBeamX * Math.Tan(alfa);
+                shift = (halfBeamY + d) * Math.Sin(Math.PI / 2 - alfa);
             }
 
-            var vector = new Vector3d(p1, p2);
             Vector3d[] orthogonalVectors = [
                 new Vector3d(vector.Y,-vector.X, 0.0, vector.Coord), // clockwise 
                             new Vector3d(-vector.Y,vector.X, 0.0, vector.Coord) // counterclockwise 
