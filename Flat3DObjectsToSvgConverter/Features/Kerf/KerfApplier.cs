@@ -166,11 +166,11 @@ public class KerfApplier(IOptions<KerfSettings> options,
             var beamShiftY = 0.0;
             if (orthogonalVector.Y < 0)
             {
-                beamShiftY = mainLoop ? halfBeamHeight + beamCenterY : halfBeamHeight + beamCenterY;
+                beamShiftY = halfBeamHeight + beamCenterY;
             }
             else
             {
-                beamShiftY = mainLoop ? halfBeamHeight - beamCenterY : halfBeamHeight - beamCenterY;
+                beamShiftY = halfBeamHeight - beamCenterY;
             }
 
             if (xSame)
