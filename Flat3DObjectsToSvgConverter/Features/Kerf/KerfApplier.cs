@@ -145,27 +145,9 @@ public class KerfApplier(IOptions<KerfSettings> options,
             var xSame = Math.Abs(p1.X - p2.X) <= tolerance;
             var ySame = Math.Abs(p1.Y - p2.Y) <= tolerance;
             var shift = 0.0;
-            var halfBeamX = config.BeamSize.X / 2;
-            var halfBeamY = config.BeamSize.Y / 2;
-
-
-            if (xSame)
-            {
-                shift = halfBeamY;
-            }
-
-            if (ySame)
-            {
-                shift = halfBeamX;
-            }
-
-            if (!(xSame || ySame))
-            {
-                var axisXVector = new Vector3d(1.0, 0.0, 0.0);
-                var alfa = vector.AngleTo(new Line3d(vector.ToPoint, axisXVector));
-                var d = halfBeamX * Math.Tan(alfa);
-                shift = (halfBeamY + d) * Math.Sin(Math.PI / 2 - alfa);
-            }
+            var halfBeamWidth = config.BeamSize.Width / 2;
+            var halfBeamHeight = config.BeamSize.Height / 2;
+            var beamCenterY = config.BeamCenter.Y;
 
             Vector3d[] orthogonalVectors = [
                 new Vector3d(vector.Y,-vector.X, 0.0, vector.Coord), // clockwise 
@@ -180,6 +162,34 @@ public class KerfApplier(IOptions<KerfSettings> options,
 
                 return mainLoop ? !pointInPolygon : pointInPolygon;
             });
+
+            var beamShiftY = 0.0;
+            if (orthogonalVector.Y < 0)
+            {
+                beamShiftY = mainLoop ? halfBeamHeight + beamCenterY : halfBeamHeight + beamCenterY;
+            }
+            else
+            {
+                beamShiftY = mainLoop ? halfBeamHeight - beamCenterY : halfBeamHeight - beamCenterY;
+            }
+
+            if (xSame)
+            {
+                shift = halfBeamWidth;
+            }
+
+            if (ySame)
+            {
+                shift = beamShiftY;
+            }
+
+            if (!(xSame || ySame))
+            {
+                var axisXVector = new Vector3d(1.0, 0.0, 0.0);
+                var alfa = vector.AngleTo(new Line3d(vector.ToPoint, axisXVector));
+                var d = halfBeamWidth * Math.Tan(alfa);
+                shift = (beamShiftY + d) * Math.Sin(Math.PI / 2 - alfa);
+            }
 
             var shiftVector = orthogonalVector.Normalized.Mult(shift);
             kerfSegment.ShiftedSegment = s.Translate(shiftVector);
