@@ -57,7 +57,7 @@ namespace Flat3DObjectsToSvgConverter.Features.Parse3dObjects
             }
 
             var maxAxisesVertsCount = axisesBoxPlanes.Select(ap => ap.VertexCount).Max();
-            var targetAxisVerts = axisesPlanes.First(p => p.VertexCount == maxAxisesVertsCount);
+            var targetAxisVerts = axisesBoxPlanes.First(p => p.VertexCount == maxAxisesVertsCount);
 
             var targetAxis = targetAxisVerts.Axis;
             var orderedPlanes = targetAxisVerts.Planes.OrderBy(g => g.Key).ToList(); // parallel vert planes should be in pairs between plains in pair should be 4 mms
