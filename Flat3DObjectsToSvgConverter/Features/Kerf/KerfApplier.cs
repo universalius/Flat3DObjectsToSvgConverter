@@ -188,7 +188,8 @@ public class KerfApplier(IOptions<KerfSettings> options,
                 var axisXVector = new Vector3d(1.0, 0.0, 0.0);
                 var alfa = vector.AngleTo(new Line3d(vector.ToPoint, axisXVector));
                 var d = halfBeamWidth * Math.Tan(alfa);
-                shift = (beamShiftY + d) * Math.Sin(Math.PI / 2 - alfa);
+                //shift = (beamShiftY + d) * Math.Sin(Math.PI / 2 - alfa);
+                shift = beamShiftY * Math.Sin(Math.PI / 2 - alfa);
             }
 
             var shiftVector = orthogonalVector.Normalized.Mult(shift);
