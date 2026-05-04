@@ -31,18 +31,24 @@ namespace Flat3DObjectsToSvgConverter.Features
             svgNest.ParseSvg(inputSvg);
             await svgNest.Start();
 
-            var document = svgNest.CompactedSvgs.First();
-            var svgString = document.OuterXml;
-            _file.SaveSvg("compacted", svgString);
+            var index = 0;
+            foreach (var svgDocument in svgNest.CompactedSvgs)
+            {
+                var svgString = svgDocument.OuterXml;
+                _file.SaveSvg($"compacted{(index == 0 ? string.Empty : index)}", svgString);
+                index++;
+            }
+
             watch.Stop();
 
+            var document = svgNest.CompactedSvgs.First();
             var groupElements = document.GetElementsByTagName("g").Cast<XmlElement>().ToArray();
             _statistics.CompactedLoopsCount = groupElements.Length;
 
             Console.WriteLine($"Finished compacting svg curves! Compacted {groupElements.Length} loops. Took - {watch.ElapsedMilliseconds / 1000.0} sec");
             Console.WriteLine();
 
-            return svgString;
+            return document.OuterXml;
         }
     }
 }
