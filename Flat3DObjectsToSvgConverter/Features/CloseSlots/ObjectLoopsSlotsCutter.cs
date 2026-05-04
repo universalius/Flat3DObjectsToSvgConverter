@@ -85,6 +85,8 @@ public class ObjectLoopsSlotsCutter()
         return rectangularClosingSlotLoops.Concat(closing2mmSlotLoops).ToList();
     }
 
+    // This method finds pairs of ortogonal segments that can be closed with a segment to form a rectangular slot.
+    // It checks if the closing segment would lie outside the main loop and if the bottom original segment is less then 10mm.
     private List<Segment3d> CloseRectangularSlots(DoublePoint[] doublePoints, List<Segment3d[]> ortogonalSegments, List<Segment3d> segments, string meshName)
     {
         var closingLoops = ortogonalSegments.SelectMany(s => s)
@@ -98,6 +100,11 @@ public class ObjectLoopsSlotsCutter()
             .Select(p =>
             {
                 var segment = p.Segment;
+                if (segment.Length < 10)
+                {
+                    return null;
+                }
+
                 var neighborSegments = p.Neighbors.Select(n => n.Except([segment]).First()).ToArray();
                 var neighborVectors = neighborSegments.Select(n => n.ToVector).ToArray();
 
