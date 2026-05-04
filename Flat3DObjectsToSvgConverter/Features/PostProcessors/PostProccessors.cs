@@ -2,6 +2,7 @@
 using Flat3DObjectsToSvgConverter.Features.CloseSlots;
 using Flat3DObjectsToSvgConverter.Models;
 using Microsoft.Extensions.Options;
+using SvgLib;
 
 namespace Flat3DObjectsToSvgConverter.Features.PostProcessors;
 
@@ -27,12 +28,19 @@ public class PostProccessors(
 
         var coloredSvg = loopsColorDivider.SetLoopsColorBasedOnLength(withClosedSlotsSvg);
 
-        var labelsSvg = await objectsLabelsPreciseLocator.PlaceLabels(coloredSvg);
+        SvgDocument labelsSvg = null;
+        if (options.Value.ShowLabels)
+        {
+            labelsSvg = await objectsLabelsPreciseLocator.PlaceLabels(coloredSvg);
+        }
 
         if (options.Value.MakeTabs)
         {
             var tabsSvg = await loopsTabsGenerator.CutLoopsToMakeTabs(coloredSvg);
-            mergeLabelsWithTabsSvg.Merge(labelsSvg, tabsSvg);
+            if (labelsSvg != null)
+            {
+                mergeLabelsWithTabsSvg.Merge(labelsSvg, tabsSvg);
+            }
         }
     }
 }

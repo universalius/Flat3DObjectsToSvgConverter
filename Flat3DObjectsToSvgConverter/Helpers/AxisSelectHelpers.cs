@@ -60,29 +60,32 @@ public static class AxisSelectHelpers
 
     public static Point3d GetPointByAxis(string axis, Vertex vertex, int mmGain = 1)
     {
+        var lowerAxis = axis.ToLower();
+        if (!new[] { "x", "y", "z" }.Contains(lowerAxis))
+        {
+            throw new NotImplementedException();
+        }
+
         double x = 0;
         double y = 0;
 
-        if (axis.ToLower() == "x")
+        if (lowerAxis == "x")
         {
             x = vertex.Y;
             y = vertex.Z;
         }
 
-        if (axis.ToLower() == "y")
+        if (lowerAxis == "y")
         {
             x = vertex.X;
             y = vertex.Z;
         }
 
-        if (axis.ToLower() == "z")
+        if (lowerAxis == "z")
         {
             x = vertex.X;
             y = vertex.Y;
         }
-
-        if (x == 0 && y == 0)
-            throw new NotImplementedException();
 
         return new Point3d(x * mmGain, y * mmGain, 0);
     }
