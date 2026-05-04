@@ -1,6 +1,5 @@
 ﻿using ClipperLib;
 using Flat3DObjectsToSvgConverter.Helpers;
-using Flat3DObjectsToSvgConverter.Models;
 using GeometRi;
 using SvgLib;
 using SvgNest;
@@ -52,7 +51,7 @@ public class ObjectLoopsSlotsCutter()
         return svgDocument.Element.OuterXml;
     }
 
-    private List<Point3d[]> GetClosingSlotsSegments(DoublePoint[] mainLoopPoints, string meshName)
+    private List<Segment3d> GetClosingSlotsSegments(DoublePoint[] mainLoopPoints, string meshName)
     {
         var points = mainLoopPoints.Select(p => p.ToPoint3d()).ToArray();
         var doublePoints = points.Select(p => p.ToDoublePoint()).ToArray();
@@ -86,9 +85,9 @@ public class ObjectLoopsSlotsCutter()
         return rectangularClosingSlotLoops.Concat(closing2mmSlotLoops).ToList();
     }
 
-    private List<Point3d[]> CloseRectangularSlots(DoublePoint[] doublePoints, List<Segment3d[]> ortogonalSegments, List<Segment3d> segments, string meshName)
+    private List<Segment3d> CloseRectangularSlots(DoublePoint[] doublePoints, List<Segment3d[]> ortogonalSegments, List<Segment3d> segments, string meshName)
     {
-        var slotCandidates = ortogonalSegments.SelectMany(s => s)
+        var closingLoops = ortogonalSegments.SelectMany(s => s)
             .Distinct()
             .Select(s => new
             {
@@ -96,88 +95,36 @@ public class ObjectLoopsSlotsCutter()
                 Neighbors = ortogonalSegments.Where(pair => pair.Contains(s))
             })
             .Where(ol => ol.Neighbors.Count() >= 2)
-            .Where(p =>
+            .Select(p =>
             {
                 var segment = p.Segment;
                 var neighborSegments = p.Neighbors.Select(n => n.Except([segment]).First()).ToArray();
                 var neighborVectors = neighborSegments.Select(n => n.ToVector).ToArray();
 
                 var vectorsFacingOppositeDirection = neighborVectors.First().Dot(neighborVectors.Last()) < 0;
+                if (!vectorsFacingOppositeDirection){
+                    return null;
+                }
 
                 var neighborPoints = new Point3d[] { neighborSegments[0].P1, neighborSegments[0].P2, neighborSegments[1].P1, neighborSegments[1].P2 }
                     .Where(p => p != segment.P1 && p != segment.P2)
                     .ToArray();
 
-                var closingSegment = new Segment3d(neighborPoints[0], neighborPoints[1]).Scale(0.9);
+                var closingSegment = new Segment3d(neighborPoints[0], neighborPoints[1]);
+                var probClosingSegment = closingSegment.Scale(0.9);
 
-                var a = GeometryUtil.PointInPolygon(closingSegment.P1.ToDoublePoint(), doublePoints) ?? true;
-                var a1 = GeometryUtil.PointInPolygon(closingSegment.P2.ToDoublePoint(), doublePoints) ?? true;
-                return vectorsFacingOppositeDirection && !(a || a1);
-            }).ToList();
+                var p1Inside = GeometryUtil.PointInPolygon(probClosingSegment.P1.ToDoublePoint(), doublePoints) ?? true;
+                var p2Inside = GeometryUtil.PointInPolygon(probClosingSegment.P2.ToDoublePoint(), doublePoints) ?? true;
+                return !(p1Inside || p2Inside) ? closingSegment : null;
+            })
+            .Where(s => s != null)
+            .ToList();
 
         int slotIndex = 1;
-        Segment3d prevClosedSlotSegment = null;
-        List<Point3d> prevOriginalSlotPoints = null;
-
-        List<Segment3d> segmentsForDeletion = null;
-
-        var closingLoops = new List<Point3d[]>();
-
-        slotCandidates.ForEach(sc =>
+        closingLoops.ForEach(s =>
         {
-            try
-            {
-                var firstSegment = sc.Neighbors.First(pair => pair[1].Equals(sc.Segment))[0];
-                var secondSegment = sc.Segment;
-                var thirdSegment = sc.Neighbors.First(pair => pair[0].Equals(sc.Segment))[1];
-
-                var firstSegmentIndex = segments.IndexOf(firstSegment);
-
-                Segment3d closedSlotSegment = null;
-                List<Point3d> originalSlotPoints = null;
-
-                if (firstSegmentIndex != -1)
-                {
-                    closedSlotSegment = new Segment3d(firstSegment.P1, thirdSegment.P2);
-                    segments.Insert(firstSegmentIndex, closedSlotSegment);
-
-                    segmentsForDeletion = new List<Segment3d> { firstSegment, secondSegment, thirdSegment };
-
-                    originalSlotPoints = new List<Point3d> { firstSegment.P1, firstSegment.P2, secondSegment.P2, thirdSegment.P2 };
-                }
-                else
-                {
-                    var prevClosedSlotSegmentIndex = segments.IndexOf(prevClosedSlotSegment);
-
-                    closedSlotSegment = new Segment3d(prevClosedSlotSegment.P1, thirdSegment.P2);
-                    segments.Insert(prevClosedSlotSegmentIndex, closedSlotSegment);
-
-                    segmentsForDeletion = new List<Segment3d> { prevClosedSlotSegment, secondSegment, thirdSegment };
-
-                    originalSlotPoints = new List<Point3d>(prevOriginalSlotPoints) { thirdSegment.P2 };
-
-                    closingLoops.Remove(closingLoops.Last());
-                }
-
-                prevClosedSlotSegment = closedSlotSegment;
-                prevOriginalSlotPoints = originalSlotPoints;
-
-                segmentsForDeletion.ForEach(s =>
-                {
-                    segments.Remove(s);
-                });
-
-                Console.WriteLine($"    Closed rectangular slot {slotIndex} for mesh {meshName} main loop");
-
-                slotIndex++;
-
-                closingLoops.Add([closedSlotSegment.P1, closedSlotSegment.P2]);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"    Failed to close slot {slotIndex} for mesh {meshName} main loop");
-                throw;
-            }
+            Console.WriteLine($"    Closed rectangular slot {slotIndex} for mesh {meshName} main loop");
+            slotIndex++;
         });
 
         return closingLoops;
@@ -193,7 +140,7 @@ public class ObjectLoopsSlotsCutter()
         return a && b;
     }
 
-    private List<Point3d[]> CloseSlots(List<Segment3d[]> ortogonalSegments, string meshName)
+    private List<Segment3d> CloseSlots(List<Segment3d[]> ortogonalSegments, string meshName)
     {
         var slots = new List<Segment3d[]>();
         for (int i = 0; i < ortogonalSegments.Count; i++)
@@ -228,7 +175,7 @@ public class ObjectLoopsSlotsCutter()
         {
             Console.WriteLine($"    Closed less then 2mm slot {i + 1} for mesh {meshName} main loop");
 
-            return new Point3d[] { slotSegments[0].P2, slotSegments[1].P1 };
+            return new Segment3d(slotSegments[0].P2, slotSegments[1].P1);
         }).ToList();
     }
 

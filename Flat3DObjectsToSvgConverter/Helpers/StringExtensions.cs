@@ -27,5 +27,10 @@ namespace Flat3DObjectsToSvgConverter.Helpers
         {
             return $"M {string.Join(" ", points.Select(p => p.ToPathPointString()))} z";
         }
+
+        public static string ToPathString(this Segment3d segment)
+        {
+            return ToPathString([segment.P1, segment.P2]);
+        }
     }
 }
