@@ -112,7 +112,7 @@ public class ObjectLoopsSlotsCutter()
 
                 var a = GeometryUtil.PointInPolygon(closingSegment.P1.ToDoublePoint(), doublePoints) ?? true;
                 var a1 = GeometryUtil.PointInPolygon(closingSegment.P2.ToDoublePoint(), doublePoints) ?? true;
-                return segment.Length <= 10 && vectorsFacingOppositeDirection && !(a || a1);
+                return vectorsFacingOppositeDirection && !(a || a1);
             }).ToList();
 
         int slotIndex = 1;
