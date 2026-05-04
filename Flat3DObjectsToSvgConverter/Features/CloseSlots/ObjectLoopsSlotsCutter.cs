@@ -100,7 +100,7 @@ public class ObjectLoopsSlotsCutter()
             .Select(p =>
             {
                 var segment = p.Segment;
-                if (segment.Length < 10)
+                if (segment.Length > 10)
                 {
                     return null;
                 }
